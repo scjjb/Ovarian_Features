@@ -45,10 +45,10 @@ def initiate_model(args, ckpt_path):
     #if args.cpu_only:
     #    ckpt = torch.load(ckpt_path,map_location=torch.device('cpu'))
     #else:
-    if args.cpu_only:
-        ckpt = torch.load(ckpt_path,map_location=torch.device('cpu'))
-    else:
-        ckpt=torch.load(ckpt_path)
+    #if args.cpu_only:
+    #    ckpt = torch.load(ckpt_path,map_location=torch.device('cpu'))
+    #else:
+    ckpt=torch.load(ckpt_path)
     ckpt_clean = {}
     for key in ckpt.keys():
         if 'instance_loss_fn' in key:
@@ -62,7 +62,7 @@ def initiate_model(args, ckpt_path):
 
 def extract_features(args,loader,feature_extraction_model,use_cpu):
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    if args.cpu_only:
+    if use_cpu:
         device=torch.device("cpu")
     for count, (batch,coords) in enumerate(loader):
         batch = batch.to(device, non_blocking=True)

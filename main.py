@@ -55,7 +55,7 @@ def main():
             hardware={"cpu":10,"gpu":0.125}
         else:
             if args.task =='treatment':
-                hardware={"cpu":1,"gpu":0.25}
+                hardware={"cpu":0.8,"gpu":0.2}
             else:
                 hardware={"cpu":2,"gpu":0.5}
 
@@ -89,19 +89,53 @@ def main():
             if args.no_inst_cluster:
                 if args.task == "treatment":
                     search_space={
-                        "reg": tune.grid_search([0.00005, 0.00001, 0.000005]),
-                        "drop_out": tune.grid_search([0.4, 0.5, 0.6]),
-                        "lr": tune.grid_search([0.0005,0.0001,0.00005]),
-                        "patches": tune.grid_search([65, 75, 85]),
-                        "model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
+                            
+                        ##updated segmentation first tuning:
+                        #"reg": tune.grid_search([0.001, 0.0001, 0.00001]),
+                        #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
+                        #"drop_out": tune.grid_search([0.25, 0.5, 0.75]),
+                        #"lr": tune.grid_search([0.001,0.0001,0.00001]),
+                        #"patches": tune.grid_search([25, 50, 75, 100]),
+
+                        ## updated segmentation minituning:
+                        #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
+                        #"lr": tune.grid_search([0.001,0.0001,0.00001]),
+                        #"reg": tune.grid_search([0.001]),
+                        #"drop_out": tune.grid_search([0.75]),
+                        #"patches": tune.grid_search([25]),
+
+                        ## updated segmentation patient tuning:
+                        "A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
+                        "lr": tune.grid_search([0.001,0.0001]),
+                        "patches": tune.grid_search([50, 75]),
+                        "drop_out": tune.grid_search([0.5, 0.75]),
+                        "reg": tune.grid_search([0.001, 0.0001]),
+
+                        ##test
+                        #"A_model_size": tune.grid_search(["hipt_smaller"]),
+                        #"lr": tune.grid_search([0.001]),
+                        #"patches": tune.grid_search([10, 20]),
+                        #"drop_out": tune.grid_search([0.5]),
+                        #"reg": tune.grid_search([0.001]),
+
+                        #"reg": tune.grid_search([0.00005, 0.00001, 0.000005]),
+                        #"drop_out": tune.grid_search([0.4, 0.5, 0.6]),
+                        #"lr": tune.grid_search([0.0005,0.0001,0.00005]),
+                        #"patches": tune.grid_search([65, 75, 85]),
+                        #"A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
                         #"reg": tune.grid_search([0.001, 0.0001, 0.00001]),
                         #"drop_out": tune.grid_search([0.0, 0.25, 0.5, 0.75]),
+                        #"drop_out": tune.grid_search([0.65, 0.75, 0.85]),
                         #"drop_out": tune.grid_search([0.5, 0.75]),
                         #"lr": tune.grid_search([0.001,0.0001,0.00001]),
                         #"lr": tune.grid_search([0.0001,0.00001,0.000001]),
+                        #"lr": tune.grid_search([0.00005,0.00001,0.000005]),
                         #"patches": tune.grid_search([25, 50, 75, 100]),
-                        #"model_size": tune.grid_search(["hipt_big","hipt_medium","hipt_small"])
-                        #"model_size": tune.grid_search(["hipt_big","hipt_medium","hipt_small","hipt_smaller"])
+                        ##"A_model_size": tune.grid_search(["hipt_big","hipt_medium","hipt_small"])
+                        #"A_model_size": tune.grid_search(["hipt_big","hipt_medium","hipt_small","hipt_smaller"])
+                        #"A_model_size": tune.grid_search(["hipt_small","hipt_smaller"])
+                        
+                        
                         }
                 else:
                     search_space={
@@ -117,12 +151,54 @@ def main():
                 #    "lr": tune.loguniform(1e-5,1e-2)
                 #}
             else:
-                search_space = {
-                    "reg": tune.loguniform(1e-10,1e-2),
-                    "drop_out": tune.uniform(0.00,0.99),
-                    "lr": tune.loguniform(1e-5,1e-2),
-                    "B": tune.choice([4,6,16,32,64]),
-                }
+                if args.task == "treatment":
+                    search_space={
+                            #"reg": tune.grid_search([0.00005, 0.00001, 0.000005]),
+                            #"drop_out": tune.grid_search([0.4, 0.5, 0.6]),
+                            #"lr": tune.grid_search([0.0005,0.0001,0.00005]),
+                            #"patches": tune.grid_search([65, 75, 85]),
+                            #"model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
+                            
+                            ## first clam exp:
+                            #"reg": tune.grid_search([0.001, 0.0001, 0.00001]),
+                            #"drop_out": tune.grid_search([0.25, 0.5, 0.75]),
+                            #"lr": tune.grid_search([0.001,0.0001,0.00001]),
+                            #"patches": tune.grid_search([50, 75, 100]),
+                            #"B": tune.grid_search([4,6,8]),
+                            #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
+                            
+                            ## second clam exp:
+                            "reg": tune.grid_search([0.0001, 0.00001]),
+                            "drop_out": tune.grid_search([0.5, 0.6, 0.7]),
+                            "lr": tune.grid_search([0.00005,0.00001,0.000005]),
+                            "patches": tune.grid_search([50, 75, 100]),
+                            "B": tune.grid_search([6,8,10]),
+                            "A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
+
+                            #"drop_out": tune.grid_search([0.0, 0.25, 0.5, 0.75]),
+                            #"drop_out": tune.grid_search([0.25, 0.5, 0.75]),
+                            #"drop_out": tune.grid_search([0.65, 0.75, 0.85]),
+                            #"drop_out": tune.grid_search([0.5, 0.75]),
+                            #"lr": tune.grid_search([0.001,0.0001,0.00001]),
+                            #"lr": tune.grid_search([0.0001,0.00001,0.000001]),
+                            #"lr": tune.grid_search([0.00005,0.00001,0.000005]),
+                            #"patches": tune.grid_search([50, 75, 100]),
+                            #"patches": tune.grid_search([25, 50, 75, 100]),
+                            #"B": tune.grid_search([4,6,8]),
+
+                            ## have renamed this and changed the corresponding line in utils/core_utils/tuning.py to make model_size the first column in raytune (ordered alphabetically) which will cause it to alternate model sizes and not use the most computationally intensive models all at the same time
+                            #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
+                            #"A_model_size": tune.grid_search(["hipt_big","hipt_medium","hipt_small"]),
+                            #"model_size": tune.grid_search(["hipt_big","hipt_medium","hipt_small","hipt_smaller"]),
+                            #"model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
+                            }
+                else:
+                    search_space = {
+                        "reg": tune.loguniform(1e-10,1e-2),
+                        "drop_out": tune.uniform(0.00,0.99),
+                        "lr": tune.loguniform(1e-5,1e-2),
+                        "B": tune.choice([4,6,16,32,64]),
+                    }
             
 
         scheduler = tune.schedulers.ASHAScheduler(
@@ -165,13 +241,14 @@ def main():
             class_counts=[class_counts_train[i]+class_counts_val[i] for i in range(len(class_counts_train))]
 
         if args.tuning:
-            stopper=TrialPlateauStopper(metric="loss",mode="min",num_results=20,grace_period=20)
+            seed_torch(args.seed)
+            stopper=TrialPlateauStopper(metric="loss",mode="min",num_results=30,grace_period=40)
             if args.sampling:
                 tuner = tune.Tuner(tune.with_resources(partial(train_sampling,datasets=datasets,cur=i,class_counts=class_counts,args=args),hardware),param_space=search_space, run_config=RunConfig(name="test_run",stop=stopper, progress_reporter=reporter),tune_config=tune.TuneConfig(scheduler=scheduler,num_samples=args.num_tuning_experiments))
             else:
                 tuner = tune.Tuner(tune.with_resources(partial(train_tuning,datasets=datasets,cur=i,class_counts=class_counts,args=args),hardware),param_space=search_space, run_config=RunConfig(name="test_run",stop=stopper, progress_reporter=reporter),tune_config=tune.TuneConfig(scheduler=scheduler,num_samples=args.num_tuning_experiments))
             results = tuner.fit()
-            results_df=results.get_dataframe()
+            results_df=results.get_dataframe(filter_metric="loss", filter_mode="min")
             results_df.to_csv(args.tuning_output_file,index=False)
 
             best_trial = results.get_best_result("loss", "min","last-10-avg")

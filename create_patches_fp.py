@@ -103,7 +103,10 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
                 # Inialize WSI
                 full_path = os.path.join(source, slide)
-                WSI_object = WholeSlideImage(full_path)
+                if args.pad_slide:
+                    WSI_object = WholeSlideImage(full_path,4096)
+                else:
+                    WSI_object = WholeSlideImage(full_path)
 
                 if use_default_params:
                         current_vis_params = vis_params.copy()
@@ -194,9 +197,8 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
                 patch_time_elapsed = -1 # Default time
                 if patch:
-                        current_patch_params.update({'patch_level': patch_level, 'patch_size': patch_size, 'step_size': step_size, 
-                                                                                 'save_path': patch_save_dir})
-                        file_path, patch_time_elapsed = patching(WSI_object = WSI_object,  **current_patch_params,)
+                    current_patch_params.update({'patch_level': patch_level, 'patch_size': patch_size, 'step_size': step_size,'save_path': patch_save_dir})
+                    file_path, patch_time_elapsed = patching(WSI_object = WSI_object,  **current_patch_params,)
                 
                 stitch_time_elapsed = -1
                 if stitch:
@@ -243,6 +245,8 @@ parser.add_argument('--ahfilter', type = int, default=16,
                                                 help='a_h parameter for filtering')
 parser.add_argument('--max_holes', type = int, default=8,
                                                 help='max_num_holes parameter for filtering')
+parser.add_argument('--closing', type = int, default=8,
+                                                help='number of closing iterations to remove gaps')
 parser.add_argument('--seg_level', type = int, default=-1,
                                                 help='slide hierarchy level to use for segmentation, -1 automatically finds best level for 64x downsample')
 parser.add_argument('--use_otsu', default=False, action='store_true')
@@ -258,6 +262,8 @@ parser.add_argument('--patch_level', type=int, default=0,
                                         help='downsample level at which to patch')
 parser.add_argument('--process_list',  type = str, default=None,
                                         help='name of list of images to process with parameters (.csv)')
+parser.add_argument('--pad_slide', default=False, action='store_true', help='pad slides a minimum of 4096x4096 for use in the ATEC23 test data')
+
 
 if __name__ == '__main__':
         args = parser.parse_args()
@@ -288,7 +294,7 @@ if __name__ == '__main__':
                 if key not in ['source']:
                         os.makedirs(val, exist_ok=True)
 
-        seg_params = {'seg_level': args.seg_level, 'sthresh': args.sthresh, 'mthresh': args.mthresh, 'close': 4, 'use_otsu': args.use_otsu,
+        seg_params = {'seg_level': args.seg_level, 'sthresh': args.sthresh, 'mthresh': args.mthresh, 'close': args.closing, 'use_otsu': args.use_otsu,
                                   'keep_ids': 'none', 'exclude_ids': 'none'}
         filter_params = {'a_t':args.atfilter, 'a_h': args.ahfilter, 'max_n_holes':args.max_holes}
         vis_params = {'vis_level': -1, 'line_thickness': 250}

@@ -571,7 +571,6 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                         sampled_idxs=np.random.choice(len(features),self.max_patches_per_slide)
                         features = features[sampled_idxs]
                         coords = coords[sampled_idxs]
-
                     if self.use_perturbs:
                         noise = torch.randn_like(features) * 0.1
                         features = features + noise

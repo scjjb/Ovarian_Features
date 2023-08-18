@@ -102,7 +102,7 @@ def train_tuning(config, datasets, cur, class_counts, args):
     args.reg=config["reg"]
     args.drop_out=config["drop_out"]
     args.max_patches_per_slide=config["patches"]
-    args.model_size=config["model_size"]
+    args.model_size=config["A_model_size"]
     writer_dir = os.path.join(args.results_dir, str(cur))
     if not os.path.isdir(writer_dir):
         os.mkdir(writer_dir)
@@ -348,6 +348,7 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
 
     print('\n')
     for batch_idx, (data, label) in enumerate(loader):
+        #print("len batched data",len(data))
         data, label = data.to(device), label.to(device)
 
         logits, Y_prob, Y_hat, _, _ = model(data)

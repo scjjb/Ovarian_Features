@@ -242,6 +242,8 @@ def train(datasets, cur, class_counts, args):
         workers = 1
     if args.debug_loader:
         workers = 1
+    if args.hardware=="DGX":
+        workers = 1
     train_loader = get_split_loader(train_split, training=True, testing = args.testing, weighted = args.weighted_sample, workers=workers)
     #print("len train loader",len(train_loader))
     val_loader = get_split_loader(val_split,  testing = args.testing, workers=workers)
@@ -390,14 +392,14 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         #print(batch_idx, data[0], label)
         #print("len batched data",len(data))
         
-        plot_data=False
+        plot_data=True
         if plot_data:
             for patch in data:
                 plot_tensor = patch
                 #print("tensor shape",plot_tensor.shape)
                 #plot_image = PIL.Image.fromarray(plot_tensor)
                 plot_image=pil_image_transform(plot_tensor)
-                plot_image.save("../mount_outputs/patch_plots/{}.jpg".format(random.randint(0,100000)))
+                plot_image.save("../mount_outputs/patch_plots_hipt/{}.jpg".format(random.randint(0,100000)))
         data, label = data.to(device), label.to(device)
         
         if feature_extractor is not None:

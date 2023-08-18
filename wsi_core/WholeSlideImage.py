@@ -20,16 +20,29 @@ from utils.file_utils import load_pkl, save_pkl
 Image.MAX_IMAGE_PIXELS = 933120000
 
 class WholeSlideImage(object):
-    def __init__(self, path):
+    def __init__(self, path, pad=0):
 
         """
         Args:
             path (str): fullpath to WSI file
         """
 
-#         self.name = ".".join(path.split("/")[-1].split('.')[:-1])
         self.name = os.path.splitext(os.path.basename(path))[0]
         self.wsi = openslide.open_slide(path)
+        if pad>0:
+            if min(self.wsi.dimensions)<pad:
+                current_width, current_height = self.wsi.dimensions
+                pad_left = max(0, (pad - current_width) // 2)
+                pad_right = max(0, pad - current_width - pad_left)
+                pad_top = max(0, (pad - current_height) // 2)
+                pad_bottom = max(0, pad - current_height - pad_top)
+                new_width = current_width + pad_left + pad_right
+                new_height = current_height + pad_top + pad_bottom
+
+                padded_slide = Image.new("RGB", (new_width, new_height),color=(255, 255, 255))
+                padded_slide.paste(self.wsi.read_region((0, 0), 0, (current_width, current_height)), (pad_left, pad_top))
+                padded_slide.save("../mount_outputs/padded_slides/{}.tiff".format(self.name))
+                self.wsi = openslide.open_slide("../mount_outputs/padded_slides/{}.tiff".format(self.name))
         self.level_downsamples = self._assertLevelDownsamples()
         self.level_dim = self.wsi.level_dimensions
     
@@ -468,7 +481,7 @@ class WholeSlideImage(object):
         
         print('Extracted {} coordinates'.format(len(results)))
 
-        if len(results)>1:
+        if len(results)>0:
             asset_dict = {'coords' :          results}
             
             attr = {'patch_size' :            patch_size, # To be considered...
