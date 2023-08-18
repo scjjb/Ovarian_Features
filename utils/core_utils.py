@@ -238,6 +238,8 @@ def train(datasets, cur, class_counts, args):
     #print("train extract_features",train_split.extract_features)
     #print("val extract_features",val_split.extract_features)
     workers = 4
+    if args.hardware=="DGX":
+        workers = 1
     if args.debug_loader:
         workers = 1
     train_loader = get_split_loader(train_split, training=True, testing = args.testing, weighted = args.weighted_sample, workers=workers)

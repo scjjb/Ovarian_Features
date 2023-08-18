@@ -22,7 +22,7 @@ from ray import tune
 from ray.air.config import RunConfig
 import ray
 
-from streamlit import legacy_caching as caching
+#from streamlit import legacy_caching as caching
 
 # Evaluation settings
 parser = argparse.ArgumentParser(description='CLAM Evaluation Script')
