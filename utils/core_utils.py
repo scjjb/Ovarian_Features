@@ -392,7 +392,7 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         #print(batch_idx, data[0], label)
         #print("len batched data",len(data))
         
-        plot_data=True
+        plot_data=False
         if plot_data:
             for patch in data:
                 plot_tensor = patch

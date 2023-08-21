@@ -2,7 +2,7 @@ import pandas as pd
 import argparse
 import os
 import numpy as np
-parser = argparse.ArgumentParser(description='Script to add augmentations to validation and test folds')
+parser = argparse.ArgumentParser(description='Script to add augmentations to train fold')
 parser.add_argument('--split_name', type=str, default=None)
 parser.add_argument('--k', type=int, default=10, help='number of folds (default: 10)')
 parser.add_argument('--num_augs', type=int, default=1, help='number of augs per image')

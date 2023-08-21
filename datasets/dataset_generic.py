@@ -496,8 +496,8 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                 if self.use_augs:
                     assert not self.use_h5, "augmentations not currently setup with h5 files, only pt files"
                     ## aug numbers start at 0, -1 is the original with no augmentation 
-                    aug_number = random.randint(-1,self.number_of_augs-1)
-                    if aug_number>-1:
+                    aug_number = random.randint(0,self.number_of_augs)
+                    if aug_number>0:
                         slide_id=slide_id+"aug{}".format(aug_number)
                     #print(self.number_of_augs)
                     #print(slide_id)
