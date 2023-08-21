@@ -168,6 +168,16 @@ def compute_w_loader(file_path, output_path, wsi, model,
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,
                 custom_downsample=custom_downsample, target_patch_size=target_patch_size)
         
+        elif args.use_transforms=='HIPT_augment01':
+            t = transforms.Compose(
+                    [transforms.RandomHorizontalFlip(p=0.5),
+                    transforms.RandomVerticalFlip(p=0.5),
+                    transforms.RandomAffine(degrees=5,translate=(0.025,0.025), scale=(0.975,1.025),shear=0.025),
+                    transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
+                    eval_transforms()])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,
+                custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+
         else:
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, pretrained=pretrained, 
                 custom_downsample=custom_downsample, target_patch_size=target_patch_size)
@@ -218,7 +228,7 @@ parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
 parser.add_argument('--model_type',type=str,choices=['resnet18','resnet50','levit_128s','HIPT_4K'],default='resnet50')
-parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_augment','spatial','macenko','none'],default='none')
+parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_augment','HIPT_augment01','spatial','macenko','none'],default='none')
 args = parser.parse_args()
 
 

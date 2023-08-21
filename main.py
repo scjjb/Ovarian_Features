@@ -34,6 +34,10 @@ import sys
 
 import cProfile, pstats
 
+## set maximum number of raytune trials pending at once to 20
+os.environ['TUNE_MAX_PENDING_TRIALS_PG'] = "20"
+
+
 def main():
     # create results directory if necessary
     if not os.path.isdir(args.results_dir):
@@ -49,10 +53,10 @@ def main():
         end = args.k_end
     
     if args.tuning:
-        ray.init(num_gpus=1)
+        ray.init(num_gpus=1,runtime_env={"TUNE_MAX_PENDING_TRIALS_PG": 7})
             
         if args.hardware=='DGX':
-            hardware={"cpu":10,"gpu":0.125}
+            hardware={"cpu":32,"gpu":0.2}
         else:
             if args.task =='treatment':
                 hardware={"cpu":0.8,"gpu":0.2}
@@ -105,11 +109,18 @@ def main():
                         #"patches": tune.grid_search([25]),
 
                         ## updated segmentation patient tuning:
-                        "A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
-                        "lr": tune.grid_search([0.001,0.0001]),
-                        "patches": tune.grid_search([50, 75]),
-                        "drop_out": tune.grid_search([0.5, 0.75]),
-                        "reg": tune.grid_search([0.001, 0.0001]),
+                        #"A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
+                        #"lr": tune.grid_search([0.001,0.0001]),
+                        #"patches": tune.grid_search([50, 75]),
+                        #"drop_out": tune.grid_search([0.5, 0.75]),
+                        #"reg": tune.grid_search([0.001, 0.0001]),
+
+                        ## updated segmentation DGX tuning
+                        "A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
+                        "lr": tune.grid_search([0.01,0.001,0.0001]),
+                        "patches": tune.grid_search([25,50, 75,100]),
+                        "drop_out": tune.grid_search([0.25,0.5, 0.75]),
+                        "reg": tune.grid_search([0.1, 0.001, 0.0001]),
 
                         ##test
                         #"A_model_size": tune.grid_search(["hipt_smaller"]),
