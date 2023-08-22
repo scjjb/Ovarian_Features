@@ -22,6 +22,7 @@ def count_patches(dataset):
     #patches=0
     print("slides: ",len(loader))
     patch_counts=[]
+    all_counts=[]
     for batch_idx, (data, label, coords, ids) in enumerate(loader):
         count=len(coords)
         #patches=patches+count
@@ -30,11 +31,12 @@ def count_patches(dataset):
         elif label==1:
             patches1=patches1+count
         patch_counts=patch_counts+[[ids,count]]
+        all_counts=all_counts+[count]
         #print("number", batch_idx, "   slide",ids," total patches: ",patches)
         print("number", batch_idx, "   slide",ids,"  class 0 patches: ",patches0, "  class 1 patches: ",patches1)
     patches=patches0+patches1
     #pd.DataFrame(patch_counts,columns=["slide","patches"]).to_csv("results/patch_counts/ESGO_available_staging.csv",index=False)
-    return patches
+    return patches, all_counts
 
 
 csv_path=args.csv_path
@@ -60,5 +62,10 @@ dataset = Generic_MIL_Dataset(csv_path = csv_path,
                         ignore=[],
                         max_patches_per_slide=100000000)
 split_dataset=dataset
-patches  = count_patches(split_dataset)
+patches, all_counts  = count_patches(split_dataset)
 print("{} patches".format(patches))
+
+print("min patches:",min(all_counts))
+print("max patches:",max(all_counts))
+print("mean patches:",np.mean(all_counts))
+print("sd patches:",np.std(all_counts))
