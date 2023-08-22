@@ -158,6 +158,17 @@ def compute_w_loader(file_path, output_path, wsi, model,
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,
                 custom_downsample=custom_downsample, target_patch_size=target_patch_size)
         
+        elif args.use_transforms=='HIPT_wang':
+        ## augmentations from the baseline ATEC23 paper
+            t = transforms.Compose(
+                    [transforms.RandomHorizontalFlip(p=0.5),
+                    transforms.RandomVerticalFlip(p=0.5),
+                    transforms.RandomAffine(degrees=90),
+                    transforms.ColorJitter(brightness=0.125, contrast=0.2, saturation=0.2),
+                    eval_transforms()])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,
+                custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+
         elif args.use_transforms=='HIPT_augment_colour':
             ## same as HIPT_augment but no affine
             t = transforms.Compose(
@@ -238,7 +249,7 @@ parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
 parser.add_argument('--model_type',type=str,choices=['resnet18','resnet50','levit_128s','HIPT_4K'],default='resnet50')
-parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_augment','HIPT_augment_colour','HIPT_augment01','spatial','macenko','none'],default='none')
+parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','macenko','none'],default='none')
 args = parser.parse_args()
 
 
