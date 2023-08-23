@@ -187,7 +187,8 @@ def main():
     all_results = []
     all_auc = []
     all_acc = []
-    
+    all_loss = []
+
     if args.tuning:
         ray.init(num_gpus=1)
                              
@@ -246,16 +247,19 @@ def main():
             print("Best trial final acuracy: {}".format(best_trial.metrics["accuracy"]))
 
         else:
-            model, patient_results, test_error, auc, df  = eval(None,split_dataset, args, ckpt_paths[ckpt_idx])
+            model, patient_results, test_error, auc, df, loss = eval(None,split_dataset, args, ckpt_paths[ckpt_idx])
             #all_results.append(all_results)
             all_auc.append(auc)
             print("all auc", all_auc)
             all_acc.append(1-test_error)
             print("all acc", all_acc)
+            all_loss.append(loss)
+            print("all loss", all_loss)
             if not args.eval_features:
                 df.to_csv(os.path.join(args.save_dir, 'fold_{}.csv'.format(folds[ckpt_idx])), index=False)	
     if not args.tuning:
-        final_df = pd.DataFrame({'folds': folds, 'test_auc': all_auc, 'test_acc': all_acc})	
+        final_df = pd.DataFrame({'folds': folds, 'test_auc': all_auc, 'test_acc': all_acc, 'loss': all_loss})	
+        print(final_df)
         if len(folds) != args.k:	
             save_name = 'summary_partial_{}_{}.csv'.format(folds[0], folds[-1])	
         else:	

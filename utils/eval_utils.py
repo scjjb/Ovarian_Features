@@ -103,20 +103,24 @@ def eval(config, dataset, args, ckpt_path):
         patient_results, test_error, auc, df, _ = summary_sampling(model,dataset, args)
     else:
         loader = get_simple_loader(dataset)
-        patient_results, test_error, auc, df, _ = summary(model, loader, args)
+        patient_results, test_error, auc, df, _, loss = summary(model, loader, args)
     
     if args.tuning:
         tune.report(accuracy=1-test_error, auc=auc)    
     print('test_error: ', test_error)
     print('auc: ', auc)
-    return model, patient_results, test_error, auc, df
+    return model, patient_results, test_error, auc, df, loss
 
 
-def summary(model, loader, args):
+def summary(model, loader, args, loss_fn = None):
+    if loss_fn is None:
+        loss_fn = nn.CrossEntropyLoss()
+    
     acc_logger = Accuracy_Logger(n_classes=args.n_classes)
     model.eval()
     test_loss = 0.
     test_error = 0.
+    loss_value = 0.
 
     all_probs = np.zeros((len(loader), args.n_classes))
     all_labels = np.zeros(len(loader))
@@ -136,14 +140,19 @@ def summary(model, loader, args):
         all_probs[batch_idx] = probs
         all_labels[batch_idx] = label.item()
         all_preds[batch_idx] = Y_hat.item()
-        
+
         patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'label': label.item()}})
         
+        loss = loss_fn(logits, label)
+        loss_value += loss.item()
+        
+
         error = calculate_error(Y_hat, label)
         test_error += error
 
     del data
     test_error /= len(loader)
+    loss_value /= len(loader)
 
     aucs = []
     if len(np.unique(all_labels)) == 1:
@@ -171,7 +180,7 @@ def summary(model, loader, args):
     for c in range(args.n_classes):
         results_dict.update({'p_{}'.format(c): all_probs[:,c]})
     df = pd.DataFrame(results_dict)
-    return patient_results, test_error, auc_score, df, acc_logger
+    return patient_results, test_error, auc_score, df, acc_logger, loss_value
 
 
 def summary_sampling(model, dataset, args):

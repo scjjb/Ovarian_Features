@@ -35,7 +35,7 @@ for model_name in model_names:
         all_Ys=[]
         all_p1s=[]
         all_probs=[]
-
+        all_losses=list(pd.read_csv(full_model_name+'/summary.csv')['loss'])
         print("run: ",run_no)
         for fold_no in range(args.folds):
             if args.run_repeats>1:
@@ -60,6 +60,7 @@ for model_name in model_names:
         
         print("confusion matrix (predicted x axis, true y axis): \n")
         print(confusion_matrix(all_Ys,all_Yhats),"\n")
+        print("average ce loss: ",np.mean(all_losses), "(not bootstrapped)")
 
         for _ in range(bootstraps):
             idxs=np.random.choice(range(len(all_Ys)),len(all_Ys))
@@ -85,9 +86,10 @@ for model_name in model_names:
         if args.num_classes==2:
             print("F1 mean: ",all_f1_means," F1 std: ",all_f1_sds)
         else:
-            print("Marco F1 mean: ",all_f1_means," F1 std: ",all_f1_sds)
+            print("Macro F1 mean: ",all_f1_means," F1 std: ",all_f1_sds)
         print("accuracy mean: ",all_accuracy_means," accuracy std: ",all_accuracy_sds)
         print("balanced accuracy mean: ",all_balanced_accuracy_means," balanced accuracy std: ",all_balanced_accuracy_sds)
+        
     df=pd.DataFrame([[all_auc_means],[all_accuracy_means],[all_balanced_accuracy_means],[all_f1_means],[all_auc_sds],[all_accuracy_sds],[all_balanced_accuracy_sds],[all_f1_sds]])
     df.to_csv("metric_results/"+model_name+".csv",index=False)
 
