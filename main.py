@@ -91,7 +91,7 @@ def main():
                 }
         else:
             if args.no_inst_cluster:
-                if args.task == "treatment":
+                if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller"]:
                     search_space={
                             
                         ##updated segmentation first tuning:
@@ -162,7 +162,7 @@ def main():
                 #    "lr": tune.loguniform(1e-5,1e-2)
                 #}
             else:
-                if args.task == "treatment":
+                if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller"]:
                     search_space={
                             #"reg": tune.grid_search([0.00005, 0.00001, 0.000005]),
                             #"drop_out": tune.grid_search([0.4, 0.5, 0.6]),
