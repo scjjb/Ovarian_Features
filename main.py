@@ -150,11 +150,11 @@ def main():
                         }
                 else:
                     search_space={
-                        "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
+                        "reg": tune.grid_search([0.01, 0.001, 0.0001]),
                         "drop_out": tune.grid_search([0.0, 0.25, 0.5, 0.75]),
                         "lr": tune.grid_search([0.001,0.0001, 0.00001]),
                         "patches": tune.grid_search([10000,7500, 5000, 2500 ]),
-                        "model_size": tune.grid_search(["small","tiny","tinier"])
+                        "A_model_size": tune.grid_search(["small","tiny","tinier"])
                         }
                 #search_space = {
                 #    "reg": tune.loguniform(1e-10,1e-2),
