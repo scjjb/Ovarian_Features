@@ -101,8 +101,14 @@ def train_tuning(config, datasets, cur, class_counts, args):
     args.lr=config["lr"]
     args.reg=config["reg"]
     args.drop_out=config["drop_out"]
-    args.max_patches_per_slide=config["patches"]
-    args.model_size=config["A_model_size"]
+    try:
+        args.max_patches_per_slide=config["patches"]
+    except:
+        args.max_patches_per_slide=config["A_patches"]
+    try:
+        args.model_size=config["A_model_size"]
+    except:
+        args.model_size=config["model_size"]
     writer_dir = os.path.join(args.results_dir, str(cur))
     if not os.path.isdir(writer_dir):
         os.mkdir(writer_dir)

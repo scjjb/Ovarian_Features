@@ -116,11 +116,18 @@ def main():
                         #"reg": tune.grid_search([0.001, 0.0001]),
 
                         ## updated segmentation DGX tuning
-                        "A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
-                        "lr": tune.grid_search([0.01,0.001,0.0001]),
-                        "patches": tune.grid_search([25,50, 75,100]),
-                        "drop_out": tune.grid_search([0.25,0.5, 0.75]),
-                        "reg": tune.grid_search([0.1, 0.001, 0.0001]),
+                        #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
+                        #"lr": tune.grid_search([0.01,0.001,0.0001]),
+                        #"patches": tune.grid_search([25,50, 75,100]),
+                        #"drop_out": tune.grid_search([0.25,0.5, 0.75]),
+                        #"reg": tune.grid_search([0.1, 0.01, 0.001, 0.0001]),
+
+                        ## second tuning
+                        "A_model_size": tune.grid_search(["hipt_small","hipt_smaller","hipt_smallest"]),
+                        "lr": tune.grid_search([0.005,0.001,0.0005]),
+                        "patches": tune.grid_search([15, 25, 35, 45]),
+                        "drop_out": tune.grid_search([0.2,0.4,0.6]),
+                        "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
 
                         ##test
                         #"A_model_size": tune.grid_search(["hipt_smaller"]),
@@ -153,8 +160,8 @@ def main():
                         "reg": tune.grid_search([0.01, 0.001, 0.0001]),
                         "drop_out": tune.grid_search([0.25, 0.5, 0.75]),
                         "lr": tune.grid_search([0.001,0.0001, 0.00001]),
-                        "patches": tune.grid_search([7500, 5000, 2500 ]),
-                        "A_model_size": tune.grid_search(["small","tiny","tinier"])
+                        "A_patches": tune.grid_search([7500, 5000, 2500 ]),
+                        "model_size": tune.grid_search(["small","tiny","tinier"])
                         }
                 #search_space = {
                 #    "reg": tune.loguniform(1e-10,1e-2),
@@ -171,20 +178,20 @@ def main():
                             #"model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
                             
                             ## first clam exp:
-                            #"reg": tune.grid_search([0.001, 0.0001, 0.00001]),
-                            #"drop_out": tune.grid_search([0.25, 0.5, 0.75]),
-                            #"lr": tune.grid_search([0.001,0.0001,0.00001]),
-                            #"patches": tune.grid_search([50, 75, 100]),
-                            #"B": tune.grid_search([4,6,8]),
-                            #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
+                            "reg": tune.grid_search([0.1, 0.01, 0.001, 0.0001]),
+                            "drop_out": tune.grid_search([0.25, 0.5, 0.75]),
+                            "lr": tune.grid_search([0.01,0.001,0.0001]),
+                            "patches": tune.grid_search([25, 50, 75, 100]),
+                            "B": tune.grid_search([4,6,8]),
+                            "A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
                             
                             ## second clam exp:
-                            "reg": tune.grid_search([0.0001, 0.00001]),
-                            "drop_out": tune.grid_search([0.5, 0.6, 0.7]),
-                            "lr": tune.grid_search([0.00005,0.00001,0.000005]),
-                            "patches": tune.grid_search([50, 75, 100]),
-                            "B": tune.grid_search([6,8,10]),
-                            "A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
+                            #"reg": tune.grid_search([0.0001, 0.00001]),
+                            #"drop_out": tune.grid_search([0.5, 0.6, 0.7]),
+                            #"lr": tune.grid_search([0.00005,0.00001,0.000005]),
+                            #"patches": tune.grid_search([50, 75, 100]),
+                            #"B": tune.grid_search([6,8,10]),
+                            #"A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
 
                             #"drop_out": tune.grid_search([0.0, 0.25, 0.5, 0.75]),
                             #"drop_out": tune.grid_search([0.25, 0.5, 0.75]),
@@ -334,7 +341,7 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
                     help='type of model (default: clam_sb, clam w/ single attention branch)')
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
-parser.add_argument('--model_size', type=str, choices=['256','tinier3','tinier_resnet18','tinier2_resnet18','tiny_resnet18','tinier','tiny','small', 'big','hipt_big','hipt_medium','hipt_small','hipt_smaller'], default='small', help='size of model, does not affect mil')
+parser.add_argument('--model_size', type=str, choices=['256','tinier3','tinier_resnet18','tinier2_resnet18','tiny_resnet18','tinier','tiny','small', 'big','hipt_big','hipt_medium','hipt_small','hipt_smaller','hipt_smallest'], default='small', help='size of model, does not affect mil')
 parser.add_argument('--task', type=str, choices=['ovarian_5class','ovarian_1vsall','nsclc','treatment','treatment_switched'])
 parser.add_argument('--profile', action='store_true', default=False, 
                     help='show profile of longest running code sections')
