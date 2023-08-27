@@ -183,7 +183,7 @@ def main():
                             "lr": tune.grid_search([0.01,0.001,0.0001]),
                             #"patches": tune.grid_search([25, 50, 75, 100]),
                             ## part 1 is 25, 50, part 2 is 75, 100
-                            "patches": tune.grid_search([25, 50]),
+                            "patches": tune.grid_search([75, 100]),
                             "B": tune.grid_search([4,6,8]),
                             "A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
                             
