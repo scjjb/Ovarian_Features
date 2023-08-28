@@ -36,7 +36,8 @@ import cProfile, pstats
 
 ## set maximum number of raytune trials pending at once to 20
 os.environ['TUNE_MAX_PENDING_TRIALS_PG'] = "20"
-
+## turn off ray_tune logging as the files quickly overwhelm storage
+os.environ["TUNE_DISABLE_AUTO_CALLBACK_LOGGERS"] = "1"
 
 def main():
     # create results directory if necessary
