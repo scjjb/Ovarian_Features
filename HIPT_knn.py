@@ -25,8 +25,8 @@ def agg_slide_feature(region_features):
     h_WSI = self.global_rho(h_path)
     return h_WSI
 
-data_root_dir = "../mount_i/features"
-features_folder = "treatment_hipt4096_features_normalised"
+data_root_dir = "../mount_outputs/features"
+features_folder = "treatment_Q90_hipt4096_features_normalised_updatedsegmentation"
 data_dir = os.path.join(data_root_dir, features_folder)
 
 x=None

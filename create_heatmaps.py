@@ -398,7 +398,12 @@ if __name__ == '__main__':
                 coords = coord_dset[:]
                 file.close()
 
-                heatmap_vis_args = {'convert_to_percentiles': True, 'vis_level': heatmap_args.vis_level, 'blur': heatmap_args.blur, 'custom_downsample': heatmap_args.custom_downsample}
+                try:
+                    max_size = heatmap_args.max_size
+                except:
+                    max_size = 10000
+
+                heatmap_vis_args = {'convert_to_percentiles': True, 'vis_level': heatmap_args.vis_level, 'blur': heatmap_args.blur, 'custom_downsample': heatmap_args.custom_downsample, 'max_size': max_size}
                 if heatmap_args.use_ref_scores:
                         heatmap_vis_args['convert_to_percentiles'] = False
 

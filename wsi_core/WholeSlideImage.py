@@ -256,7 +256,7 @@ class WholeSlideImage(object):
         if max_size is not None and (w > max_size or h > max_size):
             resizeFactor = max_size/w if w > h else max_size/h
             img = img.resize((int(w*resizeFactor), int(h*resizeFactor)))
-       
+
         return img
 
 
