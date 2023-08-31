@@ -59,14 +59,21 @@ test_labels = [labels[idx] for idx in test_ids]
 train_x = torch.index_select(x, 0, torch.tensor(train_ids)).squeeze(1)
 test_x = torch.index_select(x, 0, torch.tensor(test_ids)).squeeze(1)
 
+k = 10
+
+## trying testing on training data to check its doing something reasonable
+#test_ids = train_ids
+#test_labels = train_labels
+#test_x = train_x
+#k = 3
+
 #print(train_x.shape)
 #print(train_labels)
 
 print("starting knn")
 
-k=5
-
-top1 = knn_classifier(train_x,torch.tensor(train_labels),test_x,torch.tensor(test_labels),k,T=0.07,num_classes=2)
+## voting temperature T turned out very important, the default 0.07 led to terrible results even when using train set for testing
+top1 = knn_classifier(train_x,torch.tensor(train_labels),test_x,torch.tensor(test_labels),k,T=1,num_classes=2)
 
 print("{} nearest neighbor results with random train/test split".format(k))
 print("accuracy:", top1)

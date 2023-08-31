@@ -155,18 +155,25 @@ def main():
                         
                         }
                 else:
+                    ## first ResNet-ABMIL tuning:
+                    #search_space={
+                    #    "reg": tune.grid_search([0.01, 0.001, 0.0001]),
+                    #    "drop_out": tune.grid_search([0.25, 0.5, 0.75]),
+                    #    "lr": tune.grid_search([0.001,0.0001, 0.00001]),
+                    #    "A_patches": tune.grid_search([7500, 5000, 2500 ]),
+                    #    "model_size": tune.grid_search(["small","tiny","tinier"])
+                    #    }
+
+                    ## second ResNet-ABMIL tuning:
                     search_space={
-                        "reg": tune.grid_search([0.01, 0.001, 0.0001]),
-                        "drop_out": tune.grid_search([0.25, 0.5, 0.75]),
-                        "lr": tune.grid_search([0.001,0.0001, 0.00001]),
-                        "A_patches": tune.grid_search([7500, 5000, 2500 ]),
-                        "model_size": tune.grid_search(["small","tiny","tinier"])
-                        }
-                #search_space = {
-                #    "reg": tune.loguniform(1e-10,1e-2),
-                #    "drop_out": tune.uniform(0.00,0.99),
-                #    "lr": tune.loguniform(1e-5,1e-2)
-                #}
+                            "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
+                            "drop_out": tune.grid_search([0.15, 0.35, 0.55]),
+                            "lr": tune.grid_search([0.005,0.001,0.0005]),
+                            "A_patches": tune.grid_search([6000, 5000, 4000 ]),
+                            "model_size": tune.grid_search(["small","tiny","tinier"])
+                            }
+
+
             else:
                 if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller"]:
                     search_space={
@@ -188,7 +195,7 @@ def main():
                             "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
                             ##"drop_out": tune.grid_search([0.0, 0.2, 0.4, 0.6]),
                             ## again gonna split into 2 parts - part1 is 0.0 or 0.2 dropout
-                            "drop_out": tune.grid_search([0.0, 0.2]),
+                            "drop_out": tune.grid_search([0.4, 0.6]),
                             "lr": tune.grid_search([0.005,0.001,0.0005]),
                             "patches": tune.grid_search([15,25,35,45]),
                             "B": tune.grid_search([6,8,10]),
