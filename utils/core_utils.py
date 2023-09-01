@@ -244,10 +244,10 @@ def train(datasets, cur, class_counts, args):
         workers = 1
     if args.hardware=="DGX":
         workers = 1
-    train_loader = get_split_loader(train_split, training=True, testing = args.testing, weighted = args.weighted_sample, workers=workers)
+    train_loader = get_split_loader(train_split, training=True, weighted = args.weighted_sample, workers=workers)
     #print("len train loader",len(train_loader))
-    val_loader = get_split_loader(val_split,  testing = args.testing, workers=workers)
-    test_loader = get_split_loader(test_split, testing = args.testing, workers=workers)
+    val_loader = get_split_loader(val_split,  workers=workers)
+    test_loader = get_split_loader(test_split, workers=workers)
     print('Done!')
 
     print('\nSetup EarlyStopping...', end=' ')
@@ -277,10 +277,10 @@ def train(datasets, cur, class_counts, args):
     else:
         torch.save(model.state_dict(), os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur)))
 
-    _, val_error, val_auc, _= summary(model, val_loader, args.n_classes)
+    val_error, val_auc, _= summary(model, val_loader, args.n_classes)
     print('Val error: {:.4f}, ROC AUC: {:.4f}'.format(val_error, val_auc))
 
-    results_dict, test_error, test_auc, acc_logger = summary(model, test_loader, args.n_classes)
+    test_error, test_auc, acc_logger = summary(model, test_loader, args.n_classes)
     print('Test error: {:.4f}, ROC AUC: {:.4f}'.format(test_error, test_auc))
 
     for i in range(args.n_classes):
@@ -296,7 +296,7 @@ def train(datasets, cur, class_counts, args):
         writer.add_scalar('final/test_error', test_error, 0)
         writer.add_scalar('final/test_auc', test_auc, 0)
         writer.close()
-    return results_dict, test_auc, val_auc, 1-test_error, 1-val_error 
+    return test_auc, val_auc, 1-test_error, 1-val_error 
 
 
 def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writer = None, loss_fn = None, feature_extractor = None):
@@ -609,7 +609,6 @@ def summary(model, loader, n_classes):
     all_labels = np.zeros(len(loader))
 
     slide_ids = loader.dataset.slide_data['slide_id']
-    patient_results = {}
 
     for batch_idx, (data, label) in enumerate(loader):
         data, label = data.to(device), label.to(device)
@@ -622,7 +621,6 @@ def summary(model, loader, n_classes):
         all_probs[batch_idx] = probs
         all_labels[batch_idx] = label.item()
         
-        patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'label': label.item()}})
         error = calculate_error(Y_hat, label)
         test_error += error
 
@@ -644,4 +642,4 @@ def summary(model, loader, n_classes):
         auc = np.nanmean(np.array(aucs))
 
 
-    return patient_results, test_error, auc, acc_logger
+    return test_error, auc, acc_logger

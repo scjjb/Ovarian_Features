@@ -1,25 +1,8 @@
 from __future__ import print_function
 
 import argparse
-import pdb
 import os
-import math
-
-# internal imports
-from utils.file_utils import save_pkl, load_pkl
-from utils.utils import *
-from utils.core_utils import train
-from utils.core_utils_tuning import train_tuning
-from utils.core_utils_sampling import train_sampling
-#from utils.core_utils_sampling_tuning import train_sampling_tuning
-from datasets.dataset_generic import Generic_WSI_Classification_Dataset, Generic_MIL_Dataset
-
-# pytorch imports
 import torch
-from torch.utils.data import DataLoader, sampler
-import torch.nn as nn
-import torch.nn.functional as F
-
 import pandas as pd
 import numpy as np
 
@@ -27,12 +10,14 @@ from functools import partial
 from ray import tune
 from ray.air.config import RunConfig
 import ray
-from utils.tuning_utils import TrialPlateauStopper
-
-import signal
-import sys
-
 import cProfile, pstats
+
+# internal imports
+from utils.core_utils import train
+from utils.core_utils_tuning import train_tuning
+from utils.core_utils_sampling import train_sampling
+from datasets.dataset_generic import Generic_MIL_Dataset
+from utils.tuning_utils import TrialPlateauStopper
 
 ## set maximum number of raytune trials pending at once to 20
 os.environ['TUNE_MAX_PENDING_TRIALS_PG'] = "20"
@@ -90,69 +75,21 @@ def main():
                 }
         else:
             if args.no_inst_cluster:
-                if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller"]:
+                if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest"]:
                     search_space={
-                            
-                        ##updated segmentation first tuning:
-                        #"reg": tune.grid_search([0.001, 0.0001, 0.00001]),
-                        #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
-                        #"drop_out": tune.grid_search([0.25, 0.5, 0.75]),
-                        #"lr": tune.grid_search([0.001,0.0001,0.00001]),
-                        #"patches": tune.grid_search([25, 50, 75, 100]),
-
-                        ## updated segmentation minituning:
-                        #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
-                        #"lr": tune.grid_search([0.001,0.0001,0.00001]),
-                        #"reg": tune.grid_search([0.001]),
-                        #"drop_out": tune.grid_search([0.75]),
-                        #"patches": tune.grid_search([25]),
-
-                        ## updated segmentation patient tuning:
-                        #"A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
-                        #"lr": tune.grid_search([0.001,0.0001]),
-                        #"patches": tune.grid_search([50, 75]),
-                        #"drop_out": tune.grid_search([0.5, 0.75]),
-                        #"reg": tune.grid_search([0.001, 0.0001]),
-
-                        ## updated segmentation DGX tuning
+                        ## HIPT-ABMIL first tuning
                         #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
                         #"lr": tune.grid_search([0.01,0.001,0.0001]),
                         #"patches": tune.grid_search([25,50, 75,100]),
                         #"drop_out": tune.grid_search([0.25,0.5, 0.75]),
                         #"reg": tune.grid_search([0.1, 0.01, 0.001, 0.0001]),
 
-                        ## second tuning
+                        ## HIPT-ABMIL second tuning
                         "A_model_size": tune.grid_search(["hipt_small","hipt_smaller","hipt_smallest"]),
                         "lr": tune.grid_search([0.005,0.001,0.0005]),
                         "patches": tune.grid_search([15, 25, 35, 45]),
-                        "drop_out": tune.grid_search([0.0]),
+                        "drop_out": tune.grid_search([0.0, 0.2,0.4,0.6]),
                         "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
-
-                        ##test
-                        #"A_model_size": tune.grid_search(["hipt_smaller"]),
-                        #"lr": tune.grid_search([0.001]),
-                        #"patches": tune.grid_search([10, 20]),
-                        #"drop_out": tune.grid_search([0.5]),
-                        #"reg": tune.grid_search([0.001]),
-
-                        #"reg": tune.grid_search([0.00005, 0.00001, 0.000005]),
-                        #"drop_out": tune.grid_search([0.4, 0.5, 0.6]),
-                        #"lr": tune.grid_search([0.0005,0.0001,0.00005]),
-                        #"patches": tune.grid_search([65, 75, 85]),
-                        #"A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
-                        #"reg": tune.grid_search([0.001, 0.0001, 0.00001]),
-                        #"drop_out": tune.grid_search([0.0, 0.25, 0.5, 0.75]),
-                        #"drop_out": tune.grid_search([0.65, 0.75, 0.85]),
-                        #"drop_out": tune.grid_search([0.5, 0.75]),
-                        #"lr": tune.grid_search([0.001,0.0001,0.00001]),
-                        #"lr": tune.grid_search([0.0001,0.00001,0.000001]),
-                        #"lr": tune.grid_search([0.00005,0.00001,0.000005]),
-                        #"patches": tune.grid_search([25, 50, 75, 100]),
-                        ##"A_model_size": tune.grid_search(["hipt_big","hipt_medium","hipt_small"])
-                        #"A_model_size": tune.grid_search(["hipt_big","hipt_medium","hipt_small","hipt_smaller"])
-                        #"A_model_size": tune.grid_search(["hipt_small","hipt_smaller"])
-                        
-                        
                         }
                 else:
                     ## first ResNet-ABMIL tuning:
@@ -175,15 +112,9 @@ def main():
 
 
             else:
-                if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller"]:
+                if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest"]:
                     search_space={
-                            #"reg": tune.grid_search([0.00005, 0.00001, 0.000005]),
-                            #"drop_out": tune.grid_search([0.4, 0.5, 0.6]),
-                            #"lr": tune.grid_search([0.0005,0.0001,0.00005]),
-                            #"patches": tune.grid_search([65, 75, 85]),
-                            #"model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
-                            
-                            ## first clam exp:
+                            ## first HIPT-CLAM:
                             #"reg": tune.grid_search([0.1, 0.01, 0.001, 0.0001]),
                             #"drop_out": tune.grid_search([0.25, 0.5, 0.75]),
                             #"lr": tune.grid_search([0.01,0.001,0.0001]),
@@ -191,34 +122,13 @@ def main():
                             #"B": tune.grid_search([4,6,8]),
                             #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
                             
-                            ## second clam exp:
+                            ## second HIPT-CLAM tuning:
                             "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
-                            ##"drop_out": tune.grid_search([0.0, 0.2, 0.4, 0.6]),
-                            ## again gonna split into 2 parts - part1 is 0.0 or 0.2 dropout
-                            "drop_out": tune.grid_search([0.4, 0.6]),
+                            "drop_out": tune.grid_search([0.0, 0.2, 0.4, 0.6]),
                             "lr": tune.grid_search([0.005,0.001,0.0005]),
                             "patches": tune.grid_search([15,25,35,45]),
                             "B": tune.grid_search([6,8,10]),
                             "A_model_size": tune.grid_search(["hipt_smaller","hipt_smallest"])
-                            
-
-
-                            #"drop_out": tune.grid_search([0.0, 0.25, 0.5, 0.75]),
-                            #"drop_out": tune.grid_search([0.25, 0.5, 0.75]),
-                            #"drop_out": tune.grid_search([0.65, 0.75, 0.85]),
-                            #"drop_out": tune.grid_search([0.5, 0.75]),
-                            #"lr": tune.grid_search([0.001,0.0001,0.00001]),
-                            #"lr": tune.grid_search([0.0001,0.00001,0.000001]),
-                            #"lr": tune.grid_search([0.00005,0.00001,0.000005]),
-                            #"patches": tune.grid_search([50, 75, 100]),
-                            #"patches": tune.grid_search([25, 50, 75, 100]),
-                            #"B": tune.grid_search([4,6,8]),
-
-                            ## have renamed this and changed the corresponding line in utils/core_utils/tuning.py to make model_size the first column in raytune (ordered alphabetically) which will cause it to alternate model sizes and not use the most computationally intensive models all at the same time
-                            #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
-                            #"A_model_size": tune.grid_search(["hipt_big","hipt_medium","hipt_small"]),
-                            #"model_size": tune.grid_search(["hipt_big","hipt_medium","hipt_small","hipt_smaller"]),
-                            #"model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
                             }
                 else:
                     search_space = {
@@ -279,6 +189,12 @@ def main():
             results_df=results.get_dataframe(filter_metric="loss", filter_mode="min")
             results_df.to_csv(args.tuning_output_file,index=False)
 
+            ## if the tuning has already run and saved, can look at the best trial using the following code:
+            ## tuner = tune.Tuner.restore(
+            ##        path="~/ray_results/test_run"
+            ##          )
+            ## results = tuner.fit()
+
             best_trial = results.get_best_result("loss", "min","last-10-avg")
             print("best trial:", best_trial)
             print("Best trial config: {}".format(best_trial.config))
@@ -289,17 +205,14 @@ def main():
 
         else:
             if args.sampling:
-                results, test_auc, val_auc, test_acc, val_acc  = train_sampling(None,datasets, i, class_counts, args)
+                test_auc, val_auc, test_acc, val_acc  = train_sampling(None,datasets, i, class_counts, args)
             else:
-                results, test_auc, val_auc, test_acc, val_acc  = train(datasets, i, class_counts, args)
+                test_auc, val_auc, test_acc, val_acc  = train(datasets, i, class_counts, args)
         
             all_test_auc.append(test_auc)
             all_val_auc.append(val_auc)
             all_test_acc.append(test_acc)
             all_val_acc.append(val_acc)
-            #write results to pkl
-            filename = os.path.join(args.results_dir, 'split_{}_results.pkl'.format(i))
-            save_pkl(filename, results)
 
     
     if not args.tuning:
@@ -341,7 +254,6 @@ parser.add_argument('--split_dir', type=str, default=None,
                     +'instead of infering from the task and label_frac argument (default: None)')
 parser.add_argument('--log_data', action='store_true', default=False, help='log data using tensorboard')
 parser.add_argument('--continue_training', action='store_true', default=False, help='Continue model training from latest checkpoint')
-parser.add_argument('--testing', action='store_true', default=False, help='debugging tool')
 parser.add_argument('--early_stopping', action='store_true', default=False, help='enable early stopping')
 parser.add_argument('--opt', type=str, choices = ['adam', 'sgd'], default='adam')
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout p=0.25')

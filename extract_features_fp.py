@@ -1,29 +1,25 @@
 import torch
 import torch.nn as nn
-from math import floor
 import os
-import random
-import numpy as np
-import pdb
 import time
-from datasets.dataset_h5 import Dataset_All_Bags, Whole_Slide_Bag_FP
-import torch
-from torchvision import transforms
-from torch.utils.data import DataLoader
-from models.resnet_custom import resnet18_baseline,resnet50_baseline
-import argparse
-from utils.utils import print_network, collate_features
-from utils.file_utils import save_hdf5
-from PIL import Image
 import h5py
 import openslide
 import timm
+import argparse
+
+from datasets.dataset_h5 import Dataset_All_Bags, Whole_Slide_Bag_FP
+from torch.utils.data import DataLoader
+from models.resnet_custom import resnet18_baseline,resnet50_baseline
+from utils.utils import collate_features
+from utils.file_utils import save_hdf5
 from HIPT_4K.hipt_4k import HIPT_4K
 from HIPT_4K.hipt_model_utils import eval_transforms
-import cv2
+
+import torch
+from torchvision import transforms
 import torchstain
-import torchvision
-import random
+
+
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print("torch device:", device, "\n")
 
@@ -49,9 +45,6 @@ def compute_w_loader(file_path, output_path, wsi, model,
                     self.failures=0
 
                 def __call__(self,image):
-                    #print(image)
-                    #print("input shape: ",image.shape)
-                    #torchvision.utils.save_image(image/255,"../mount_outputs/notnormalised.jpg")
                     try:
                         norm, _, _ = self.normalizer.normalize(I=image, stains=False)
                         norm = norm.permute(2, 0, 1)/255
@@ -59,71 +52,6 @@ def compute_w_loader(file_path, output_path, wsi, model,
                         norm=image/255
                         self.failures=self.failures+1
                         print("failed patches: ",self.failures)
-                        #torchvision.utils.save_image(norm,"../mount_outputs/macenkofailures/notnormalised{}.jpg".format(random.randint(0,1000000)))
-                    #print("input shape: ",image.shape)
-                    #print("output shape: ",norm.shape)
-                    #im = Image.fromarray((norm.numpy()).astype(np.uint8))
-                    #norm = norm.permute(2, 0, 1)
-                    #print("output shape: ",norm.shape)
-                    #print(norm)
-                    #norm=norm/255
-                    #image=image/255
-                    #print(norm)
-                    #print(image)
-                    
-                    #torchvision.utils.save_image(image,"../mount_outputs/notnormalised.jpg")
-                    #im.save("../mount_outputs/normalised.jpg")
-                    #assert 1==2, "testing"
-                    return norm
-
-
-
-            class WrongMacenkoNormalisation:
-                def __init__(self, alpha=1, beta=0.15, phi=1e-6):
-                    self.alpha = alpha
-                    self.beta = beta
-                    self.phi = phi
-
-                def __call__(self, image):
-                    image_np = np.transpose(np.array(image),(1,2,0))
-                    im = Image.fromarray((image_np * 255).astype(np.uint8))
-                    im.save("../mount_outputs/notnormalised.jpg")
-                    # Convert image to LAB color space
-                    lab_image = cv2.cvtColor(image_np, cv2.COLOR_RGB2LAB)
-                    # Split the channels of the LAB image
-                    L, A, B = cv2.split(lab_image)
-                    # Normalize the L channel
-                    L = L.astype(np.float32) / 255.0
-                    # Calculate mean and standard deviation of L channel
-                    mean_L = np.mean(L)
-                    std_L = np.std(L)
-                    # Set lower and upper bounds for pixel intensities
-                    min_intensity = mean_L - (2.0 * std_L)
-                    max_intensity = mean_L + (2.0 * std_L)
-                    # Clip pixel intensities to the bounds
-                    L_clipped = np.clip(L, min_intensity, max_intensity)
-                    # Apply Macenko normalization
-                    f = np.vectorize(lambda x: self.alpha * (x - self.beta) / (1 - self.beta * np.exp(-1 * self.alpha * (x - self.beta))) + self.phi)
-                    L_normalized = f(L_clipped)
-                    # Convert normalized L channel back to uint8
-                    L_normalized = (L_normalized * 255.0).astype(np.uint8)
-                    A=A.astype(np.uint8)
-                    B=B.astype(np.uint8)
-                    # Combine normalized L channel and original A and B channels
-                    lab_image_normalized = cv2.merge((L_normalized, A, B))
-                    # Convert LAB image back to RGB
-                    rgb_image_normalized = cv2.cvtColor(lab_image_normalized, cv2.COLOR_LAB2RGB)
-                    # Convert RGB image to PyTorch tensor
-                    tensor_image_normalized = torch.from_numpy(np.transpose(rgb_image_normalized, (2, 0, 1)))
-                    #im = Image.fromarray(np.array(image_np))
-                    #im.save("../mount_outputs/notnormalised.jpg")
-                    #cv2.imwrite("../mount_outputs/notnormalised.jpg", image_np)
-                    cv2.imwrite("../mount_outputs/normalised.jpg", np.transpose(rgb_image_normalized, (0, 1, 2)))
-                    assert 1==2, "This is clearly wrong both methodologically and visually"
-                    return tensor_image_normalized.float()
-
-            
-            
             t = transforms.Compose(
                 [transforms.ToTensor(),
                 transforms.Lambda(lambda x: x*255),
@@ -316,7 +244,5 @@ if __name__ == '__main__':
                 print('coordinates size: ', file['coords'].shape)
                 features = torch.from_numpy(features)
                 bag_base, _ = os.path.splitext(bag_name)
-                if args.use_transforms == 'all':
-                    bag_base=bag_base+"aug1"
                 torch.save(features, os.path.join(args.feat_dir, 'pt_files', bag_base+'.pt'))
 

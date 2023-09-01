@@ -1,28 +1,19 @@
 from __future__ import print_function
 
-import numpy as np
 
 import argparse
 import torch
-import torch.nn as nn
-import pdb
 import os
 import pandas as pd
-from utils.utils import *
-from math import floor
-import matplotlib.pyplot as plt
-from datasets.dataset_generic import Generic_WSI_Classification_Dataset, Generic_MIL_Dataset, save_splits
-import h5py
-from utils.eval_utils import *
-import cProfile, pstats
+from datasets.dataset_generic import Generic_MIL_Dataset
+from utils.eval_utils import eval
 from datasets.dataset_h5 import Dataset_All_Bags
 
 from functools import partial
 from ray import tune
 from ray.air.config import RunConfig
 import ray
-
-#from streamlit import legacy_caching as caching
+import cProfile, pstats
 
 # Evaluation settings
 parser = argparse.ArgumentParser(description='CLAM Evaluation Script')
@@ -172,19 +163,8 @@ else:
 ckpt_paths = [os.path.join(args.models_dir, 's_{}_checkpoint.pt'.format(fold)) for fold in folds]
 datasets_id = {'train': 0, 'val': 1, 'test': 2, 'all': -1}
 
-def count_patches(dataset,args,ckpt):
-    loader = get_simple_loader(dataset)
-    patches=0
-    for batch_idx, (data, label,coords,slide_id) in enumerate(loader):
-        patches=patches+len(data)
-        print(len(data))
-        print(data)
-        assert 1==2,"testing"
-    return patches
-
 
 def main():
-    all_results = []
     all_auc = []
     all_acc = []
     all_loss = []
@@ -247,8 +227,7 @@ def main():
             print("Best trial final acuracy: {}".format(best_trial.metrics["accuracy"]))
 
         else:
-            model, patient_results, test_error, auc, df, loss = eval(None,split_dataset, args, ckpt_paths[ckpt_idx])
-            #all_results.append(all_results)
+            test_error, auc, df, loss = eval(None,split_dataset, args, ckpt_paths[ckpt_idx])
             all_auc.append(auc)
             print("all auc", all_auc)
             all_acc.append(1-test_error)
@@ -268,6 +247,8 @@ def main():
     
 if __name__ == "__main__":
     if args.profile:
+        ## import is here because it doesn't work on all systems
+        from streamlit import legacy_caching as caching
         caching.clear_cache()
         profiler = cProfile.Profile()
         profiler.enable()

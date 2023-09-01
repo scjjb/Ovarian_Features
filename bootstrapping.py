@@ -1,6 +1,8 @@
 import argparse
 import pandas as pd
-from sklearn.metrics import confusion_matrix, f1_score, accuracy_score,balanced_accuracy_score, roc_auc_score
+from sklearn.metrics import confusion_matrix, f1_score, accuracy_score,balanced_accuracy_score, roc_auc_score, roc_curve, auc
+import matplotlib.pyplot as plt
+import os
 import numpy as np
 
 parser = argparse.ArgumentParser(description='Model names input split by commas')
@@ -13,6 +15,8 @@ parser.add_argument('--folds', type=int, default=10,
                             help='Number of cross-validation folds')
 parser.add_argument('--data_csv', type=str, default='set_all_714.csv')
 parser.add_argument('--num_classes',type=int,default=2)
+parser.add_argument('--plot_roc_curves', action='store_true', default=False, help="Plot an ROC curve for each run repeat")
+parser.add_argument('--roc_plot_dir', type=str, default='../mount_outputs/roc_plots/',help='directory to plot ROC curves')
 args = parser.parse_args()
 model_names=args.model_names.split(",")
 bootstraps=args.bootstraps
@@ -62,6 +66,15 @@ for model_name in model_names:
         print(confusion_matrix(all_Ys,all_Yhats),"\n")
         print("average ce loss: ",np.mean(all_losses), "(not bootstrapped)")
 
+        if args.plot_roc_curves:
+            fpr, tpr, threshold = roc_curve(all_Ys, all_p1s)
+            roc_auc = auc(fpr, tpr)
+            if args.run_repeats>1:
+                plt.plot(fpr, tpr, label = 'Repeat '+str(run_no+1))
+            else:
+                plt.plot(fpr, tpr)
+        
+
         for _ in range(bootstraps):
             idxs=np.random.choice(range(len(all_Ys)),len(all_Ys))
             if args.num_classes==2:
@@ -73,6 +86,12 @@ for model_name in model_names:
             accuracies=accuracies+[accuracy_score([all_Ys[idx] for idx in idxs],[all_Yhats[idx] for idx in idxs])]
             balanced_accuracies=balanced_accuracies+[balanced_accuracy_score([all_Ys[idx] for idx in idxs],[all_Yhats[idx] for idx in idxs])]
             
+
+        if args.plot_roc_curves:
+            os.makedirs(args.roc_plot_dir, exist_ok=True)
+            print("saving ROC curves to {}{}.png \n".format(args.roc_plot_dir,model_name))
+            plt.savefig("{}{}.png".format(args.roc_plot_dir,model_name),dpi=300)
+
         all_auc_means=all_auc_means+[np.mean(AUC_scores)]
         all_auc_sds=all_auc_sds+[np.std(AUC_scores)]
         all_f1_means=all_f1_means+[np.mean(f1s)]

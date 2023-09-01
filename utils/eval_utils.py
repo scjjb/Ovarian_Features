@@ -94,22 +94,22 @@ def eval(config, dataset, args, ckpt_path):
     
     
     if args.eval_features:
-        patient_results, test_error, auc, df, _ = summary_sampling(model,dataset,args)
+        test_error, auc, df, _ = summary_sampling(model,dataset,args)
 
     elif args.sampling:
         assert 0<=args.sampling_random<=1,"sampling_random needs to be between 0 and 1"
         dataset.load_from_h5(True)
         #loader = get_simple_loader(dataset)
-        patient_results, test_error, auc, df, _ = summary_sampling(model,dataset, args)
+        test_error, auc, df, _ = summary_sampling(model,dataset, args)
     else:
         loader = get_simple_loader(dataset)
-        patient_results, test_error, auc, df, _, loss = summary(model, loader, args)
+        test_error, auc, df, _, loss = summary(model, loader, args)
     
     if args.tuning:
         tune.report(accuracy=1-test_error, auc=auc)    
     print('test_error: ', test_error)
     print('auc: ', auc)
-    return model, patient_results, test_error, auc, df, loss
+    return test_error, auc, df, loss
 
 
 def summary(model, loader, args, loss_fn = None):
@@ -127,7 +127,6 @@ def summary(model, loader, args, loss_fn = None):
     all_preds = np.zeros(len(loader))
 
     slide_ids = loader.dataset.slide_data['slide_id']
-    patient_results = {}
     for batch_idx, (data, label) in enumerate(loader):
         data, label = data.to(device), label.to(device)
         slide_id = slide_ids.iloc[batch_idx]
@@ -141,12 +140,9 @@ def summary(model, loader, args, loss_fn = None):
         all_labels[batch_idx] = label.item()
         all_preds[batch_idx] = Y_hat.item()
 
-        patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'label': label.item()}})
-        
         loss = loss_fn(logits, label)
         loss_value += loss.item()
         
-
         error = calculate_error(Y_hat, label)
         test_error += error
 
@@ -180,7 +176,7 @@ def summary(model, loader, args, loss_fn = None):
     for c in range(args.n_classes):
         results_dict.update({'p_{}'.format(c): all_probs[:,c]})
     df = pd.DataFrame(results_dict)
-    return patient_results, test_error, auc_score, df, acc_logger, loss_value
+    return test_error, auc_score, df, acc_logger, loss_value
 
 
 def summary_sampling(model, dataset, args):
@@ -249,7 +245,6 @@ def summary_sampling(model, dataset, args):
     test_error = 0.
     #all_probs = np.zeros((num_slides, args.n_classes))
     all_preds = np.zeros(num_slides)
-    patient_results = {}
     
     num_random=int(args.samples_per_iteration*args.sampling_random)
     
@@ -341,11 +336,9 @@ def summary_sampling(model, dataset, args):
                 #all_probs[(batch_idx*same_slide_repeats)+repeat_no] = probs
                 all_preds[(batch_idx*same_slide_repeats)+repeat_no] = Y_hat.item()
                 if args.eval_features:
-                    patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'label': float(label)}})
                     error = calculate_error(Y_hat, label_tensor)
                 else:
                     all_labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
-                    patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'label': label.item()}})
                     error = calculate_error(Y_hat, label)
                 test_error += error
                 continue
@@ -508,11 +501,9 @@ def summary_sampling(model, dataset, args):
 
 
             if args.eval_features:
-                patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'label': float(label)}})
                 error = calculate_error(Y_hat, label_tensor)
             else:
                 all_labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
-                patient_results.update({slide_id: {'slide_id': np.array(slide_id), 'prob': probs, 'label': label.item()}})
                 error = calculate_error(Y_hat, label)
 
             test_error += error
@@ -571,5 +562,5 @@ def summary_sampling(model, dataset, args):
     df = pd.DataFrame(results_dict)
     #print("all errors: ",all_errors)
     #print("all aucs: ",all_aucs)
-    return patient_results, test_error, auc_score, df, acc_logger
+    return test_error, auc_score, df, acc_logger
 
