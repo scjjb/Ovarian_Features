@@ -104,7 +104,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
                 # Inialize WSI
                 full_path = os.path.join(source, slide)
                 if args.pad_slide:
-                    WSI_object = WholeSlideImage(full_path,4096)
+                    WSI_object = WholeSlideImage(full_path,args.patch_size)
                 else:
                     WSI_object = WholeSlideImage(full_path)
 
