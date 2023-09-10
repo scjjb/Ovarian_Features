@@ -123,21 +123,20 @@ def main():
                 if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest"]:
                     search_space={
                             ## first HIPT-CLAM:
-                            "reg": tune.grid_search([0.1, 0.01, 0.001, 0.0001]),
-                            "drop_out": tune.grid_search([0.25, 0.5, 0.75]),
-                            "lr": tune.grid_search([0.01,0.001,0.0001]),
-                            "patches": tune.grid_search([25, 50]),
-                            ## "patches": tune.grid_search([25, 50, 75, 100]),
-                            "B": tune.grid_search([4,6,8]),
-                            "A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
+                            #"reg": tune.grid_search([0.1, 0.01, 0.001, 0.0001]),
+                            #"drop_out": tune.grid_search([0.25, 0.5, 0.75]),
+                            #"lr": tune.grid_search([0.01,0.001,0.0001]),
+                            #"patches": tune.grid_search([25, 50, 75, 100]),
+                            #"B": tune.grid_search([4,6,8]),
+                            #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
                             
                             ## second HIPT-CLAM tuning:
-                            #"reg": tune.grid_search([0.001, 0.0001, 0.00001]),
-                            #"drop_out": tune.grid_search([0.0, 0.2, 0.4, 0.6]),
-                            #"lr": tune.grid_search([0.005,0.001,0.0005]),
-                            #"patches": tune.grid_search([15,25,35,45]),
-                            #"B": tune.grid_search([6,8,10]),
-                            #"A_model_size": tune.grid_search(["hipt_smaller","hipt_smallest"])
+                            "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
+                            "drop_out": tune.grid_search([0.0, 0.2, 0.4, 0.6]),
+                            "lr": tune.grid_search([0.005,0.001,0.0005]),
+                            "patches": tune.grid_search([15,25,35,45]),
+                            "B": tune.grid_search([6,8,10]),
+                            "A_model_size": tune.grid_search(["hipt_smaller","hipt_smallest"])
                             }
                 else:
                     search_space = {
