@@ -91,6 +91,16 @@ def main():
                         "drop_out": tune.grid_search([0.0, 0.2,0.4,0.6]),
                         "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
                         }
+                elif args.model_size in ["tiny_resnet18","tinier_resnet18","tinier2_resnet18"]:
+                    ## first HistoResNet-ABMIL tuning:
+                    search_space={
+                        "reg": tune.grid_search([0.01, 0.001, 0.0001]),
+                        "drop_out": tune.grid_search([0.25, 0.5, 0.75]),
+                        "lr": tune.grid_search([0.001,0.0001, 0.00001]),
+                        "A_patches": tune.grid_search([7500, 5000, 2500 ]),
+                        "model_size": tune.grid_search([["tiny_resnet18","tinier_resnet18","tinier2_resnet18"])
+                        }
+                
                 else:
                     ## first ResNet-ABMIL tuning:
                     #search_space={
@@ -131,13 +141,24 @@ def main():
                             #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
                             
                             ## second HIPT-CLAM tuning:
-                            "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
-                            "drop_out": tune.grid_search([0.0, 0.2, 0.4, 0.6]),
-                            "lr": tune.grid_search([0.005,0.001,0.0005]),
-                            "patches": tune.grid_search([15,25,35,45]),
-                            "B": tune.grid_search([6,8,10]),
+                            #"reg": tune.grid_search([0.001, 0.0001, 0.00001]),
+                            #"drop_out": tune.grid_search([0.0, 0.2, 0.4, 0.6]),
+                            #"lr": tune.grid_search([0.005,0.001,0.0005]),
+                            #"patches": tune.grid_search([15,25,35,45]),
+                            #"B": tune.grid_search([6,8,10]),
+                            #"A_model_size": tune.grid_search(["hipt_smaller","hipt_smallest"])
+                            #}
+                
+                            ##third HIPT-CLAM tuning - this is just using clam_mb on best hyperparams from clam_sb
+                            "reg": tune.grid_search([0.001, 0.0001]),
+                            "drop_out": tune.grid_search([0.0, 0.25]),
+                            "lr": tune.grid_search([0.001,0.0005]),
+                            "patches": tune.grid_search([25,50]),
+                            "B": tune.grid_search([6,8]),
                             "A_model_size": tune.grid_search(["hipt_smaller","hipt_smallest"])
                             }
+
+
                 else:
                     search_space = {
                         "reg": tune.loguniform(1e-10,1e-2),
