@@ -94,5 +94,35 @@ The cross-validation results for this optimal HIPT-ABMIL model were as follows:
 ```
 </details>
 
+<details>
+<summary>
+Challenge test set
+</summary>
+
+First, the test set images were pre-processed into pyramid svs files through the same approach as used for the training set images (though these originated as .bmp files rather than .svs files), for example:
+
+``` shell
+vips tiffsave "I:\treatment_data\2023MICCAI_testing_set\0.BMP" "I:\treatment_data\testpyramid_jpeg90compress\0.svs" --compression jpeg --Q 90 --tile --pyramid
+```
+
+Patches were selected (one per slide due to the size of these images) and features extracted:
+``` shell
+python create_patches_fp.py --source "../mount_i/treatment_data/testpyramid_jpeg90compress" --save_dir "../mount_outputs/extracted_mag20x_patch4096_fp_testset_updated_Q90" --patch_size 4096 --step_size 4096 --seg --patch --stitch --pad_slide --sthresh 15 --mthresh 5 --use_otsu --closing 200 --atfilter 8
+python extract_features_fp.py --use_transforms 'HIPT' --model_type 'HIPT_4K' --data_h5_dir "../mount_outputs/extracted_mag20x_patch4096_fp_testset_updated_Q90" --data_slide_dir "../mount_i/treatment_data/testpyramid_jpeg90compress" --csv_path "dataset_csv/set_treatment_test.csv" --feat_dir "../mount_outputs/features/treatment_hipt4096_features_normalised_test_updated_Q90patches" --batch_size 1 --slide_ext .svs
+```
+
+The hyperparameters of the best-performing model on internal data was applied to create an ensemble of four models:
+``` shell
+python main.py --hardware DGX --max_patches_per_slide 15 --data_slide_dir "../mount_i/treatment_data/pyramid_jpeg90compress" --min_epochs 0 --early_stopping --drop_out 0.0 --lr 0.0005 --reg 0.0001 --model_size hipt_smaller --split_dir "treatment_submission_folds" --k 4 --results_dir results --exp_code treatment_HIPTnormalised_Q90_betterseg_15patches_drop0lr0005reg0001_modelhiptsmaller_ABMILsb_ce_20x_5fold_noaugs_4fold_7525test --subtyping --weighted_sample --bag_loss ce --task treatment --max_epochs 1000 --model_type clam_sb --no_inst_cluster --csv_path 'dataset_csv/set_treatment_plus_test.csv' --data_root_dir "../mount_outputs/features/" --features_folder treatment_Q90_hipt4096_features_normalised_updatedsegmentation
+```
+
+Finally, predictions were made on the TMA challenge test set, with the median of these predictions submitted for the challenge:
+``` shell
+python eval.py --drop_out 0.0 --model_size hipt_smaller --models_exp_code treatment_HIPTnormalised_Q90_betterseg_15patches_drop0lr0005reg0001_modelhiptsmaller_ABMILsb_ce_20x_5fold_noaugs_4fold_7525test_s1 --save_exp_code treatment_HIPTnormalised_Q90_betterseg_15patches_drop0lr0005reg0001_modelhiptsmaller_ABMILsb_ce_20x_5fold_noaugs_4fold_7525test_Q90patchestest_bootstrapping --task treatment --model_type clam_sb --results_dir results --data_root_dir "../mount_outputs/features/" --k 4 --features_folder "treatment_Q90_hipt4096_features_normalised_updatedsegmentation" --csv_path 'dataset_csv/set_treatment_plus_test.csv'
+```
+</details>
+
+
+
 ## Reference
 This code is an extension of our [previous repository](https://github.com/scjjb/DRAS-MIL), which itself was forked from the [CLAM repository](https://github.com/mahmoodlab/CLAM) with corresponding [paper](https://www.nature.com/articles/s41551-020-00682-w). Code is also used from the [HIPT repository](https://github.com/mahmoodlab/HIPT), including pretrained model weights. This repository and the original CLAM repository are both available for non-commercial academic purposes under the GPLv3 License.
