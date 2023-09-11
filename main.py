@@ -102,14 +102,23 @@ def main():
                         
                 elif args.model_size in ["tiny_resnet18","tinier_resnet18","tinier2_resnet18"]:
                     ## first HistoResNet-ABMIL tuning:
-                    search_space={
-                        "reg": tune.grid_search([0.01, 0.001, 0.0001]),
-                        "drop_out": tune.grid_search([0.25, 0.5, 0.75]),
-                        "lr": tune.grid_search([0.001,0.0001, 0.00001]),
-                        "A_patches": tune.grid_search([7500, 5000, 2500 ]),
-                        "model_size": tune.grid_search(["tiny_resnet18","tinier_resnet18","tinier2_resnet18"])
-                        }
+                    #search_space={
+                    #    "reg": tune.grid_search([0.01, 0.001, 0.0001]),
+                    #    "drop_out": tune.grid_search([0.25, 0.5, 0.75]),
+                    #    "lr": tune.grid_search([0.001,0.0001, 0.00001]),
+                    #    "A_patches": tune.grid_search([7500, 5000, 2500 ]),
+                    #    "model_size": tune.grid_search(["tiny_resnet18","tinier_resnet18","tinier2_resnet18"])
+                    #    }
                 
+                    ## second HistoResNet-ABMIL tuning:
+                    search_space={
+                            "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
+                            "drop_out": tune.grid_search([0.15, 0.35, 0.55]),
+                            "lr": tune.grid_search([0.005,0.001,0.0005]),
+                            "A_patches": tune.grid_search([2000, 4000, 6000 ]),
+                            "model_size": tune.grid_search(["tiny_resnet18","tinier_resnet18","tinier2_resnet18"])
+                            }
+
                 else:
                     ## first ResNet-ABMIL tuning:
                     #search_space={
