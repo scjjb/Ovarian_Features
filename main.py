@@ -40,7 +40,11 @@ def main():
         ray.init(num_gpus=1,runtime_env={"TUNE_MAX_PENDING_TRIALS_PG": 7})
             
         if args.hardware=='DGX':
-            hardware={"cpu":32,"gpu":0.2}
+            if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest",]:
+                hardware={"cpu":32,"gpu":0.2}
+            else:
+                hardware={"cpu":64,"gpu":0.3333}
+
         else:
             if args.task =='treatment':
                 hardware={"cpu":0.8,"gpu":0.2}
@@ -100,7 +104,7 @@ def main():
                         "reg": tune.grid_search([0.0001, 0.00001]),
                         }
                         
-                elif args.model_size in ["tiny_resnet18","tinier_resnet18","tinier2_resnet18"]:
+                elif args.model_size in ["small_resnet18","tiny_resnet18","tinier_resnet18","tinier2_resnet18"]:
                     ## first HistoResNet-ABMIL tuning:
                     #search_space={
                     #    "reg": tune.grid_search([0.01, 0.001, 0.0001]),
@@ -111,12 +115,21 @@ def main():
                     #    }
                 
                     ## second HistoResNet-ABMIL tuning:
+                    #search_space={
+                    #        "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
+                    #        "drop_out": tune.grid_search([0.15, 0.35, 0.55]),
+                    #        "lr": tune.grid_search([0.005,0.001,0.0005]),
+                    #        "A_patches": tune.grid_search([2000, 4000, 6000 ]),
+                    #        "model_size": tune.grid_search(["tiny_resnet18","tinier_resnet18","tinier2_resnet18"])
+                    #        }
+
+                    ## third HistoResNet-ABMIL tuning:
                     search_space={
-                            "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
-                            "drop_out": tune.grid_search([0.15, 0.35, 0.55]),
-                            "lr": tune.grid_search([0.005,0.001,0.0005]),
-                            "A_patches": tune.grid_search([2000, 4000, 6000 ]),
-                            "model_size": tune.grid_search(["tiny_resnet18","tinier_resnet18","tinier2_resnet18"])
+                            "reg": tune.grid_search([0.001]),
+                            "drop_out": tune.grid_search([0.1, 0.3, 0.5, 0.7]),
+                            "lr": tune.grid_search([0.01,0.005]),
+                            "A_patches": tune.grid_search([1000, 3000, 5000, 7000 ]),
+                            "model_size": tune.grid_search(["small_resnet18","tiny_resnet18"])
                             }
 
                 else:
@@ -320,7 +333,7 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
                     help='type of model (default: clam_sb, clam w/ single attention branch)')
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
-parser.add_argument('--model_size', type=str, choices=['256','tinier3','tinier_resnet18','tinier2_resnet18','tiny_resnet18','tinier','tiny','small', 'big','hipt_big','hipt_medium','hipt_small','hipt_smaller','hipt_smallest'], default='small', help='size of model, does not affect mil')
+parser.add_argument('--model_size', type=str, choices=['256','tinier3','tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier','tiny','small', 'big','hipt_big','hipt_medium','hipt_small','hipt_smaller','hipt_smallest'], default='small', help='size of model, does not affect mil')
 parser.add_argument('--task', type=str, choices=['ovarian_5class','ovarian_1vsall','nsclc','treatment','treatment_switched'])
 parser.add_argument('--profile', action='store_true', default=False, 
                     help='show profile of longest running code sections')
