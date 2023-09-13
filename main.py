@@ -124,11 +124,20 @@ def main():
                     #        }
 
                     ## third HistoResNet-ABMIL tuning:
+                    #search_space={
+                    #        "reg": tune.grid_search([0.001]),
+                    #        "drop_out": tune.grid_search([0.1, 0.3, 0.5, 0.7]),
+                    #        "lr": tune.grid_search([0.01,0.005]),
+                    #        "A_patches": tune.grid_search([1000, 3000, 5000, 7000 ]),
+                    #        "model_size": tune.grid_search(["small_resnet18","tiny_resnet18"])
+                    #        }
+
+                    ## fourth HistoResNet-ABMIL tuning - trying the best abmil_sb models with abmil_mb:
                     search_space={
-                            "reg": tune.grid_search([0.001]),
-                            "drop_out": tune.grid_search([0.1, 0.3, 0.5, 0.7]),
+                            "reg": tune.grid_search([0.001,0.0001]),
+                            "drop_out": tune.grid_search([0.1, 0.5]),
                             "lr": tune.grid_search([0.01,0.005]),
-                            "A_patches": tune.grid_search([1000, 3000, 5000, 7000 ]),
+                            "A_patches": tune.grid_search([1000, 3000]),
                             "model_size": tune.grid_search(["small_resnet18","tiny_resnet18"])
                             }
 
