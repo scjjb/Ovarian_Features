@@ -78,7 +78,7 @@ class CLAM_SB(nn.Module):
     def __init__(self, gate = True, size_arg = "small", dropout = 0.0, k_sample=8, n_classes=2,
         instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
         super(CLAM_SB, self).__init__()
-        self.size_dict = {"tinier3": [1024, 32, 8],"256":[256, 64, 16],"tinier_resnet18": [512, 64, 16],"tinier2_resnet18": [512, 32, 8], "tiny_resnet18": [512, 128, 32], "small_resnet18": [512, 256, 64], "tinier": [1024, 64, 16], "tiny": [1024, 256, 64], "small": [1024, 512, 256], "big": [1024, 512, 384], "hipt_big":[192,128,64], "hipt_medium":[192,64,32], "hipt_small":[192,32,16],"hipt_smaller":[192,16,8], "hipt_smallest":[192,8,4]}
+        self.size_dict = {"tinier3": [1024, 32, 8],"256":[256, 64, 16],"tinier_resnet18": [512, 64, 16],"tinier2_resnet18": [512, 32, 8], "tiny_resnet18": [512, 128, 32], "small_resnet18": [512, 256, 64], "tinier": [1024, 64, 16], "tiny128": [1024, 128, 32], "tiny": [1024, 256, 64], "small": [1024, 512, 256], "big": [1024, 512, 384], "hipt_big":[192,128,64], "hipt_medium":[192,64,32], "hipt_small":[192,32,16],"hipt_smaller":[192,16,8], "hipt_smallest":[192,8,4]}
         size = self.size_dict[size_arg]
         fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
         if dropout>0:
@@ -194,7 +194,7 @@ class CLAM_MB(CLAM_SB):
     def __init__(self, gate = True, size_arg = "small", dropout = 0.0, k_sample=8, n_classes=2,
         instance_loss_fn=nn.CrossEntropyLoss(), subtyping=False):
         nn.Module.__init__(self)
-        self.size_dict = {"tinier3": [1024, 32, 8],"256":[256, 64, 16],"tinier_resnet18": [512, 64, 16],"tinier2_resnet18": [512, 32, 8], "tiny_resnet18": [512, 128, 32], "small_resnet18": [512, 256, 64], "tinier": [1024, 64, 16], "tiny": [1024, 256, 64], "small": [1024, 512, 256], "big": [1024, 512, 384], "hipt_big":[192,128,64], "hipt_medium":[192,64,32], "hipt_small":[192,32,16],"hipt_smaller":[192,16,8], "hipt_smallest":[192,8,4]}
+        self.size_dict = {"tinier3": [1024, 32, 8],"256":[256, 64, 16],"tinier_resnet18": [512, 64, 16],"tinier2_resnet18": [512, 32, 8], "tiny_resnet18": [512, 128, 32], "small_resnet18": [512, 256, 64], "tinier": [1024, 64, 16],"tiny128": [1024, 128, 32], "tiny": [1024, 256, 64], "small": [1024, 512, 256], "big": [1024, 512, 384], "hipt_big":[192,128,64], "hipt_medium":[192,64,32], "hipt_small":[192,32,16],"hipt_smaller":[192,16,8], "hipt_smallest":[192,8,4]}
         size = self.size_dict[size_arg]
         fc = [nn.Linear(size[0], size[1]), nn.ReLU()]
         if dropout>0:
