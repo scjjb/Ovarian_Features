@@ -40,7 +40,7 @@ parser.add_argument('--models_exp_code', type=str, default=None,
                     help='experiment code to load trained models (directory under results_dir containing model checkpoints')
 parser.add_argument('--splits_dir', type=str, default=None,
                     help='splits directory, if using custom splits other than what matches the task (default: None)')
-parser.add_argument('--model_size', type=str, choices=['tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier','tiny','small', 'big','hipt_small','hipt_medium','hipt_big','hipt_smaller'], default='small', 
+parser.add_argument('--model_size', type=str, choices=['tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier','tiny128','tiny','small', 'big','hipt_small','hipt_medium','hipt_big','hipt_smaller'], default='small', 
                     help='size of model (default: small)')
 parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
                     help='type of model (default: clam_sb)')
