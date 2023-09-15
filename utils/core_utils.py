@@ -132,6 +132,9 @@ def train(datasets, cur, class_counts, args):
 
     print('\nInit train/val/test splits...', end=' ')
     train_split, val_split, test_split = datasets
+    train_split.max_patches_per_slide=args.max_patches_per_slide
+    val_split.max_patches_per_slide=float('inf')
+    test_split.max_patches_per_slide=float('inf')
     save_splits(datasets, ['train', 'val', 'test'], os.path.join(args.results_dir, 'splits_{}.csv'.format(cur)))
     print('Done!')
     print("Training on {} samples".format(len(train_split)))
@@ -455,6 +458,7 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
     with torch.no_grad():
         for batch_idx, (data, label) in enumerate(loader):
             data, label = data.to(device, non_blocking=True), label.to(device, non_blocking=True)
+            #print(len(data)," val data len")
             if feature_extractor:
                 data = feature_extractor(data)
             logits, Y_prob, Y_hat, _, _ = model(data)
