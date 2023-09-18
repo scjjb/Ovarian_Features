@@ -265,7 +265,7 @@ parser.add_argument('--number_of_augs', type=int, default=1, help='number of aug
 ## feature extraction options
 parser.add_argument('--extract_features', action='store_true', default=False, help='extract features during training')
 parser.add_argument('--augment_features', action='store_true', default=False, help='if extracting features, whether to apply augmentations before feature extraction')
-parser.add_argument('--max_patches_per_slide', type=int, default=100000, help='number of patches to use per slide each iteration when extracting features during training')
+parser.add_argument('--max_patches_per_slide', type=int, default=float('inf'), help='number of patches to use per slide each iteration when extracting features during training')
 parser.add_argument('--model_architecture',type=str,choices=['resnet18','resnet50','levit_128s'],default='resnet50')
 parser.add_argument('--batch_size', type=int, default=256)
 parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')

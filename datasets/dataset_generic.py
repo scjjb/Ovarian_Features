@@ -603,7 +603,6 @@ class Generic_Split(Generic_MIL_Dataset):
                 self.target_patch_size = target_patch_size
                 self.model_architecture = model_architecture
                 self.batch_size = batch_size
-                print("max patches per slide",self.max_patches_per_slide)
                 self.extract_features = extract_features
                 for i in range(self.num_classes):
                         self.slide_cls_ids[i] = np.where(self.slide_data['label'] == i)[0]

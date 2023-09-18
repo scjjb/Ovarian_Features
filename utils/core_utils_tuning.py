@@ -123,6 +123,11 @@ def train_tuning(config, datasets, cur, class_counts, args):
     print('\nInit train/val/test splits...', end=' ')
     train_split, val_split, test_split = datasets
     train_split.max_patches_per_slide=args.max_patches_per_slide
+    val_split.max_patches_per_slide=float('inf')
+    test_split.max_patches_per_slide=float('inf')
+    print("\nTraining max patches per slide: ",train_split.max_patches_per_slide)
+    print("Validation max patches per slide: ",val_split.max_patches_per_slide)
+    print("Testing max patches per slide: ",test_split.max_patches_per_slide)
     save_splits(datasets, ['train', 'val', 'test'], os.path.join(args.results_dir, 'splits_{}.csv'.format(cur)))
     print('Done!')
     print("Training on {} samples".format(len(train_split)))
