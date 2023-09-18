@@ -79,66 +79,13 @@ def main():
                 }
         else:
             if args.no_inst_cluster:
-                if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest"]:
+                    ## ESGO first tuning - just getting a grasp on lr and patches, will look at others later
                     search_space={
-                        ## HIPT-ABMIL first tuning
-                        #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
-                        #"lr": tune.grid_search([0.01,0.001,0.0001]),
-                        #"patches": tune.grid_search([25,50, 75,100]),
-                        #"drop_out": tune.grid_search([0.25,0.5, 0.75]),
-                        #"reg": tune.grid_search([0.1, 0.01, 0.001, 0.0001]),
-
-                        ## HIPT-ABMIL second tuning
-                        #"A_model_size": tune.grid_search(["hipt_small","hipt_smaller","hipt_smallest"]),
-                        #"lr": tune.grid_search([0.005,0.001,0.0005]),
-                        #"patches": tune.grid_search([15, 25, 35, 45]),
-                        #"drop_out": tune.grid_search([0.0, 0.2,0.4,0.6]),
-                        #"reg": tune.grid_search([0.001, 0.0001, 0.00001]),
-                        #}
-                
-                        ##HIPT-ABMIL third tuning - trying the best ABMIL_sb models with ABMIL_mb
-                        "A_model_size": tune.grid_search(["hipt_smaller","hipt_smallest"]),
-                        "lr": tune.grid_search([0.001,0.0005]),
-                        "patches": tune.grid_search([15, 35]),
-                        "drop_out": tune.grid_search([0.0, 0.2]),
-                        "reg": tune.grid_search([0.0001, 0.00001]),
-                        }
-                        
-                elif args.model_size in ["small_resnet18","tiny_resnet18","tinier_resnet18","tinier2_resnet18"]:
-                    ## first HistoResNet-ABMIL tuning:
-                    #search_space={
-                    #    "reg": tune.grid_search([0.01, 0.001, 0.0001]),
-                    #    "drop_out": tune.grid_search([0.25, 0.5, 0.75]),
-                    #    "lr": tune.grid_search([0.001,0.0001, 0.00001]),
-                    #    "A_patches": tune.grid_search([7500, 5000, 2500 ]),
-                    #    "model_size": tune.grid_search(["tiny_resnet18","tinier_resnet18","tinier2_resnet18"])
-                    #    }
-                
-                    ## second HistoResNet-ABMIL tuning:
-                    #search_space={
-                    #        "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
-                    #        "drop_out": tune.grid_search([0.15, 0.35, 0.55]),
-                    #        "lr": tune.grid_search([0.005,0.001,0.0005]),
-                    #        "A_patches": tune.grid_search([2000, 4000, 6000 ]),
-                    #        "model_size": tune.grid_search(["tiny_resnet18","tinier_resnet18","tinier2_resnet18"])
-                    #        }
-
-                    ## third HistoResNet-ABMIL tuning:
-                    #search_space={
-                    #        "reg": tune.grid_search([0.001]),
-                    #        "drop_out": tune.grid_search([0.1, 0.3, 0.5, 0.7]),
-                    #        "lr": tune.grid_search([0.01,0.005]),
-                    #        "A_patches": tune.grid_search([1000, 3000, 5000, 7000 ]),
-                    #        "model_size": tune.grid_search(["small_resnet18","tiny_resnet18"])
-                    #        }
-
-                    ## fourth HistoResNet-ABMIL tuning - trying the best abmil_sb models with abmil_mb:
-                    search_space={
-                            "reg": tune.grid_search([0.001,0.0001]),
-                            "drop_out": tune.grid_search([0.1, 0.5]),
-                            "lr": tune.grid_search([0.01,0.005]),
-                            "A_patches": tune.grid_search([1000, 3000]),
-                            "model_size": tune.grid_search(["small_resnet18","tiny_resnet18"])
+                            "reg": tune.grid_search([0.0001]),
+                            "drop_out": tune.grid_search([0.5]),
+                            "lr": tune.grid_search([0.01,0.001,0.0001]),
+                            "A_patches": tune.grid_search([2500, 5000, 7500]),
+                            "model_size": tune.grid_search(["small"])
                             }
 
                 else:
