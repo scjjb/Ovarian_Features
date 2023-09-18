@@ -90,14 +90,23 @@ def main():
 
 
                     ## StagingVsIDS second tuning - fixing lr and patches, varying drop_out and model_size
+                    #search_space={
+                    #        "reg": tune.grid_search([0.0001]),
+                    #        "drop_out": tune.grid_search([0.25,0.5,0.75]),
+                    #        "lr": tune.grid_search([0.001]),
+                    #        "A_patches": tune.grid_search([2500]),
+                    #        "model_size": tune.grid_search(["tiny","small","big"])
+                    #        }
+
+
+                    ## StagingVsIDS third tuning - trying dropout vs lr as these have been most impactful so far
                     search_space={
                             "reg": tune.grid_search([0.0001]),
-                            "drop_out": tune.grid_search([0.25,0.5,0.75]),
-                            "lr": tune.grid_search([0.001]),
+                            "drop_out": tune.grid_search([0.3,0.4,0.5,0.6]),
+                            "lr": tune.grid_search([0.005,0.001,0.0005,0.0001]),
                             "A_patches": tune.grid_search([2500]),
-                            "model_size": tune.grid_search(["tiny","small","big"])
+                            "model_size": tune.grid_search(["small"])
                             }
-
 
             else:
                 if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest"]:
