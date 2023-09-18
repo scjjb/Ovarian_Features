@@ -79,7 +79,7 @@ def main():
                 }
         else:
             if args.no_inst_cluster:
-                    ## ESGO first tuning - just getting a grasp on lr and patches, will look at others later
+                    ## StagingVsIDS first tuning - just getting a grasp on lr and patches, will look at others later
                     search_space={
                             "reg": tune.grid_search([0.0001]),
                             "drop_out": tune.grid_search([0.5]),
@@ -87,45 +87,6 @@ def main():
                             "A_patches": tune.grid_search([2500, 5000, 7500]),
                             "model_size": tune.grid_search(["small"])
                             }
-
-                else:
-                    ## first ResNet-ABMIL tuning:
-                    #search_space={
-                    #    "reg": tune.grid_search([0.01, 0.001, 0.0001]),
-                    #    "drop_out": tune.grid_search([0.25, 0.5, 0.75]),
-                    #    "lr": tune.grid_search([0.001,0.0001, 0.00001]),
-                    #    "A_patches": tune.grid_search([7500, 5000, 2500 ]),
-                    #    "model_size": tune.grid_search(["small","tiny","tinier"])
-                    #    }
-
-                    ## second ResNet-ABMIL tuning:
-                    #search_space={
-                    #        "reg": tune.grid_search([0.001, 0.0001, 0.00001]),
-                    #        "drop_out": tune.grid_search([0.15, 0.35, 0.55]),
-                    #        "lr": tune.grid_search([0.005,0.001,0.0005]),
-                    #        "A_patches": tune.grid_search([6000, 5000, 4000 ]),
-                    #        "model_size": tune.grid_search(["small","tiny","tinier"])
-                    #        }
-
-                    ## third ResNet-ABMIL tuning
-                    search_space={
-                            "reg": tune.grid_search([0.0001, 0.00001]),
-                            "drop_out": tune.grid_search([0.3, 0.4, 0.5]),
-                            "lr": tune.grid_search([0.001,0.0005]),
-                            "A_patches": tune.grid_search([10000, 8000, 6000]),
-                            "model_size": tune.grid_search(["tiny128"])
-                    #        "model_size": tune.grid_search(["tiny","tinier","tinier3"])
-                            }
-
-
-                    ## fourth ResNet-ABMIL tuning - ABMIL_mb applied to the best sb hyperparams
-                    #search_space={
-                    #        "reg": tune.grid_search([0.0001, 0.00001]),
-                    #        "drop_out": tune.grid_search([0.35, 0.55]),
-                    #        "lr": tune.grid_search([0.001,0.0005]),
-                    #        "A_patches": tune.grid_search([5000,6000]),
-                    #        "model_size": tune.grid_search(["tiny","tinier"])
-                    #        }
 
             else:
                 if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest"]:
