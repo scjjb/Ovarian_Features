@@ -114,7 +114,7 @@ def main():
                             "drop_out": tune.grid_search([0.5]),
                             "lr": tune.grid_search([0.001,0.0005]),
                             "A_patches": tune.grid_search([500,1500,2500,3500]),
-                            "model_size": tune.grid_search(["small"])
+                            "model_size": tune.grid_search(["small","big"])
                             }
                     
 
