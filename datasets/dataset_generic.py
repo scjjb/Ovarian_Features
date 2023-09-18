@@ -258,14 +258,14 @@ class Generic_WSI_Classification_Dataset(Dataset):
                         
                         if len(self.val_ids) > 0:
                                 val_data = self.slide_data.loc[self.val_ids].reset_index(drop=True)
-                                val_split = Generic_Split(val_data, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide)
+                                val_split = Generic_Split(val_data, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, batch_size = self.batch_size,max_patches_per_slide=np.inf)
 
                         else:
                                 val_split = None
                         
                         if len(self.test_ids) > 0:
                                 test_data = self.slide_data.loc[self.test_ids].reset_index(drop=True)
-                                test_split = Generic_Split(test_data, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide)
+                                test_split = Generic_Split(test_data, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, batch_size = self.batch_size,max_patches_per_slide=np.inf)
                         
                         else:
                                 test_split = None
@@ -273,7 +273,10 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 
                 else:
                         assert csv_path 
-                        all_splits = pd.read_csv(csv_path, dtype=self.slide_data['slide_id'].dtype)
+                        try:
+                            all_splits = pd.read_csv(csv_path, dtype=self.slide_data['slide_id'].dtype)
+                        except:
+                            all_splits = pd.read_csv(csv_path)
                         # Without "dtype=self.slide_data['slide_id'].dtype", read_csv() will convert all-number columns to a numerical type. Even if we convert numerical columns back to objects later, we may lose zero-padding in the process; the columns must be correctly read in from the get-go. When we compare the individual train/val/test columns to self.slide_data['slide_id'] in the get_split_from_df() method, we cannot compare objects (strings) to numbers or even to incorrectly zero-padded objects/strings. An example of this breaking is shown in https://github.com/andrew-weisman/clam_analysis/tree/main/datatype_comparison_bug-2021-12-01.
                         all_splits.astype('str')
                         train_split = self.get_split_from_df(all_splits, 'train')

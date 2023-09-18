@@ -13,7 +13,8 @@ from models.model_hierarchical_mil import HIPT_LGP_FC
 
 self = HIPT_LGP_FC()
 
-df = pd.read_csv('dataset_csv/set_treatment.csv',header=0)
+#df = pd.read_csv('dataset_csv/set_treatment.csv',header=0)
+df = pd.read_csv('dataset_csv/ESGO_train_staging.csv',header=0)
 
 def agg_slide_feature(region_features):
     h_4096 = self.global_phi(region_features)
@@ -26,7 +27,8 @@ def agg_slide_feature(region_features):
     return h_WSI
 
 data_root_dir = "../mount_outputs/features"
-features_folder = "treatment_Q90_hipt4096_features_normalised_updatedsegmentation"
+#features_folder = "treatment_Q90_hipt4096_features_normalised_updatedsegmentation"
+features_folder = "ovarian_leeds_hipt4096_features_normalised"
 data_dir = os.path.join(data_root_dir, features_folder)
 
 x=None
@@ -43,10 +45,12 @@ for row in df.iterrows():
         x = torch.cat((x,torch.unsqueeze(h_WSI, dim=0)),0)
 
 for i in range(len(labels)):
-    if labels[i]=='effective':
+    if labels[i]=='high_grade':
         labels[i]=1
     else:
         labels[i]=0
+
+assert sum(labels) < len(labels)
 
 train_ids = random.sample(range(len(labels)),181)
 test_ids = list(set(range(len(labels)))-set(train_ids))
@@ -59,7 +63,7 @@ test_labels = [labels[idx] for idx in test_ids]
 train_x = torch.index_select(x, 0, torch.tensor(train_ids)).squeeze(1)
 test_x = torch.index_select(x, 0, torch.tensor(test_ids)).squeeze(1)
 
-k = 10
+k = 5
 
 ## trying testing on training data to check its doing something reasonable
 #test_ids = train_ids
