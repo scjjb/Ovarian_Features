@@ -295,7 +295,7 @@ parser.add_argument('--fully_random',action='store_true', default=False, help='T
 ## tuning options
 parser.add_argument('--tuning', action='store_true', default=False, help='run hyperparameter tuning')
 parser.add_argument('--tuning_output_file',type=str,default="tuning_results/tuning_output.csv",help="where to save tuning outputs")
-parser.add_argument('--num_tuning_experiments',type=int,default=100,help="number of tuning experiments")
+parser.add_argument('--num_tuning_experiments',type=int,default=100,help="Number of tuning experiments. If using grid tuning this is how many times each config will repeat, if sampling in ranges then this will be the number of overall experiments.")
 parser.add_argument('--hardware',type=str, choices=['DGX','PC'], default='DGX',help='sets amount of CPU and GPU to use per experiment')
 
 ### CLAM specific options
