@@ -80,13 +80,24 @@ def main():
         else:
             if args.no_inst_cluster:
                     ## StagingVsIDS first tuning - just getting a grasp on lr and patches, will look at others later
+                    #search_space={
+                    #        "reg": tune.grid_search([0.0001]),
+                    #        "drop_out": tune.grid_search([0.5]),
+                    #        "lr": tune.grid_search([0.01,0.001,0.0001]),
+                    #        "A_patches": tune.grid_search([2500, 5000, 7500]),
+                    #        "model_size": tune.grid_search(["small"])
+                    #        }
+
+
+                    ## StagingVsIDS second tuning - fixing lr and patches, varying drop_out and model_size
                     search_space={
                             "reg": tune.grid_search([0.0001]),
-                            "drop_out": tune.grid_search([0.5]),
-                            "lr": tune.grid_search([0.01,0.001,0.0001]),
-                            "A_patches": tune.grid_search([2500, 5000, 7500]),
-                            "model_size": tune.grid_search(["small"])
+                            "drop_out": tune.grid_search([0.25,0.5,0.75]),
+                            "lr": tune.grid_search([0.001]),
+                            "A_patches": tune.grid_search([2500]),
+                            "model_size": tune.grid_search(["tiny","small","big"])
                             }
+
 
             else:
                 if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest"]:
