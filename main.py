@@ -118,13 +118,22 @@ def main():
                     #        }
                     
 
-                    ## StagingVsIDS first Staging+IDS tuning - Getting a grap on lr, patches
+                    ## StagingVsIDS first Staging+IDS tuning - Getting a grasp on lr, patches
+                    #search_space={
+                    #        "reg": tune.grid_search([0.0001]),
+                    #        "drop_out": tune.grid_search([0.5]),
+                    #        "lr": tune.grid_search([0.01,0.001,0.0001]),
+                    #        "A_patches": tune.grid_search([2500, 5000, 7500]),
+                    #        "model_size": tune.grid_search(["small"])
+                    #        }
+
+                    ## StagingVsIDS second Staging+IDS tuning - fixing lr and patches, varying drop_out and model_size
                     search_space={
                             "reg": tune.grid_search([0.0001]),
-                            "drop_out": tune.grid_search([0.5]),
-                            "lr": tune.grid_search([0.01,0.001,0.0001]),
-                            "A_patches": tune.grid_search([2500, 5000, 7500]),
-                            "model_size": tune.grid_search(["small"])
+                            "drop_out": tune.grid_search([0.25,0.5,0.75]),
+                            "lr": tune.grid_search([0.001]),
+                            "A_patches": tune.grid_search([7500]),
+                            "model_size": tune.grid_search(["tiny","small","big"])
                             }
             
             else:
