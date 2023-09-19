@@ -138,12 +138,21 @@ def main():
             
 
                     ## StagingVsIDS third Staging+IDS - trying dropout vs lr
+                    #search_space={
+                    #        "reg": tune.grid_search([0.0001]),
+                    #        "drop_out": tune.grid_search([0.3,0.4,0.5,0.6]),
+                    #        "lr": tune.grid_search([0.005,0.001,0.0005,0.0001]),
+                    #        "A_patches": tune.grid_search([7500]),
+                    #        "model_size": tune.grid_search(["small"])
+                    #        }
+
+                    ## StagingVsIDS final Staging+IDS - allowing up to 100 epochs instead of 50 previously
                     search_space={
-                            "reg": tune.grid_search([0.0001]),
-                            "drop_out": tune.grid_search([0.3,0.4,0.5,0.6]),
-                            "lr": tune.grid_search([0.005,0.001,0.0005,0.0001]),
-                            "A_patches": tune.grid_search([7500]),
-                            "model_size": tune.grid_search(["small"])
+                            "reg": tune.grid_search([0.001,0.0001,0.00001]),
+                            "drop_out": tune.grid_search([0.3]),
+                            "lr": tune.grid_search([0.001,0.0005]),
+                            "A_patches": tune.grid_search([2500,7500]),
+                            "model_size": tune.grid_search(["small","big"])
                             }
 
             else:
