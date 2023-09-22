@@ -147,12 +147,22 @@ def main():
                     #        }
 
                     ## StagingVsIDS final Staging+IDS - allowing up to 100 epochs instead of 50 previously
+                    #search_space={
+                    #        "reg": tune.grid_search([0.001,0.0001,0.00001]),
+                    #        "drop_out": tune.grid_search([0.3]),
+                    #        "lr": tune.grid_search([0.001,0.0005]),
+                    #        "A_patches": tune.grid_search([2500,7500]),
+                    #        "model_size": tune.grid_search(["small","big"])
+                    #        }
+
+
+                    ## HIPT_ABMIL ESGO staging data first tuning
                     search_space={
-                            "reg": tune.grid_search([0.001,0.0001,0.00001]),
-                            "drop_out": tune.grid_search([0.3]),
-                            "lr": tune.grid_search([0.001,0.0005]),
-                            "A_patches": tune.grid_search([2500,7500]),
-                            "model_size": tune.grid_search(["small","big"])
+                            "reg": tune.grid_search([0.0001]),
+                            "drop_out": tune.grid_search([0.25,0.5,0.75]),
+                            "lr": tune.grid_search([0.01,0.001,0.0001]),
+                            "patches": tune.grid_search([80,40]),
+                            "A_model_size": tune.grid_search(["hipt_mega_small","hipt_const","hipt_big"]),
                             }
 
             else:
@@ -318,7 +328,7 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
                     help='type of model (default: clam_sb, clam w/ single attention branch)')
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
-parser.add_argument('--model_size', type=str, choices=['256','tinier3','tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier', 'tiny128','tiny','small', 'big','hipt_mega_small','hipt_big','hipt_medium','hipt_small','hipt_smaller','hipt_smallest'], default='small', help='size of model, does not affect mil')
+parser.add_argument('--model_size', type=str, choices=['256','tinier3','tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier', 'tiny128','tiny','small', 'big','hipt_mega_small','hipt_const','hipt_big','hipt_medium','hipt_small','hipt_smaller','hipt_smallest'], default='small', help='size of model, does not affect mil')
 parser.add_argument('--task', type=str, choices=['ovarian_5class','ovarian_1vsall','nsclc','treatment','treatment_switched'])
 parser.add_argument('--profile', action='store_true', default=False, 
                     help='show profile of longest running code sections')
