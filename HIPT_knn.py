@@ -10,11 +10,15 @@ sys.path.append('../HIPT/1-Hierarchical-Pretraining/')
 sys.path.append('../HIPT/HIPT_4K/')
 from eval_knn import knn_classifier
 from models.model_hierarchical_mil import HIPT_LGP_FC
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import cross_val_score, StratifiedKFold
+import numpy as np
 
 self = HIPT_LGP_FC()
 
 #df = pd.read_csv('dataset_csv/set_treatment.csv',header=0)
-df = pd.read_csv('dataset_csv/ESGO_train_staging.csv',header=0)
+#df = pd.read_csv('dataset_csv/ESGO_train_staging.csv',header=0)
+df = pd.read_csv('dataset_csv/ESGO_train_all.csv',header=0)
 
 def agg_slide_feature(region_features):
     h_4096 = self.global_phi(region_features)
@@ -77,7 +81,22 @@ k = 5
 print("starting knn")
 
 ## voting temperature T turned out very important, the default 0.07 led to terrible results even when using train set for testing
-top1 = knn_classifier(train_x,torch.tensor(train_labels),test_x,torch.tensor(test_labels),k,T=1,num_classes=2)
+#top1 = knn_classifier(train_x,torch.tensor(train_labels),test_x,torch.tensor(test_labels),k,T=1,num_classes=2)
 
-print("{} nearest neighbor results with random train/test split".format(k))
-print("accuracy:", top1)
+#print("{} nearest neighbor results with random train/test split".format(k))
+#print("accuracy:", top1)
+
+
+
+## trying the code from https://github.com/mahmoodlab/HIPT/blob/master/3-Self-Supervised-Eval/slide_extraction-evaluation.ipynb instead
+embeddings_all = x.detach().squeeze(1)#torch.stack(x).numpy()
+labels_all = np.array(labels)             
+                              
+clf = KNeighborsClassifier()
+skf = StratifiedKFold(n_splits=10, shuffle=True, random_state=0)
+label_dict = {'high_grade':0,'low_grade':1,'clear_cell':1,'endometrioid':1,'mucinous':1}
+
+if len(label_dict.keys()) > 2:
+    scores = cross_val_score(clf, embeddings_all, labels_all, cv=skf, scoring='roc_auc_ovr')
+else:
+    scores = cross_val_score(clf, embeddings_all, labels_all, cv=skf, scoring='roc_auc')
