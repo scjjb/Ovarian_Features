@@ -17,8 +17,8 @@ import numpy as np
 self = HIPT_LGP_FC()
 
 #df = pd.read_csv('dataset_csv/set_treatment.csv',header=0)
-#df = pd.read_csv('dataset_csv/ESGO_train_staging.csv',header=0)
-df = pd.read_csv('dataset_csv/ESGO_train_all.csv',header=0)
+df = pd.read_csv('dataset_csv/ESGO_train_staging.csv',header=0)
+#df = pd.read_csv('dataset_csv/ESGO_train_all.csv',header=0)
 
 def agg_slide_feature(region_features):
     h_4096 = self.global_phi(region_features)
@@ -100,3 +100,5 @@ if len(label_dict.keys()) > 2:
     scores = cross_val_score(clf, embeddings_all, labels_all, cv=skf, scoring='roc_auc_ovr')
 else:
     scores = cross_val_score(clf, embeddings_all, labels_all, cv=skf, scoring='roc_auc')
+print("all scores:",scores)
+print("mean score:",scores.mean())
