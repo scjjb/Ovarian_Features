@@ -157,14 +157,24 @@ def main():
 
 
                     ## HIPT_ABMIL ESGO staging data first tuning
+                    #search_space={
+                    #        "reg": tune.grid_search([0.0001]),
+                    #        "drop_out": tune.grid_search([0.25,0.5,0.75]),
+                    #        "lr": tune.grid_search([0.01,0.001,0.0001]),
+                    #        "patches": tune.grid_search([80,40]),
+                    #        "A_model_size": tune.grid_search(["hipt_mega_small","hipt_const","hipt_big"]),
+                    #        }
+
+                    ## HIPT_ABMIL ESGO staging data second tuning
                     search_space={
                             "reg": tune.grid_search([0.0001]),
                             "drop_out": tune.grid_search([0.25,0.5,0.75]),
-                            "lr": tune.grid_search([0.01,0.001,0.0001]),
+                            "lr": tune.grid_search([0.0001,0.00001,0.000001]),
                             "patches": tune.grid_search([80,40]),
                             "A_model_size": tune.grid_search(["hipt_mega_small","hipt_const","hipt_big"]),
                             }
-
+            
+                            
             else:
                 if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest"]:
                     search_space={
