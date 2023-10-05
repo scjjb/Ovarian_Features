@@ -186,6 +186,7 @@ parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
 parser.add_argument('--model_type',type=str,choices=['resnet18','resnet50','levit_128s','HIPT_4K'],default='resnet50')
 parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_blur','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','macenko','none'],default='none')
+parser.add_argument('--hardware',type=str,default="PC")
 args = parser.parse_args()
 
 
@@ -211,7 +212,10 @@ if __name__ == '__main__':
         elif args.model_type=='levit_128s':
             model=timm.create_model('levit_256',pretrained=True, num_classes=0)    
         elif args.model_type=='HIPT_4K':
-            model = HIPT_4K(model256_path="/CLAM/HIPT_4K/ckpts/vit256_small_dino.pth",model4k_path="/CLAM/HIPT_4K/ckpts/vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
+            if args.hardware=='DGX':
+                 model = HIPT_4K(model256_path="/mnt/results/Checkpoints/vit256_small_dino.pth",model4k_path="/mnt/results/Checkpoints/vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
+            else:
+                model = HIPT_4K(model256_path="HIPT_4K/ckpts/vit256_small_dino.pth",model4k_path="HIPT_4K/ckpts/vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
         model = model.to(device)
         
         if torch.cuda.device_count() > 1:
