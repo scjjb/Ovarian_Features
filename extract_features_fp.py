@@ -211,7 +211,7 @@ if __name__ == '__main__':
         elif args.model_type=='levit_128s':
             model=timm.create_model('levit_256',pretrained=True, num_classes=0)    
         elif args.model_type=='HIPT_4K':
-            model = HIPT_4K(model256_path="ckpts/vit256_small_dino.pth",model4k_path="ckpts/vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
+            model = HIPT_4K(model256_path="/CLAM/HIPT_4K/ckpts/vit256_small_dino.pth",model4k_path="/CLAM/HIPT_4K/ckpts/vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
         model = model.to(device)
         
         if torch.cuda.device_count() > 1:

@@ -4,6 +4,7 @@ from math import ceil
 import os 
 import numpy as np
 import pandas as pd
+import sklearn
 
 import torch
 import torch.nn.functional as F
@@ -18,21 +19,23 @@ from tqdm import tqdm
 
 import h5py
 
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, f1_score, balanced_accuracy_score, roc_auc_score
 
 epochs = 10
 #total_slides = 400
 max_nodes = 250
+#max_nodes = 30000
 #num_classes = 2
-learning_rate = 0.005
+learning_rate = 0.0001
 
 class GraphDataset(Dataset):
-    def __init__(self, root, node_features_dir, coordinates_dir, labels_file, transform=None, pre_transform=None):
+    def __init__(self, root, node_features_dir, coordinates_dir, labels_file, max_nodes = 250, transform=None, pre_transform=None):
         #super(GraphDataset, self).__init__(root, transform, pre_transform)
         self.root = root
         self.node_features_dir = node_features_dir
         self.coordinates_dir = coordinates_dir
         self.labels_file = labels_file
+        self.max_nodes = max_nodes
 
     @property
     def dir_names(self):
@@ -52,6 +55,7 @@ class GraphDataset(Dataset):
         #slide_names = []
         print("processing dataset")
         total_slides = len(slides)
+        #total_slides=500
         for i in tqdm(range(total_slides)):
             #print("processing slide {}".format(i))
             ## Need to edit this to not be doing a read.csv but instead loading from pt file
@@ -64,6 +68,9 @@ class GraphDataset(Dataset):
             node_features = torch.load(os.path.join(self.root, self.node_features_dir, str(slide_name)+".pt"))
             with h5py.File(os.path.join(self.root, self.coordinates_dir, str(slide_name)+".h5"),'r') as hdf5_file:
                 coordinates = hdf5_file['coords'][:]
+            if len(node_features)>self.max_nodes:
+                node_features=node_features[:max_nodes]
+                coordinates=coordinates[:max_nodes]
             #print("len coords",len(coordinates))
             adjacency_matrix = to_dense_adj(torch.tensor(coordinates), max_num_nodes=min(len(coordinates),max_nodes), edge_attr=None)
             #print("node_features_file",node_features_files[i])
@@ -112,6 +119,8 @@ class GraphDataset(Dataset):
     #    return f'{self.__class__.__name__}({len(self)})'
 
 dataset = GraphDataset(root='../mount_outputs', node_features_dir='features/ovarian_leeds_hipt4096_features_normalised/pt_files', coordinates_dir='patches/ovarian_leeds_mag20x_patch8192_fp/patches', labels_file = 'dataset_csv/ESGO_train_all.csv')
+#dataset = GraphDataset(root='../', node_features_dir='mount_i/features/ovarian_dataset_features_256_patches_20x/pt_files', coordinates_dir='mount_outputs/patches/512_patches_40x/patches', labels_file = 'dataset_csv/ESGO_train_all.csv')
+
 dataset.process()
 print(dataset)
 #loader = DataLoader(dataset, batch_size=1, shuffle=True)
@@ -188,18 +197,23 @@ class Net(torch.nn.Module):
     def __init__(self):
         super().__init__()
 
-        num_nodes = ceil(0.25 * max_nodes)
-        self.gnn1_pool = GNN(dataset.num_features, 64, num_nodes)
-        self.gnn1_embed = GNN(dataset.num_features, 64, 64, lin=False)
+        pooling_factor = 0.6
+        embedding_size = 256
 
-        num_nodes = ceil(0.25 * num_nodes)
-        self.gnn2_pool = GNN(3 * 64, 64, num_nodes)
-        self.gnn2_embed = GNN(3 * 64, 64, 64, lin=False)
+        num_nodes = ceil(pooling_factor * max_nodes)
+        self.gnn1_pool = GNN(dataset.num_features, embedding_size, num_nodes)
+        self.gnn1_embed = GNN(dataset.num_features, embedding_size, embedding_size, lin=False)
 
-        self.gnn3_embed = GNN(3 * 64, 64, 64, lin=False)
+        num_nodes = ceil(pooling_factor * num_nodes)
+        self.gnn2_pool = GNN(3 * embedding_size, embedding_size, num_nodes)
+        self.gnn2_embed = GNN(3 * embedding_size, embedding_size, embedding_size, lin=False)
 
-        self.lin1 = torch.nn.Linear(3 * 64, 64)
-        self.lin2 = torch.nn.Linear(64, dataset.num_classes())
+        num_nodes = ceil(pooling_factor * num_nodes)
+        self.gnn3_pool = GNN(3 * embedding_size, embedding_size, num_nodes)
+        self.gnn3_embed = GNN(3 * embedding_size, embedding_size, embedding_size, lin=False)
+
+        self.lin1 = torch.nn.Linear(3 * embedding_size, embedding_size)
+        self.lin2 = torch.nn.Linear(embedding_size, dataset.num_classes())
 
     def forward(self, x, adj, mask=None):
         ## removed mask from these
@@ -214,7 +228,11 @@ class Net(torch.nn.Module):
 
         x, adj, l2, e2 = dense_diff_pool(x, adj, s)
 
+        s = self.gnn3_pool(x, adj)
         x = self.gnn3_embed(x, adj)
+        #x = self.gnn3_embed(x, adj)
+
+        x, adj, l3, e3 = dense_diff_pool(x, adj, s)
 
         x = x.mean(dim=1)
         x = self.lin1(x).relu()
@@ -233,7 +251,7 @@ model = Net().to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, capturable = True)
 
 
-def train(epoch):
+def train(epoch,weight):
     model.train()
     loss_all = 0
 
@@ -249,7 +267,8 @@ def train(epoch):
         except:
             print("broken slide with data",data, "label", data.y)
             assert 1==2
-        loss = F.nll_loss(output, data.y.view(-1))
+        #loss = F.cross_entropy(output, data.y.view(-1), weight=weight)
+        loss = F.nll_loss(output, data.y.view(-1), weight=weight)
         loss.backward()
         loss_all += data.y.size(0) * float(loss)
         optimizer.step()
@@ -283,9 +302,16 @@ def test_all(loader):
 
 best_val_acc = test_acc = 0
 times = []
+y = pd.DataFrame([data.y.item() for data in train_dataset])
+#print("train_dataset",train_dataset)
+#print("y",y)
+#print("np.unique(y)",np.unique(y))
+#print("torch.tensor(y)",torch.tensor(y))
+weight=torch.tensor(sklearn.utils.class_weight.compute_class_weight('balanced',classes=np.unique(y),y=y.values.reshape(-1))).to(device).float()
+print("loss weight",weight)
 for epoch in range(epochs):
     start = time.time()
-    train_loss = train(epoch)
+    train_loss = train(epoch,weight)
     train_acc = test(train_loader)
     val_acc = test(val_loader)
     if val_acc > best_val_acc:
@@ -298,17 +324,31 @@ print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
 
 preds, labels = test_all(train_loader)
 preds_int = [int(pred) for pred in preds]
-print("train set confusion matrix (predicted x axis, true y axis): \n")
-print(confusion_matrix(labels,preds_int),"\n")
+print("train set confusion matrix (predicted x axis, true y axis)")
+print(confusion_matrix(labels,preds_int))
+try:
+    print("train set balanced accuracy: ",balanced_accuracy_score(labels,preds_int)
+            )
+    print("  AUC: ",roc_auc_score(labels,preds)
+            )
+    print( "  F1:",f1_score(labels,preds_int))
+except:
+    print("train scores didn't work")
 
 preds, labels = test_all(val_loader)
 preds_int = [int(pred) for pred in preds]
 print("val set confusion matrix (predicted x axis, true y axis): \n")
 print(confusion_matrix(labels,preds_int),"\n")
+try:
+    print("val set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds), "  F1:",f1_score(labels,preds))
+except:
+    print("val scores didn't work")
 
 preds, labels = test_all(test_loader)
 preds_int = [int(pred) for pred in preds]
 print("test set confusion matrix (predicted x axis, true y axis): \n")
 print(confusion_matrix(labels,preds_int),"\n")
-
-
+try:
+    print("test set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds), "  F1:",f1_score(labels,preds))
+except:
+    print("test scores didn't work")

@@ -68,7 +68,8 @@ def get_vit256(pretrained_weights, arch='vit_small', device=torch.device('cuda:0
         state_dict = {k.replace("backbone.", ""): v for k, v in state_dict.items()}
         msg = model256.load_state_dict(state_dict, strict=False)
         print('Pretrained weights found at {} and loaded with msg: {}'.format(pretrained_weights, msg))
-        
+    else:
+        print("pretrained weights not available at ",pretrained_weights)
     return model256
 
 
@@ -104,7 +105,8 @@ def get_vit4k(pretrained_weights, arch='vit4k_xs', device=torch.device('cuda:1')
         state_dict = {k.replace("backbone.", ""): v for k, v in state_dict.items()}
         msg = model4k.load_state_dict(state_dict, strict=False)
         print('Pretrained weights found at {} and loaded with msg: {}'.format(pretrained_weights, msg))
-        
+    else:
+        print("pretrained weights not available at ",pretrained_weights)
     return model4k
 
 
