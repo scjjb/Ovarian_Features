@@ -16,8 +16,8 @@ import numpy as np
 
 self = HIPT_LGP_FC()
 
-#df = pd.read_csv('dataset_csv/set_treatment.csv',header=0)
-df = pd.read_csv('dataset_csv/ESGO_train_staging.csv',header=0)
+df = pd.read_csv('dataset_csv/set_treatment.csv',header=0)
+#df = pd.read_csv('dataset_csv/ESGO_train_staging.csv',header=0)
 #df = pd.read_csv('dataset_csv/ESGO_train_all.csv',header=0)
 
 def agg_slide_feature(region_features):
@@ -31,8 +31,9 @@ def agg_slide_feature(region_features):
     return h_WSI
 
 data_root_dir = "../mount_outputs/features"
-#features_folder = "treatment_Q90_hipt4096_features_normalised_updatedsegmentation"
-features_folder = "ovarian_leeds_hipt4096_features_normalised"
+features_folder = "hipt_accidentally_not_pretrained/treatment_Q90_hipt4096_features_normalised_updatedsegmentation"
+#features_folder = "treatment_Q90_hipt4096_features_normalised_updatedsegmentation_pretrained"
+#features_folder = "ovarian_leeds_hipt4096_features_normalised"
 data_dir = os.path.join(data_root_dir, features_folder)
 
 x=None
@@ -49,7 +50,7 @@ for row in df.iterrows():
         x = torch.cat((x,torch.unsqueeze(h_WSI, dim=0)),0)
 
 for i in range(len(labels)):
-    if labels[i]=='high_grade':
+    if labels[i]=='effective':
         labels[i]=1
     else:
         labels[i]=0
@@ -67,7 +68,7 @@ test_labels = [labels[idx] for idx in test_ids]
 train_x = torch.index_select(x, 0, torch.tensor(train_ids)).squeeze(1)
 test_x = torch.index_select(x, 0, torch.tensor(test_ids)).squeeze(1)
 
-k = 5
+k = 10
 
 ## trying testing on training data to check its doing something reasonable
 #test_ids = train_ids
@@ -94,7 +95,8 @@ labels_all = np.array(labels)
                               
 clf = KNeighborsClassifier()
 skf = StratifiedKFold(n_splits=10, shuffle=True, random_state=0)
-label_dict = {'high_grade':0,'low_grade':1,'clear_cell':1,'endometrioid':1,'mucinous':1}
+#label_dict = {'high_grade':0,'low_grade':1,'clear_cell':1,'endometrioid':1,'mucinous':1}
+label_dict = {'invalid':0,'effective':1}
 
 if len(label_dict.keys()) > 2:
     scores = cross_val_score(clf, embeddings_all, labels_all, cv=skf, scoring='roc_auc_ovr')
