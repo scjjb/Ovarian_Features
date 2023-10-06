@@ -80,12 +80,13 @@ def main():
         else:
             if args.no_inst_cluster:
                     ## ATEC23 HIPT-ABMIL first tuning
-                    "A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
-                    "lr": tune.grid_search([0.001,0.0001,0.00001]),
-                    "patches": tune.grid_search([25,50, 75]),
-                    "drop_out": tune.grid_search([0.25,0.5, 0.75]),
-                    "reg": tune.grid_search([0.01, 0.001, 0.0001]),
-
+                    search_space={
+                        "A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
+                        "lr": tune.grid_search([0.001,0.0001,0.00001]),
+                        "patches": tune.grid_search([25,50, 75]),
+                        "drop_out": tune.grid_search([0.25,0.5, 0.75]),
+                        "reg": tune.grid_search([0.01, 0.001, 0.0001]),
+                        }
                     ## StagingVsIDS first tuning - just getting a grasp on lr and patches, will look at others later
                     #search_space={
                     #        "reg": tune.grid_search([0.0001]),
