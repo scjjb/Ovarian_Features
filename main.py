@@ -89,14 +89,22 @@ def main():
                     #    }
                     
                     ## ATEC23 HIPT-ABMIL second tuning
-                    search_space={
-                            "A_model_size": tune.grid_search(["hipt_small","hipt_smaller","hipt_smallest"]),
-                            "lr": tune.grid_search([0.001,0.0005,0.0001]),
-                            "patches": tune.grid_search([25,50,75]),
-                            "drop_out": tune.grid_search([0.6, 0.75, 0.9]),
-                            "reg": tune.grid_search([0.1, 0.01, 0.001]),
-                            }
+                    #search_space={
+                    #        "A_model_size": tune.grid_search(["hipt_small","hipt_smaller","hipt_smallest"]),
+                    #        "lr": tune.grid_search([0.001,0.0005,0.0001]),
+                    #        "patches": tune.grid_search([25,50,75]),
+                    #        "drop_out": tune.grid_search([0.6, 0.75, 0.9]),
+                    #        "reg": tune.grid_search([0.1, 0.01, 0.001]),
+                    #        }
                     
+                    ## ATEC hipt-ABMIL third tuning
+                    search_space={
+                            "A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
+                            "lr": tune.grid_search([0.001,0.0005]),
+                            "patches": tune.grid_search([50,75,100]),
+                            "drop_out": tune.grid_search([0.85, 0.9, 0.95]),
+                            "reg": tune.grid_search([0.5,0.1, 0.05]),
+                            }
                     
                     ## StagingVsIDS first tuning - just getting a grasp on lr and patches, will look at others later
                     #search_space={
