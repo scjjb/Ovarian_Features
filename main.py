@@ -119,7 +119,7 @@ def main():
                     ## ATEC hipt-ABMIL third tuning part 3
                     search_space={
                             "A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
-                            "lr": tune.grid_search([0.001,0.0005])
+                            "lr": tune.grid_search([0.001,0.0005]),
                             "patches": tune.grid_search([50,75,100]),
                             "drop_out": tune.grid_search([0.8,0.85,0.9,0.95]),
                             "reg": tune.grid_search([1]),
