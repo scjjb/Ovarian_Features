@@ -7,19 +7,23 @@ from HIPT_4K.hipt_heatmap_utils import *
 
 light_jet = cmap_map(lambda x: x/2 + 0.5, matplotlib.cm.jet)
 
-pretrained_weights256 = 'HIPT_4K/ckpts/vit256_small_dino.pth'
-pretrained_weights4k = 'HIPT_4K/ckpts/vit4k_xs_dino.pth'
-device256 = torch.device('cuda:0')
-device4k = torch.device('cuda:0')
+
+pretrained_weights256 ="/mnt/results/Checkpoints/vit256_small_dino.pth"
+pretrained_weights4k = "/mnt/results/Checkpoints/vit4k_xs_dino.pth"
+
+#pretrained_weights256 = 'HIPT_4K/ckpts/vit256_small_dino.pth'
+#pretrained_weights4k = 'HIPT_4K/ckpts/vit4k_xs_dino.pth'
+device256 = torch.device('cuda')
+device4k = torch.device('cuda')
 
 ### ViT_256 + ViT_4K loaded independently (used for Attention Heatmaps)
-model256 = get_vit256(pretrained_weights=pretrained_weights256, device=device256)
-model4k = get_vit4k(pretrained_weights=pretrained_weights4k, device=device4k)
+#model256 = get_vit256(pretrained_weights=pretrained_weights256, device=device256)
+#model4k = get_vit4k(pretrained_weights=pretrained_weights4k, device=device4k)
 
 ### ViT_256 + ViT_4K loaded into HIPT_4K API
 model = HIPT_4K(pretrained_weights256, pretrained_weights4k, device256, device4k)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-model = model.to(device)
+#model = model.to(device)
 model.eval()
 
 
