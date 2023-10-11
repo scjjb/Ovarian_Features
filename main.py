@@ -274,7 +274,7 @@ def main():
                             "reg": tune.grid_search([0.1,0.01,0.001]),
                             "drop_out": tune.grid_search([0.8, 0.85, 0.9, 0.95]),
                             "lr": tune.grid_search([0.001,0.0005]),
-                            "patches": tune.grid_search([50]),
+                            "patches": tune.grid_search([40,50,60]),
                             "B": tune.grid_search([4,6]),
                             "A_model_size": tune.grid_search(["hipt_smaller","hipt_smallest"]),
                             }
