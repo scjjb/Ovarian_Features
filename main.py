@@ -262,7 +262,7 @@ def main():
                             
                             ## second HIPT_clam:
                             "reg": tune.grid_search([0.01,0.001]),
-                            "drop_out": tune.grid_search(0.6, 0.75, 0.9]),
+                            "drop_out": tune.grid_search([0.6, 0.75, 0.9]),
                             "lr": tune.grid_search([0.001,0.0005,0.0001]),
                             "patches": tune.grid_search([25, 50]),
                             "B": tune.grid_search([4,8]),
