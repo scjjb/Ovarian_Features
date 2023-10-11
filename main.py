@@ -261,14 +261,25 @@ def main():
                             #}
                             
                             ## second HIPT_clam:
-                            "reg": tune.grid_search([0.01,0.001]),
-                            "drop_out": tune.grid_search([0.6, 0.75, 0.9]),
-                            "lr": tune.grid_search([0.001,0.0005,0.0001]),
-                            "patches": tune.grid_search([25, 50]),
-                            "B": tune.grid_search([4,8]),
-                            "A_model_size": tune.grid_search(["hipt_small","hipt_smaller","hipt_smallest"]),
-                            }
+                            #"reg": tune.grid_search([0.01,0.001]),
+                            #"drop_out": tune.grid_search([0.6, 0.75, 0.9]),
+                            #"lr": tune.grid_search([0.001,0.0005,0.0001]),
+                            #"patches": tune.grid_search([25, 50]),
+                            #"B": tune.grid_search([4,8]),
+                            #"A_model_size": tune.grid_search(["hipt_small","hipt_smaller","hipt_smallest"]),
+                            #}
                     
+                         
+                            ## Third HIPT_CLAM
+                            "reg": tune.grid_search([0.1,0.01,0.001]),
+                            "drop_out": tune.grid_search([0.8, 0.85, 0.9, 0.95]),
+                            "lr": tune.grid_search([0.001,0.0005]),
+                            "patches": tune.grid_search([50]),
+                            "B": tune.grid_search([4,6]),
+                            "A_model_size": tune.grid_search(["hipt_smaller","hipt_smallest"]),
+                            }
+
+
                             ## second HIPT-CLAM tuning:
                             #"reg": tune.grid_search([0.001, 0.0001, 0.00001]),
                             #"drop_out": tune.grid_search([0.0, 0.2, 0.4, 0.6]),
