@@ -149,7 +149,10 @@ def compute_w_loader(file_path, output_path, wsi, model,
             kwargs = {'num_workers': 16, 'pin_memory': True} if device.type == "cuda" else {}
             tfms=torch.nn.Sequential(transforms.CenterCrop(224))
         elif args.model_type=='HIPT_4K':
-            kwargs = {'num_workers': 1, 'pin_memory': True} if device.type == "cuda" else {}
+            if args.hardware=='DGX':
+                kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
+            else:
+                kwargs = {'num_workers': 1, 'pin_memory': True} if device.type == "cuda" else {}
         loader = DataLoader(dataset=dataset, batch_size=batch_size, **kwargs, collate_fn=collate_features)
 
         if verbose > 0:
