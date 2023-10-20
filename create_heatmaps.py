@@ -92,13 +92,13 @@ if __name__ == '__main__':
                 else:
                         print ('\n'+key + " : " + str(value))
                         
-        decision = input('Continue? Y/N ')
-        if decision in ['Y', 'y', 'Yes', 'yes']:
-                pass
-        elif decision in ['N', 'n', 'No', 'NO']:
-                exit()
-        else:
-                raise NotImplementedError
+        #decision = input('Continue? Y/N ')
+        #if decision in ['Y', 'y', 'Yes', 'yes']:
+        #        pass
+        #elif decision in ['N', 'n', 'No', 'NO']:
+        #        exit()
+        #else:
+        #        raise NotImplementedError
 
         model_type = args.model
         args = config_dict
@@ -173,7 +173,7 @@ if __name__ == '__main__':
             feature_extractor = resnet50_baseline(pretrained=True)
         elif model_type=='hipt':
             print("USING HIPT")
-            feature_extractor = HIPT_4K(model256_path="ckpts/vit256_small_dino.pth",model4k_path="ckpts/vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
+            feature_extractor = HIPT_4K(model256_path="/CLAM/HIPT_4K/ckpts/vit256_small_dino.pth",model4k_path="/CLAM/HIPT_4K/ckpts/vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
         else:
             raise NotImplementedError
         feature_extractor.eval()

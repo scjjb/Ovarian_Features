@@ -54,7 +54,7 @@ def initiate_model(args, ckpt_path):
         if 'instance_loss_fn' in key:
             continue
         ckpt_clean.update({key.replace('.module', ''):ckpt[key]})
-    model.load_state_dict(ckpt_clean, strict=True)
+    model.load_state_dict(ckpt_clean, strict=False)
     model.relocate()
     model.eval()
     return model
