@@ -6,7 +6,6 @@ from HIPT_4K.hipt_model_utils import get_vit256, get_vit4k, eval_transforms
 from HIPT_4K.hipt_heatmap_utils import *
 import argparse
 
-#light_jet = cmap_map(lambda x: x/2 + 0.5, matplotlib.cm.jet)
 parser = argparse.ArgumentParser(description='Configurations for HIPT feature extraction')
 parser.add_argument('--hardware',type=str, choices=['DGX','PC'], default='DGX',help='sets amount of CPU and GPU to use per experiment')
 args = parser.parse_args()
@@ -18,29 +17,17 @@ else:
     pretrained_weights256 ="/mnt/results/Checkpoints/vit256_small_dino.pth"
     pretrained_weights4k = "/mnt/results/Checkpoints/vit4k_xs_dino.pth"
 
-#pretrained_weights256 = 'HIPT_4K/ckpts/vit256_small_dino.pth'
-#pretrained_weights4k = 'HIPT_4K/ckpts/vit4k_xs_dino.pth'
 device256 = torch.device('cuda')
 device4k = torch.device('cuda')
 
-### ViT_256 + ViT_4K loaded independently (used for Attention Heatmaps)
-#model256 = get_vit256(pretrained_weights=pretrained_weights256, device=device256)
-#model4k = get_vit4k(pretrained_weights=pretrained_weights4k, device=device4k)
-
-### ViT_256 + ViT_4K loaded into HIPT_4K API
 model = HIPT_4K(pretrained_weights256, pretrained_weights4k, device256, device4k)
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-#model = model.to(device)
+print("device: ",device)
 model.eval()
-
 
 region = Image.open('HIPT_4K/image_demo/image_4k.png')
 x = eval_transforms()(region).unsqueeze(dim=0)
-#print('Input Shape:', x.shape)
 out = model.forward(x)
-#print('Output Shape:', out.shape)
-
-#print("out:",out)
 
 expected_out = torch.tensor([[0.8896,-2.1130,0.4011,1.9388,2.2679,-0.2919,-2.8318,3.3083,
     -2.5549,-1.0718,2.4532,0.3009,-2.7087,1.0475,0.4862,-0.9086,
@@ -68,14 +55,9 @@ expected_out = torch.tensor([[0.8896,-2.1130,0.4011,1.9388,2.2679,-0.2919,-2.831
     -0.7225,-3.2197,0.5538,-0.5984,0.9696,-2.2826,-0.3154,2.4052]],
     device='cuda:0')
 
-
-#print(expected_out)
-
 if torch.equal(torch.round(out,decimals=2), torch.round(expected_out,decimals=2)):
     print("Test passed - expected features extracted")
-elif torch.equal(torch.round(out,decimals=1), torch.round(expected_out,decimals=1)):
-    print("Test inconclusive - features close but not equal to expected features")
-else:
-    print("Test failed - features not the same as expected")
-
-#print(torch.eq(out,expected_out))
+else: 
+    diff = torch.eq(torch.round(out,decimals=2), torch.round(expected_out,decimals=2))
+    similarity = (100*torch.sum(diff)/torch.numel(diff)).item()
+    print("Test failed - expected feature similarity {}%".format(round(similarity,2)))
