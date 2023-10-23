@@ -206,7 +206,7 @@ if __name__ == '__main__':
         os.makedirs(os.path.join(args.feat_dir, 'pt_files'), exist_ok=True)
         os.makedirs(os.path.join(args.feat_dir, 'h5_files'), exist_ok=True)
         dest_files = os.listdir(os.path.join(args.feat_dir, 'pt_files'))
-
+        
         print('loading {} model'.format(args.model_type))
         if args.model_type=='resnet18':
             model = resnet18_baseline(pretrained=True,dataset=args.pretraining_dataset)
@@ -227,12 +227,15 @@ if __name__ == '__main__':
         model.eval()
         total = len(bags_dataset)
 
+        unavailable_patch_files=0
         for bag_candidate_idx in range(total):
+            print('\nprogress: {}/{}'.format(bag_candidate_idx, total))
+            print('skipped unavailable slides: {}'.format(unavailable_patch_files))
+            try:        
                 slide_id = str(bags_dataset[bag_candidate_idx]).split(args.slide_ext)[0]
                 bag_name = slide_id+'.h5'
                 h5_file_path = os.path.join(args.data_h5_dir, 'patches', bag_name)
                 slide_file_path = os.path.join(args.data_slide_dir, slide_id+args.slide_ext)
-                print('\nprogress: {}/{}'.format(bag_candidate_idx, total))
                 print(slide_id)
 
                 if args.use_transforms == 'all':
@@ -260,4 +263,9 @@ if __name__ == '__main__':
                 features = torch.from_numpy(features)
                 bag_base, _ = os.path.splitext(bag_name)
                 torch.save(features, os.path.join(args.feat_dir, 'pt_files', bag_base+'.pt'))
-
+            except KeyboardInterrupt:
+                assert 1==2, "keyboard interrupt"
+            except:
+                print("patch file unavailable")
+                continue
+        print("finished running with {} unavailable slide patch files".format(unavailable_patch_files))
