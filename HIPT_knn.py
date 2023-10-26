@@ -7,7 +7,7 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser(description='Basic k-nearest neighbors to test whether extracted features are sensible. This should easily achieve good performance as the train-test splits do not stratify patients, so the same patients will be in train and test')
-parser.add_argument('--task',type=str,choices=['subtyping','treatment'],default='subtyping')
+parser.add_argument('--task',type=str,choices=['subtyping','subtyping_binary','treatment'],default='subtyping')
 parser.add_argument('--csv_path', type=str, default=None)
 parser.add_argument('--data_root_dir', type=str, default="/",help='directory containing features folders')
 parser.add_argument('--features_folder', type=str, default="/",help='folder within data_root_dir containing the features - must contain pt_files/h5_files subfolder')
@@ -38,6 +38,8 @@ for row in df.iterrows():
         x = torch.cat((x,torch.unsqueeze(averaged_features, dim=0)),0)
 
 if args.task == "subtyping":
+    label_dict = {'high_grade':0,'low_grade':1,'clear_cell':2,'endometrioid':3,'mucinous':4}
+elif args.task == "subtyping_binary":
     label_dict = {'high_grade':0,'low_grade':1,'clear_cell':1,'endometrioid':1,'mucinous':1}
 elif args.task == "treatment":
     label_dict = {'invalid':0,'effective':1}
@@ -55,15 +57,6 @@ labels = np.array(labels)
                               
 clf = KNeighborsClassifier(args.k)
 skf = StratifiedKFold(n_splits=args.splits, shuffle=True, random_state=0)
-
-if args.task == "subtyping":
-    label_dict = {'high_grade':0,'low_grade':1,'clear_cell':2,'endometrioid':3,'mucinous':4}
-elif args.task == "subtyping_binary":
-    label_dict = {'high_grade':0,'low_grade':1,'clear_cell':1,'endometrioid':1,'mucinous':1}
-elif args.task == "treatment":
-    label_dict = {'invalid':0,'effective':1}
-else:
-    raise NotImplementedError
 
 if len(label_dict.keys()) > 2:
     scores = cross_val_score(clf, embeddings_all, labels, cv=skf, scoring='roc_auc_ovr')
