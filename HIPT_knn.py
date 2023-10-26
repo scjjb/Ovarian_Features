@@ -47,7 +47,7 @@ else:
     raise NotImplementedError
 
 labels = [label_dict[label] for label in labels]
-assert 0 < sum(labels) < len(labels), "all labels are identical"
+assert len(np.unique(labels))>1, "all labels are identical"
 
 print("starting knn with k={} and {}-fold CV".format(args.k,args.splits))
 
