@@ -190,6 +190,7 @@ parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'
 parser.add_argument('--model_type',type=str,choices=['resnet18','resnet50','levit_128s','HIPT_4K'],default='resnet50')
 parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_blur','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','macenko','none'],default='none')
 parser.add_argument('--hardware',type=str,default="PC")
+parser.add_argument('--graph_patches',type=str,choices=['none','small','big'],default='none')
 args = parser.parse_args()
 
 
@@ -234,7 +235,12 @@ if __name__ == '__main__':
             try:        
                 slide_id = str(bags_dataset[bag_candidate_idx]).split(args.slide_ext)[0]
                 bag_name = slide_id+'.h5'
-                h5_file_path = os.path.join(args.data_h5_dir, 'patches', bag_name)
+                if args.graph_patches == 'big':
+                    h5_file_path = os.path.join(args.data_h5_dir,'patches/big',bag_name)
+                elif args.graph_patches == 'small':
+                    h5_file_path = os.path.join(args.data_h5_dir,'patches/small',bag_name)
+                else:
+                    h5_file_path = os.path.join(args.data_h5_dir, 'patches', bag_name)
                 slide_file_path = os.path.join(args.data_slide_dir, slide_id+args.slide_ext)
                 print(slide_id)
 

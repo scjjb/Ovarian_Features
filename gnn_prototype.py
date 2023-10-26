@@ -10,7 +10,6 @@ import torch
 import torch.nn.functional as F
 
 import torch_geometric.transforms as T
-#from torch_geometric.datasets import TUDataset
 from torch_geometric.loader import DenseDataLoader
 from torch_geometric.nn import DenseSAGEConv, dense_diff_pool
 from torch_geometric.data import Batch, Dataset, Data, DataLoader
@@ -20,12 +19,14 @@ from tqdm import tqdm
 import h5py
 
 from sklearn.metrics import confusion_matrix, f1_score, balanced_accuracy_score, roc_auc_score
+import warnings
 
-epochs = 10
+warnings.simplefilter(action='ignore', category=FutureWarning)
+np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
+
+epochs = 5
 #total_slides = 400
-max_nodes = 250
-#max_nodes = 30000
-#num_classes = 2
+max_nodes = 1000
 learning_rate = 0.0001
 
 class GraphDataset(Dataset):
@@ -42,65 +43,36 @@ class GraphDataset(Dataset):
         return [self.node_features_dir, self.coordinates_dir]
     
     def process(self):
-        #node_features_files = os.listdir(os.path.join(self.root, self.node_features_dir))
-        #coordinates_files = os.listdir(os.path.join(self.root, self.coordinates_dir))
         labels_df = pd.read_csv(self.labels_file)
         slides = labels_df['slide_id']
         # Create a list of Data objects, each representing a graph
         data_list = []
         label_dict = {'high_grade':0,'low_grade':1,'clear_cell':1,'endometrioid':1,'mucinous':1}
 
-        #for i in range(len(node_features_files)):
-        ## just doing 10 slides to check its working. Will want to change functionality to be more efficient and choose slides from dataset_csv
-        #slide_names = []
         print("processing dataset")
         total_slides = len(slides)
-        #total_slides=500
         for i in tqdm(range(total_slides)):
-            #print("processing slide {}".format(i))
-            ## Need to edit this to not be doing a read.csv but instead loading from pt file
-            #node_features = pd.read_csv(os.path.join(self.dir, self.node_features_dir, node_features_files[i])).values
-            #coordinates = pd.read_csv(os.path.join(self.raw_dir, self.coordinates_dir, coordinates_files[i])).values
             slide_name = slides[i]
-            #print(slide_name)
-            #print(slide_name)
-            #print("load path",os.path.join(self.root, self.node_features_dir, slide_name+".pt"))
             node_features = torch.load(os.path.join(self.root, self.node_features_dir, str(slide_name)+".pt"))
             with h5py.File(os.path.join(self.root, self.coordinates_dir, str(slide_name)+".h5"),'r') as hdf5_file:
                 coordinates = hdf5_file['coords'][:]
             if len(node_features)>self.max_nodes:
                 node_features=node_features[:max_nodes]
                 coordinates=coordinates[:max_nodes]
-            #print("len coords",len(coordinates))
             adjacency_matrix = to_dense_adj(torch.tensor(coordinates), max_num_nodes=min(len(coordinates),max_nodes), edge_attr=None)
-            #print("node_features_file",node_features_files[i])
-            #print("coordinates_file",coordinates_files[i])
-            x = torch.tensor(node_features, dtype=torch.float)
-            adj = torch.tensor(adjacency_matrix, dtype=torch.float).squeeze(0)
-            #pos = torch.tensor(coordinates, dtype=torch.int)
+            x = node_features.clone().detach()
+            adj = adjacency_matrix.clone().detach().squeeze(0)
             label_name = labels_df[labels_df['slide_id']==slide_name]['label'].values[0]
-            #print("label_name",label_name)
-            #print("label",int(label_dict[label_name]))
             label = torch.tensor(int(label_dict[label_name]))
-            #print("label",label)
             data = Data(x=x, adj=adj, y=label)
             data_list.append(data)
-        #self.data, self.slices = self.collate(data_list)
         self.data = data_list
         self.y = [data['y'] for data in data_list]
-        #self.num_classes = len(np.unique(self.y))
-        #print("num classes",self.num_classes)
-        #print("self.y",self.y)
-        #self.num_classes = len(np.unique(self.y))
 
     def num_classes(self):
         return len(np.unique(self.y))
 
     def collate(self, batch):
-        #print("batch:", batch)
-        #img = torch.cat([item['x'] for item in batch], dim = 0)
-        #coords = np.vstack([item['pos'] for item in batch])
-        #return [img, coords]
         return Batch.from_data_list(batch)
 
     def len(self):
@@ -115,30 +87,14 @@ class GraphDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-    #def __repr__(self):
-    #    return f'{self.__class__.__name__}({len(self)})'
-
 #dataset = GraphDataset(root='../mount_outputs', node_features_dir='features/ovarian_leeds_hipt4096_features_normalised/pt_files', coordinates_dir='patches/ovarian_leeds_mag20x_patch8192_fp/patches', labels_file = 'dataset_csv/ESGO_train_all.csv')
-dataset = GraphDataset(root='../', node_features_dir='mount_i/features/ovarian_dataset_features_256_patches_20x/pt_files', coordinates_dir='mount_outputs/patches/512_patches_40x/patches', labels_file = 'dataset_csv/ESGO_train_all.csv')
+#dataset = GraphDataset(root='../', node_features_dir='mount_i/features/ovarian_dataset_features_256_patches_20x/pt_files', coordinates_dir='mount_outputs/patches/512_patches_40x/patches', labels_file = 'dataset_csv/ESGO_train_all.csv')
+#dataset = GraphDataset(root='../', node_features_dir='mount_i/features/ovarian_dataset_features_256_patches_20x/pt_files', coordinates_dir='mount_outputs/patches/512_patches_40x/patches', labels_file = 'dataset_csv/miniprototype.csv')
+dataset = GraphDataset(root='../', node_features_dir='mount_outputs/features/graph_ovarian_leeds_resnet50imagenet_256patch_features_5x/pt_files', coordinates_dir='mount_outputs/patches/ovarian_leeds_mag40x_patchgraph2048and1024_fp/patches/big', labels_file = 'dataset_csv/miniprototype.csv')
 
 dataset.process()
 print(dataset)
-#loader = DataLoader(dataset, batch_size=1, shuffle=True)
-#for batch in loader:
-#    print(batch)
-#    print(batch['x'])
 
-#path = osp.join(osp.dirname(osp.realpath(__file__)), '..', 'data',
-                #'PROTEINS_dense')
-#dataset = TUDataset(
-#    path,
-#    name='PROTEINS',
-#    transform=T.ToDense(max_nodes),
-#    pre_filter=lambda data: data.num_nodes <= max_nodes,
-#)
-
-
-#dataset = dataset.shuffle()
 n = (len(dataset) + 4) // 5
 test_dataset = dataset[:n]
 val_dataset = dataset[n:2 * n]
@@ -216,8 +172,6 @@ class Net(torch.nn.Module):
         self.lin2 = torch.nn.Linear(embedding_size, dataset.num_classes())
 
     def forward(self, x, adj, mask=None):
-        ## removed mask from these
-        #print("adj size",adj.size())
         s = self.gnn1_pool(x, adj, mask)
         x = self.gnn1_embed(x, adj, mask)
 
@@ -230,7 +184,6 @@ class Net(torch.nn.Module):
 
         s = self.gnn3_pool(x, adj)
         x = self.gnn3_embed(x, adj)
-        #x = self.gnn3_embed(x, adj)
 
         x, adj, l3, e3 = dense_diff_pool(x, adj, s)
 
@@ -259,15 +212,11 @@ def train(epoch,weight):
         data = data.to(device)
         optimizer.zero_grad()
         ## removed data.mask input
-        #print("x shape",data.x.shape)
-        #print("adj shape",data.adj.squeeze(0).shape)
-        #print("training data label",data.y)
         try:
             output, _, _ = model(data.x, data.adj)
         except:
             print("broken slide with data",data, "label", data.y)
             assert 1==2
-        #loss = F.cross_entropy(output, data.y.view(-1), weight=weight)
         loss = F.nll_loss(output, data.y.view(-1), weight=weight)
         loss.backward()
         loss_all += data.y.size(0) * float(loss)
@@ -303,10 +252,6 @@ def test_all(loader):
 best_val_acc = test_acc = 0
 times = []
 y = pd.DataFrame([data.y.item() for data in train_dataset])
-#print("train_dataset",train_dataset)
-#print("y",y)
-#print("np.unique(y)",np.unique(y))
-#print("torch.tensor(y)",torch.tensor(y))
 weight=torch.tensor(sklearn.utils.class_weight.compute_class_weight('balanced',classes=np.unique(y),y=y.values.reshape(-1))).to(device).float()
 print("loss weight",weight)
 for epoch in range(epochs):
