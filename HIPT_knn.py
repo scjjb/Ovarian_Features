@@ -59,9 +59,14 @@ clf = KNeighborsClassifier(args.k)
 skf = StratifiedKFold(n_splits=args.splits, shuffle=True, random_state=0)
 
 if len(label_dict.keys()) > 2:
-    scores = cross_val_score(clf, embeddings_all, labels, cv=skf, scoring='roc_auc_ovr')
+    auc_scores = cross_val_score(clf, embeddings_all, labels, cv=skf, scoring='roc_auc_ovr')
 else:
-    scores = cross_val_score(clf, embeddings_all, labels, cv=skf, scoring='roc_auc')
-print("all auc scores:",scores)
-print("mean auc score across folds:",round(scores.mean(),6))
-print("std auc score across folds:",round(scores.std(),6))
+    auc_scores = cross_val_score(clf, embeddings_all, labels, cv=skf, scoring='roc_auc')
+## not efficient to rerun everything to get a different metric, needs refactoring
+bal_acc_scores = cross_val_score(clf, embeddings_all, labels, cv=skf, scoring='balanced_accuracy')
+print("all auc scores:",auc_scores)
+print("mean auc score across folds:",round(auc_scores.mean(),6))
+print("std auc score across folds:",round(auc_scores.std(),6))
+print("all balanced accuracy scores:",bal_acc_scores)
+print("mean balanced accuracy score across folds:",round(bal_acc_scores.mean(),6))
+print("std balanced accuracy score across folds:",round(bal_acc_scores.std(),6))
