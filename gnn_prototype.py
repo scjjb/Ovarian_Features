@@ -7,11 +7,12 @@ import pandas as pd
 import sklearn
 
 import torch
+from torch import nn
 import torch.nn.functional as F
 
 import torch_geometric.transforms as T
 from torch_geometric.loader import DenseDataLoader
-from torch_geometric.nn import DenseSAGEConv, dense_diff_pool
+from torch_geometric.nn import DenseSAGEConv, GCNConv, dense_diff_pool, dense_mincut_pool
 from torch_geometric.data import Batch, Dataset, Data, DataLoader
 from torch_geometric.utils import to_dense_adj
 from tqdm import tqdm
@@ -21,22 +22,35 @@ import h5py
 from sklearn.metrics import confusion_matrix, f1_score, balanced_accuracy_score, roc_auc_score
 import warnings
 
+import argparse
+parser = argparse.ArgumentParser(description='Graph neural network classifier for subtyping')
+parser.add_argument('--epochs', type=int, default=2,help='training epochs')
+parser.add_argument('--max_nodes', type=int, default=5000,help='max nodes per graph')
+parser.add_argument('--pooling_factor', type=float, default=0.6,help='proportion of graph nodes retained in each graph pooling layer')
+parser.add_argument('--pooling_layers',type=int,default=3,help='number of graph pooling layers')
+parser.add_argument('--learning_rate', type=float, default=0.001,help='model learning rate')
+parser.add_argument('--data_root_dir', type=str, default="../mount_outputs/features",help='directory containing features folders')
+parser.add_argument('--features_folder', type=str, default="graph_ovarian_leeds_resnet50imagenet_256patch_features_5x/pt_files",help='folder within data_root_dir containing the features - must contain pt_files/h5_files subfolder')
+parser.add_argument('--coords_dir', type=str, default="../mount_outputs/patches/ovarian_leeds_mag40x_patchgraph2048and1024_fp/patches/big",help="directory containing coordinates files")
+parser.add_argument('--csv_path',type=str,default='dataset_csv/miniprototype.csv',help='path to dataset_csv label file')
+parser.add_argument('--graph_pooling', type=str,choices=["diff","mincut"],default="diff",help="type of graph pooling to use - dense_diff_pool or dense_mincut_pool")
+args = parser.parse_args()
+
 warnings.simplefilter(action='ignore', category=FutureWarning)
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
 
-epochs = 5
-#total_slides = 400
-max_nodes = 1000
-learning_rate = 0.0001
+if args.graph_pooling == 'mincut':
+    print("mincut not implemented yet, will need to change pooling layers to be linear rather than GNN layers as in https://github.com/pyg-team/pytorch_geometric/blob/master/examples/proteins_mincut_pool.py")
+    raise NotImplementedError
 
 class GraphDataset(Dataset):
-    def __init__(self, root, node_features_dir, coordinates_dir, labels_file, max_nodes = 250, transform=None, pre_transform=None):
+    def __init__(self, node_features_dir, coordinates_dir, labels_file, max_nodes = 250, transform=None, pre_transform=None):
         #super(GraphDataset, self).__init__(root, transform, pre_transform)
-        self.root = root
         self.node_features_dir = node_features_dir
         self.coordinates_dir = coordinates_dir
         self.labels_file = labels_file
         self.max_nodes = max_nodes
+        self.max_nodes_in_dataset = 0
 
     @property
     def dir_names(self):
@@ -53,13 +67,15 @@ class GraphDataset(Dataset):
         total_slides = len(slides)
         for i in tqdm(range(total_slides)):
             slide_name = slides[i]
-            node_features = torch.load(os.path.join(self.root, self.node_features_dir, str(slide_name)+".pt"))
-            with h5py.File(os.path.join(self.root, self.coordinates_dir, str(slide_name)+".h5"),'r') as hdf5_file:
+            node_features = torch.load(os.path.join(self.node_features_dir, str(slide_name)+".pt"))
+            with h5py.File(os.path.join(self.coordinates_dir, str(slide_name)+".h5"),'r') as hdf5_file:
                 coordinates = hdf5_file['coords'][:]
             if len(node_features)>self.max_nodes:
-                node_features=node_features[:max_nodes]
-                coordinates=coordinates[:max_nodes]
-            adjacency_matrix = to_dense_adj(torch.tensor(coordinates), max_num_nodes=min(len(coordinates),max_nodes), edge_attr=None)
+                node_features=node_features[:self.max_nodes]
+                coordinates=coordinates[:self.max_nodes]
+            if len(coordinates)>self.max_nodes_in_dataset:
+                self.max_nodes_in_dataset=len(coordinates)
+            adjacency_matrix = to_dense_adj(torch.tensor(coordinates), max_num_nodes=min(len(coordinates),self.max_nodes), edge_attr=None)
             x = node_features.clone().detach()
             adj = adjacency_matrix.clone().detach().squeeze(0)
             label_name = labels_df[labels_df['slide_id']==slide_name]['label'].values[0]
@@ -87,13 +103,11 @@ class GraphDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
-#dataset = GraphDataset(root='../mount_outputs', node_features_dir='features/ovarian_leeds_hipt4096_features_normalised/pt_files', coordinates_dir='patches/ovarian_leeds_mag20x_patch8192_fp/patches', labels_file = 'dataset_csv/ESGO_train_all.csv')
-#dataset = GraphDataset(root='../', node_features_dir='mount_i/features/ovarian_dataset_features_256_patches_20x/pt_files', coordinates_dir='mount_outputs/patches/512_patches_40x/patches', labels_file = 'dataset_csv/ESGO_train_all.csv')
-#dataset = GraphDataset(root='../', node_features_dir='mount_i/features/ovarian_dataset_features_256_patches_20x/pt_files', coordinates_dir='mount_outputs/patches/512_patches_40x/patches', labels_file = 'dataset_csv/miniprototype.csv')
-dataset = GraphDataset(root='../', node_features_dir='mount_outputs/features/graph_ovarian_leeds_resnet50imagenet_256patch_features_5x/pt_files', coordinates_dir='mount_outputs/patches/ovarian_leeds_mag40x_patchgraph2048and1024_fp/patches/big', labels_file = 'dataset_csv/miniprototype.csv')
+
+data_dir = os.path.join(args.data_root_dir, args.features_folder)
+dataset = GraphDataset(node_features_dir=data_dir, coordinates_dir=args.coords_dir, labels_file = args.csv_path,max_nodes=args.max_nodes)
 
 dataset.process()
-print(dataset)
 
 n = (len(dataset) + 4) // 5
 test_dataset = dataset[:n]
@@ -113,14 +127,19 @@ class GNN(torch.nn.Module):
         super().__init__()
 
         self.conv1 = DenseSAGEConv(in_channels, hidden_channels, normalize)
+        #self.conv1 = GCNConv(in_channels, hidden_channels, normalize)
         self.bn1 = torch.nn.BatchNorm1d(hidden_channels)
-        self.conv2 = DenseSAGEConv(hidden_channels, hidden_channels, normalize)
-        self.bn2 = torch.nn.BatchNorm1d(hidden_channels)
-        self.conv3 = DenseSAGEConv(hidden_channels, out_channels, normalize)
-        self.bn3 = torch.nn.BatchNorm1d(out_channels)
+        self.conv2 = DenseSAGEConv(hidden_channels, out_channels, normalize)
+        #self.conv2 = GCNConv(hidden_channels, hidden_channels, normalize)
+        self.bn2 = torch.nn.BatchNorm1d(out_channels)
+        ## removed the layer which keeps the same dimension because that seems ridiculous
+
+        #self.conv3 = DenseSAGEConv(hidden_channels, out_channels, normalize)
+        #self.conv3 = GCNConv(hidden_channels, out_channels, normalize)
+        #self.bn3 = torch.nn.BatchNorm1d(out_channels)
 
         if lin is True:
-            self.lin = torch.nn.Linear(2 * hidden_channels + out_channels,
+            self.lin = torch.nn.Linear(hidden_channels + out_channels,
                                        out_channels)
         else:
             self.lin = None
@@ -133,16 +152,21 @@ class GNN(torch.nn.Module):
         x = x.view(batch_size, num_nodes, num_channels)
         return x
 
-    def forward(self, x, adj, mask=None):
+    def forward(self, x, adj):
         batch_size, num_nodes, in_channels = x.size()
 
         x0 = x
-        x1 = self.bn(1, self.conv1(x0, adj, mask).relu())
-        x2 = self.bn(2, self.conv2(x1, adj, mask).relu())
-        x3 = self.bn(3, self.conv3(x2, adj, mask).relu())
-
-        x = torch.cat([x1, x2, x3], dim=-1)
-
+        #x1 = self.conv1(x0, adj)
+        #x2 = self.conv2(x1, adj)
+        #x3 = self.conv3(x2, adj)
+        x1 = self.bn(1, self.conv1(x0, adj).relu())
+        x2 = self.bn(2, self.conv2(x1, adj).relu())
+        #x3 = self.bn(3, self.conv3(x2, adj).relu())
+        
+        ## this appending of the different features levels is a bit weird and requires larger layers in the network
+        #x = torch.cat([x1, x2, x3], dim=-1)
+        x = torch.cat([x1, x2], dim=-1)
+        
         if self.lin is not None:
             x = self.lin(x).relu()
 
@@ -150,43 +174,46 @@ class GNN(torch.nn.Module):
 
 
 class Net(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, pooling_factor = 0.6, embedding_size = 256, max_nodes = 250, pooling_layers = 3):
         super().__init__()
-
-        pooling_factor = 0.6
-        embedding_size = 256
-
+        print("largest graph layer size",max_nodes)
+        print("dataset.num_features",dataset.num_features)
         num_nodes = ceil(pooling_factor * max_nodes)
         self.gnn1_pool = GNN(dataset.num_features, embedding_size, num_nodes)
         self.gnn1_embed = GNN(dataset.num_features, embedding_size, embedding_size, lin=False)
+        
+        hidden_layers=[]
+        for _ in range(pooling_layers-1):
+            num_nodes = ceil(pooling_factor * num_nodes)
+            hidden_layers.append(GNN(2 * embedding_size, embedding_size, num_nodes))
+            hidden_layers.append(GNN(2 * embedding_size, embedding_size, embedding_size, lin=False))
+        
+        self.hidden_layers=nn.ModuleList(hidden_layers)
+        print("smallest graph layer size",num_nodes)
 
-        num_nodes = ceil(pooling_factor * num_nodes)
-        self.gnn2_pool = GNN(3 * embedding_size, embedding_size, num_nodes)
-        self.gnn2_embed = GNN(3 * embedding_size, embedding_size, embedding_size, lin=False)
-
-        num_nodes = ceil(pooling_factor * num_nodes)
-        self.gnn3_pool = GNN(3 * embedding_size, embedding_size, num_nodes)
-        self.gnn3_embed = GNN(3 * embedding_size, embedding_size, embedding_size, lin=False)
-
-        self.lin1 = torch.nn.Linear(3 * embedding_size, embedding_size)
+        self.lin1 = torch.nn.Linear(2 * embedding_size, embedding_size)
         self.lin2 = torch.nn.Linear(embedding_size, dataset.num_classes())
+        
+        if args.graph_pooling == 'diff':
+            self.pooling_layer = dense_diff_pool 
+        elif args.graph_pooling == 'mincut':
+            self.pooling_layer = dense_mincut_pool
+        else: 
+            raise NotImplementedError
 
-    def forward(self, x, adj, mask=None):
-        s = self.gnn1_pool(x, adj, mask)
-        x = self.gnn1_embed(x, adj, mask)
+    def forward(self, x, adj):
+        s = self.gnn1_pool(x, adj)
+        x = self.gnn1_embed(x, adj)
 
-        x, adj, l1, e1 = dense_diff_pool(x, adj, s, mask)
-
-        s = self.gnn2_pool(x, adj)
-        x = self.gnn2_embed(x, adj)
-
-        x, adj, l2, e2 = dense_diff_pool(x, adj, s)
-
-        s = self.gnn3_pool(x, adj)
-        x = self.gnn3_embed(x, adj)
-
-        x, adj, l3, e3 = dense_diff_pool(x, adj, s)
-
+        x, adj, l1, e1 = self.pooling_layer(x, adj, s)
+        
+        for i in range(len(self.hidden_layers)):
+            if (i % 2) == 0:
+                s = self.hidden_layers[i](x, adj)
+            else:
+                x = self.hidden_layers[i](x, adj)
+                x, adj, l2, e2 = self.pooling_layer(x, adj, s)
+        
         x = x.mean(dim=1)
         x = self.lin1(x).relu()
         x = self.lin2(x)
@@ -200,9 +227,12 @@ elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
 else:
     device = torch.device('cpu')
 
-model = Net().to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, capturable = True)
+embedding_size = dataset[0]['x'].shape[1]
+model = Net(max_nodes=dataset.max_nodes_in_dataset,pooling_factor=args.pooling_factor,embedding_size=embedding_size, pooling_layers = args.pooling_layers).to(device)
+print(model)
+optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, capturable = True)
 
+print("Model parameters:",f'{sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
 
 def train(epoch,weight):
     model.train()
@@ -254,7 +284,7 @@ times = []
 y = pd.DataFrame([data.y.item() for data in train_dataset])
 weight=torch.tensor(sklearn.utils.class_weight.compute_class_weight('balanced',classes=np.unique(y),y=y.values.reshape(-1))).to(device).float()
 print("loss weight",weight)
-for epoch in range(epochs):
+for epoch in range(args.epochs):
     start = time.time()
     train_loss = train(epoch,weight)
     train_acc = test(train_loader)
@@ -265,35 +295,38 @@ for epoch in range(epochs):
     print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f} '
           f'Val Acc: {val_acc:.4f}, Test Acc: {test_acc:.4f}')
     times.append(time.time() - start)
-print(f"Median time per epoch: {torch.tensor(times).median():.4f}s")
+print(f"Median time per epoch: {torch.tensor(times).median():.4f}s \n")
 
 preds, labels = test_all(train_loader)
 preds_int = [int(pred) for pred in preds]
-print("train set confusion matrix (predicted x axis, true y axis)")
+print("train set confusion matrix (predicted x axis, true y axis): ")
 print(confusion_matrix(labels,preds_int))
 try:
     print("train set balanced accuracy: ",balanced_accuracy_score(labels,preds_int)
             )
-    print("  AUC: ",roc_auc_score(labels,preds)
+    print("AUC: ",roc_auc_score(labels,preds)
             )
-    print( "  F1:",f1_score(labels,preds_int))
+    print( "F1:",f1_score(labels,preds_int),"\n")
 except:
-    print("train scores didn't work")
+    print("train scores didn't work \n")
 
 preds, labels = test_all(val_loader)
 preds_int = [int(pred) for pred in preds]
-print("val set confusion matrix (predicted x axis, true y axis): \n")
-print(confusion_matrix(labels,preds_int),"\n")
+print("val set confusion matrix (predicted x axis, true y axis): ")
+print(confusion_matrix(labels,preds_int))
 try:
-    print("val set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds), "  F1:",f1_score(labels,preds))
+    print("val set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds), "  F1:",f1_score(labels,preds),"\n")
 except:
-    print("val scores didn't work")
+    print("val scores didn't work \n")
 
 preds, labels = test_all(test_loader)
 preds_int = [int(pred) for pred in preds]
-print("test set confusion matrix (predicted x axis, true y axis): \n")
-print(confusion_matrix(labels,preds_int),"\n")
+print("test set confusion matrix (predicted x axis, true y axis): ")
+print(confusion_matrix(labels,preds_int))
 try:
     print("test set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds), "  F1:",f1_score(labels,preds))
 except:
     print("test scores didn't work")
+print(balanced_accuracy_score(labels,preds_int))
+print(roc_auc_score(labels,preds))
+print(f1_score(labels,preds))
