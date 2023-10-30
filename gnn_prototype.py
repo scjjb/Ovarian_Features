@@ -5,6 +5,9 @@ import os
 import numpy as np
 import pandas as pd
 import sklearn
+from sklearn.preprocessing import normalize
+from scipy.spatial.distance import pdist, squareform
+
 
 import torch
 from torch import nn
@@ -13,9 +16,12 @@ from torch.utils.data import WeightedRandomSampler, RandomSampler, SequentialSam
 
 import torch_geometric.transforms as T
 from torch_geometric.loader import DenseDataLoader
-from torch_geometric.nn import DenseSAGEConv, GCNConv, dense_diff_pool, dense_mincut_pool
+from torch_geometric.nn import DenseSAGEConv, DenseGCNConv, GCNConv, GraphConv, TopKPooling, dense_diff_pool, dense_mincut_pool
 from torch_geometric.data import Batch, Dataset, Data, DataLoader
 from torch_geometric.utils import to_dense_adj
+from torch_geometric.nn import global_max_pool as gmp
+from torch_geometric.nn import global_mean_pool as gap
+
 from tqdm import tqdm
 
 import h5py
@@ -26,11 +32,16 @@ import warnings
 from utils.utils import make_weights_for_balanced_classes_split
 
 import argparse
+
+
+CUDA_LAUNCH_BLOCKING=1
+
 parser = argparse.ArgumentParser(description='Graph neural network classifier for subtyping')
 parser.add_argument('--epochs', type=int, default=2,help='training epochs')
 parser.add_argument('--max_nodes', type=int, default=5000,help='max nodes per graph')
 parser.add_argument('--pooling_factor', type=float, default=0.6,help='proportion of graph nodes retained in each graph pooling layer')
 parser.add_argument('--pooling_layers',type=int,default=3,help='number of graph pooling layers')
+parser.add_argument('--embedding_size',type=int,default=64,help='size of embeddings within GNN')
 parser.add_argument('--learning_rate', type=float, default=0.001,help='model learning rate')
 parser.add_argument('--data_root_dir', type=str, default="../mount_outputs/features",help='directory containing features folders')
 parser.add_argument('--features_folder', type=str, default="graph_ovarian_leeds_resnet50imagenet_256patch_features_5x/pt_files",help='folder within data_root_dir containing the features - must contain pt_files/h5_files subfolder')
@@ -85,9 +96,18 @@ class GraphDataset(Dataset):
                 coordinates=coordinates[:self.max_nodes]
             if len(coordinates)>self.max_nodes_in_dataset:
                 self.max_nodes_in_dataset=len(coordinates)
-            adjacency_matrix = to_dense_adj(torch.tensor(coordinates), max_num_nodes=min(len(coordinates),self.max_nodes), edge_attr=None)
+            distances = pdist(coordinates, 'euclidean')
+            dist_matrix = squareform(distances)
+            dist_threshold = 10000  # Adjust this threshold as needed
+            adj = (dist_matrix <= dist_threshold).astype(np.float32)
+            adj = (adj - np.identity(adj.shape[0])).astype(np.float32)
+            edge_indices = np.transpose(np.triu(adj,k=1).nonzero())
+            adj = torch.from_numpy(edge_indices).t().contiguous()
+            #assert 1==2,adj.shape
+            #adj = normalize(adj, axis=1, norm='l1')
+            #adjacency_matrix = to_dense_adj(torch.tensor(coordinates), max_num_nodes=min(len(coordinates),self.max_nodes), edge_attr=None)
             x = node_features.clone().detach()
-            adj = adjacency_matrix.clone().detach().squeeze(0)
+            #adj = adjacency_matrix.clone().detach().squeeze(0)
             label_name = labels_df[labels_df['slide_id']==slide_name]['label'].values[0]
             label = torch.tensor(int(label_dict[label_name]))
             data = Data(x=x, adj=adj, y=label)
@@ -208,20 +228,19 @@ class GNN(torch.nn.Module):
                  normalize=False, lin=True):
         super().__init__()
 
-        self.conv1 = DenseSAGEConv(in_channels, hidden_channels, normalize)
-        #self.conv1 = GCNConv(in_channels, hidden_channels, normalize)
+        #self.conv1 = DenseSAGEConv(in_channels, hidden_channels, normalize)
+        self.conv1 = GCNConv(in_channels, hidden_channels)#, normalize)
         self.bn1 = torch.nn.BatchNorm1d(hidden_channels)
-        self.conv2 = DenseSAGEConv(hidden_channels, out_channels, normalize)
-        #self.conv2 = GCNConv(hidden_channels, hidden_channels, normalize)
-        self.bn2 = torch.nn.BatchNorm1d(out_channels)
-        ## removed the layer which keeps the same dimension because that seems ridiculous
+        #self.conv2 = DenseSAGEConv(hidden_channels, hidden_channels, normalize)
+        self.conv2 = GCNConv(hidden_channels, hidden_channels)#, normalize)
+        self.bn2 = torch.nn.BatchNorm1d(hidden_channels)
 
         #self.conv3 = DenseSAGEConv(hidden_channels, out_channels, normalize)
-        #self.conv3 = GCNConv(hidden_channels, out_channels, normalize)
-        #self.bn3 = torch.nn.BatchNorm1d(out_channels)
+        self.conv3 = GCNConv(hidden_channels, out_channels)#, normalize)
+        self.bn3 = torch.nn.BatchNorm1d(out_channels)
 
         if lin is True:
-            self.lin = torch.nn.Linear(hidden_channels + out_channels,
+            self.lin = torch.nn.Linear(2*hidden_channels + out_channels,
                                        out_channels)
         else:
             self.lin = None
@@ -236,18 +255,19 @@ class GNN(torch.nn.Module):
 
     def forward(self, x, adj):
         batch_size, num_nodes, in_channels = x.size()
-
+        
+        adj = adj.squeeze(0)
         x0 = x
         #x1 = self.conv1(x0, adj)
         #x2 = self.conv2(x1, adj)
         #x3 = self.conv3(x2, adj)
         x1 = self.bn(1, self.conv1(x0, adj).relu())
         x2 = self.bn(2, self.conv2(x1, adj).relu())
-        #x3 = self.bn(3, self.conv3(x2, adj).relu())
+        x3 = self.bn(3, self.conv3(x2, adj).relu())
         
         ## this appending of the different features levels is a bit weird and requires larger layers in the network
-        #x = torch.cat([x1, x2, x3], dim=-1)
-        x = torch.cat([x1, x2], dim=-1)
+        x = torch.cat([x1, x2, x3], dim=-1)
+        #x = torch.cat([x1, x2], dim=-1)
         
         if self.lin is not None:
             x = self.lin(x).relu()
@@ -258,48 +278,100 @@ class GNN(torch.nn.Module):
 class Net(torch.nn.Module):
     def __init__(self, pooling_factor = 0.6, embedding_size = 256, max_nodes = 250, pooling_layers = 3):
         super().__init__()
-        print("largest graph layer size",max_nodes)
-        print("dataset.num_features",dataset.num_features)
-        num_nodes = ceil(pooling_factor * max_nodes)
-        self.gnn1_pool = GNN(dataset.num_features, embedding_size, num_nodes)
-        self.gnn1_embed = GNN(dataset.num_features, embedding_size, embedding_size, lin=False)
         
-        hidden_layers=[]
-        for _ in range(pooling_layers-1):
-            num_nodes = ceil(pooling_factor * num_nodes)
-            hidden_layers.append(GNN(2 * embedding_size, embedding_size, num_nodes))
-            hidden_layers.append(GNN(2 * embedding_size, embedding_size, embedding_size, lin=False))
+        model_type = 'topkpool'
+        if model_type == 'dense_diff_pool':
+            print("largest graph layer size",max_nodes)
+            print("dataset.num_features",dataset.num_features)
+            num_nodes = ceil(0.5 * pooling_factor * max_nodes)
+            self.gnn1_pool = GNN(dataset.num_features, embedding_size, num_nodes, normalize = True)
+            self.gnn1_embed = GNN(dataset.num_features, embedding_size, embedding_size, lin=False, normalize = True)
+            hidden_layers=[]
+            for _ in range(pooling_layers-2):
+                num_nodes = ceil(pooling_factor * num_nodes)
+                hidden_layers.append(GNN(3 * embedding_size, embedding_size, num_nodes, normalize = True))
+                hidden_layers.append(GNN(3 * embedding_size, embedding_size, embedding_size, lin=False, normalize = True))
         
-        self.hidden_layers=nn.ModuleList(hidden_layers)
-        print("smallest graph layer size",num_nodes)
+            self.hidden_layers=nn.ModuleList(hidden_layers)
+            print("smallest graph layer size",num_nodes)
 
-        self.lin1 = torch.nn.Linear(2 * embedding_size, embedding_size)
-        self.lin2 = torch.nn.Linear(embedding_size, dataset.num_classes())
+            self.gnnX_embed = GNN(3 * embedding_size, embedding_size, embedding_size, lin=False, normalize = True)
+
+            self.lin1 = torch.nn.Linear(3 * embedding_size, embedding_size)
+            self.lin2 = torch.nn.Linear(embedding_size, dataset.num_classes())
         
+
+        else:
+            ##taking model from https://github.com/pyg-team/pytorch_geometric/blob/master/examples/proteins_topk_pool.py
+            self.conv1 = GraphConv(dataset.num_features, 128)
+            self.pool1 = TopKPooling(128, ratio=0.8)
+            self.conv2 = GraphConv(128, 128)
+            self.pool2 = TopKPooling(128, ratio=0.8)
+            self.conv3 = GraphConv(128, 128)
+            self.pool3 = TopKPooling(128, ratio=0.8)
+            self.lin1 = torch.nn.Linear(256,128)
+            self.lin2 = torch.nn.Linear(128,64)
+            self.lin3 = torch.nn.Linear(64, dataset.num_classes())
+            
         if args.graph_pooling == 'diff':
-            self.pooling_layer = dense_diff_pool 
+            self.pooling_layer = TopKPooling(1,192)
+            #self.pooling_layer = dense_diff_pool 
         elif args.graph_pooling == 'mincut':
             self.pooling_layer = dense_mincut_pool
         else: 
             raise NotImplementedError
 
     def forward(self, x, adj):
-        s = self.gnn1_pool(x, adj)
-        x = self.gnn1_embed(x, adj)
+        model_type = 'TopK'       
+        if model_type == 'dense_diff_pool':
+            s = self.gnn1_pool(x, adj)
+            x = self.gnn1_embed(x, adj)
+        
+            #print("before pooling",adj)
+            #x, adj, l1, e1 = self.pooling_layer(x, adj, s)
+            x, adj =  self.pooling_layer(x, adj)
+            #print("after pooling",adj)
+            #x, adj, l1, e1 = dense_diff_pool(x, adj, s)
+            #print("after pooling size",adj.shape, x.shape)
+            for i in range(len(self.hidden_layers)):
+                if (i % 2) == 0:
+                    s = self.hidden_layers[i](x, adj)
+                else:
+                    x = self.hidden_layers[i](x, adj)
+                    x, adj, l2, e2 = self.pooling_layer(x, adj, s)
+        
+            x = self.gnnX_embed(x, adj)
 
-        x, adj, l1, e1 = self.pooling_layer(x, adj, s)
+            x = x.mean(dim=1)
+            x = self.lin1(x).relu()
+            x = self.lin2(x)
+            output = F.log_softmax(x, dim=-1), l1 + l2, e1 + e2
         
-        for i in range(len(self.hidden_layers)):
-            if (i % 2) == 0:
-                s = self.hidden_layers[i](x, adj)
-            else:
-                x = self.hidden_layers[i](x, adj)
-                x, adj, l2, e2 = self.pooling_layer(x, adj, s)
-        
-        x = x.mean(dim=1)
-        x = self.lin1(x).relu()
-        x = self.lin2(x)
-        return F.log_softmax(x, dim=-1), l1 + l2, e1 + e2
+        else:
+            x, edge_index = x.squeeze(), adj.squeeze()
+            
+            x = F.relu(self.conv1(x, edge_index))
+            x, edge_index, _, batch, _, _ = self.pool1(x, edge_index)
+            x1 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
+            
+            x = F.relu(self.conv2(x, edge_index))
+            x, edge_index, _, batch, _, _ = self.pool2(x, edge_index)
+            x2 = torch.cat([gmp(x,batch), gap(x,batch)], dim=1)
+            
+            x = F.relu(self.conv3(x, edge_index))
+            x, edge_index, _, batch, _, _ = self.pool3(x, edge_index)
+            x3 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
+
+            #print("x1 shape",x1.shape)
+            #print("x2 shape",x2.shape)
+            x = x1 + x2 + x3
+            #x = torch.cat([x1, x2, x3], dim=0)
+            x = F.relu(self.lin1(x))
+            x = F.dropout(x, p=0.5, training=self.training)
+            x = F.relu(self.lin2(x))
+            output = F.log_softmax(self.lin3(x), dim=-1), 0,0
+
+        return output
 
 
 if torch.cuda.is_available():
@@ -309,7 +381,8 @@ elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
 else:
     device = torch.device('cpu')
 
-embedding_size = dataset[0]['x'].shape[1]
+embedding_size = args.embedding_size 
+#dataset[0]['x'].shape[1]
 model = Net(max_nodes=dataset.max_nodes_in_dataset,pooling_factor=args.pooling_factor,embedding_size=embedding_size, pooling_layers = args.pooling_layers).to(device)
 print(model)
 optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.learning_rate, capturable = True)
