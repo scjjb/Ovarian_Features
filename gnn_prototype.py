@@ -9,6 +9,7 @@ import sklearn
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch.utils.data import WeightedRandomSampler, RandomSampler, SequentialSampler
 
 import torch_geometric.transforms as T
 from torch_geometric.loader import DenseDataLoader
@@ -22,6 +23,8 @@ import h5py
 from sklearn.metrics import confusion_matrix, f1_score, balanced_accuracy_score, roc_auc_score
 import warnings
 
+from utils.utils import make_weights_for_balanced_classes_split
+
 import argparse
 parser = argparse.ArgumentParser(description='Graph neural network classifier for subtyping')
 parser.add_argument('--epochs', type=int, default=2,help='training epochs')
@@ -33,8 +36,11 @@ parser.add_argument('--data_root_dir', type=str, default="../mount_outputs/featu
 parser.add_argument('--features_folder', type=str, default="graph_ovarian_leeds_resnet50imagenet_256patch_features_5x/pt_files",help='folder within data_root_dir containing the features - must contain pt_files/h5_files subfolder')
 parser.add_argument('--coords_dir', type=str, default="../mount_outputs/patches/ovarian_leeds_mag40x_patchgraph2048and1024_fp/patches/big",help="directory containing coordinates files")
 parser.add_argument('--csv_path',type=str,default='dataset_csv/miniprototype.csv',help='path to dataset_csv label file')
+parser.add_argument('--split_dir', type=str, default=None, help='specify the set of splits to use')
 parser.add_argument('--graph_pooling', type=str,choices=["diff","mincut"],default="diff",help="type of graph pooling to use - dense_diff_pool or dense_mincut_pool")
+parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
 args = parser.parse_args()
+device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 warnings.simplefilter(action='ignore', category=FutureWarning)
 np.warnings.filterwarnings('ignore', category=np.VisibleDeprecationWarning)
@@ -44,20 +50,24 @@ if args.graph_pooling == 'mincut':
     raise NotImplementedError
 
 class GraphDataset(Dataset):
-    def __init__(self, node_features_dir, coordinates_dir, labels_file, max_nodes = 250, transform=None, pre_transform=None):
+    def __init__(self, node_features_dir, coordinates_dir, csv_path, max_nodes = 250, transform=None, pre_transform=None):
         #super(GraphDataset, self).__init__(root, transform, pre_transform)
         self.node_features_dir = node_features_dir
         self.coordinates_dir = coordinates_dir
-        self.labels_file = labels_file
         self.max_nodes = max_nodes
         self.max_nodes_in_dataset = 0
+        self.csv_path = csv_path
+        slide_data = pd.read_csv(csv_path)
+        self.slide_data = slide_data
+        self.transform = transform
+        self.pre_transform = pre_transform
 
     @property
     def dir_names(self):
         return [self.node_features_dir, self.coordinates_dir]
     
     def process(self):
-        labels_df = pd.read_csv(self.labels_file)
+        labels_df = pd.read_csv(self.csv_path)
         slides = labels_df['slide_id']
         # Create a list of Data objects, each representing a graph
         data_list = []
@@ -85,6 +95,31 @@ class GraphDataset(Dataset):
         self.data = data_list
         self.y = [data['y'] for data in data_list]
 
+    def get_split_from_df(self, all_splits, split_key='train'):
+        split = all_splits[split_key]
+        split = split.dropna().reset_index(drop=True)
+
+        if len(split) > 0:
+            mask = self.slide_data['slide_id'].isin(split.tolist())
+            df_slice = self.slide_data[mask].reset_index(drop=True)
+            split = Generic_Split(df_slice, data=self.data, node_features_dir=self.node_features_dir,coordinates_dir=self.coordinates_dir, csv_path=self.csv_path, max_nodes = self.max_nodes, transform=self.transform, pre_transform=self.pre_transform)
+        else:
+            split = None
+        return split
+    
+    def return_splits(self, csv_path=None):
+        assert csv_path
+        try:
+            all_splits = pd.read_csv(csv_path, dtype=self.slide_data['slide_id'].dtype)
+        except:
+            all_splits = pd.read_csv(csv_path)
+        # Without "dtype=self.slide_data['slide_id'].dtype", read_csv() will convert all-number columns to a numerical type. Even if we convert numerical columns back to objects later, we may lose zero-padding in the process; the columns must be correctly read in from the get-go. When we compare the individual train/val/test columns to self.slide_data['slide_id'] in the get_split_from_df() method, we cannot compare objects (strings) to numbers or even to incorrectly zero-padded objects/strings. An example of this breaking is shown in https://github.com/andrew-weisman/clam_analysis/tree/main/datatype_comparison_bug-2021-12-01.
+        all_splits.astype('str')
+        train_split = self.get_split_from_df(all_splits, 'train')
+        val_split = self.get_split_from_df(all_splits, 'val')
+        test_split = self.get_split_from_df(all_splits, 'test')
+        return train_split, val_split, test_split
+    
     def num_classes(self):
         return len(np.unique(self.y))
 
@@ -103,23 +138,70 @@ class GraphDataset(Dataset):
     def __len__(self):
         return len(self.data)
 
+class Generic_Split(GraphDataset):
+    def __init__(self, slide_data, data, node_features_dir=None, coordinates_dir=None, csv_path=None, max_nodes = 250, transform=None, pre_transform=None):
+        self.slide_data = slide_data
+        self.data = data
+        self.node_features_dir = node_features_dir
+        self.coordinates_dir = coordinates_dir
+        self.max_nodes = max_nodes
+        self.max_nodes_in_dataset = 0
+    def __len__(self):
+        return len(self.slide_data)
 
+def get_split_loader(split_dataset, training = False, weighted = False, workers = 4):
+    kwargs = {'num_workers': workers} if device.type == "cuda" else {}
+    if training:
+        if weighted:
+            weights = make_weights_for_balanced_classes_split(split_dataset)
+            #loader = DenseDataLoader(split_dataset, batch_size=1, sampler = WeightedRandomSampler(weights, len(weights)), **kwargs)    
+            loader = DenseDataLoader(split_dataset, batch_size=1)
+        else:
+            #loader = DenseDataLoader(split_dataset, batch_size=1, sampler = RandomSampler(split_dataset), **kwargs)
+            DenseDataLoader(split_dataset, batch_size=1)
+    else:
+        #loader = DenseDataLoader(split_dataset, batch_size=1, sampler = SequentialSampler(split_dataset), **kwargs)
+        DenseDataLoader(split_dataset, batch_size=1)
 data_dir = os.path.join(args.data_root_dir, args.features_folder)
-dataset = GraphDataset(node_features_dir=data_dir, coordinates_dir=args.coords_dir, labels_file = args.csv_path,max_nodes=args.max_nodes)
+dataset = GraphDataset(node_features_dir=data_dir, coordinates_dir=args.coords_dir, csv_path = args.csv_path,max_nodes=args.max_nodes)
 
 dataset.process()
 
-n = (len(dataset) + 4) // 5
-test_dataset = dataset[:n]
-val_dataset = dataset[n:2 * n]
-train_dataset = dataset[2 * n:]
-test_loader = DenseDataLoader(test_dataset, batch_size=1)
-val_loader = DenseDataLoader(val_dataset, batch_size=1)
-train_loader = DenseDataLoader(train_dataset, batch_size=1)
+args.split_dir = os.path.join('splits', args.split_dir)
+assert os.path.isdir(args.split_dir)
 
-print("train slides:",len(train_loader))
-print("val slides:",len(val_loader))
-print("test slides",len(test_loader))
+i = 1
+train_dataset, val_dataset, test_dataset = dataset.return_splits(csv_path='{}/splits_{}.csv'.format(args.split_dir, i))
+#datasets = (train_dataset, val_dataset, test_dataset)
+#n = (len(dataset) + 4) // 5
+#test_dataset = dataset[:n]
+#val_dataset = dataset[n:2 * n]
+#train_dataset = dataset[2 * n:]
+#test_loader = DenseDataLoader(test_dataset, batch_size=1)
+#val_loader = DenseDataLoader(val_dataset, batch_size=1)
+#train_loader = DenseDataLoader(train_dataset, batch_size=1)
+
+print("Training on {} samples".format(len(train_dataset)))
+print("Validating on {} samples".format(len(val_dataset)))
+print("Testing on {} samples".format(len(test_dataset)))
+
+print(train_dataset)
+
+train_loader = DenseDataLoader(train_dataset, batch_size=1)
+val_loader = DenseDataLoader(val_dataset, batch_size=1)
+test_loader = DenseDataLoader(test_dataset, batch_size=1)
+#print(len(loader))
+#assert 1==2, loader
+
+#workers = 4
+#train_loader = get_split_loader(train_dataset, training=True, weighted = args.weighted_sample, workers=workers)
+#val_loader = get_split_loader(val_dataset,  workers=workers)
+#test_loader = get_split_loader(test_dataset, workers=workers)
+
+print("len train_loader",len(train_loader))
+print("len val_loader",len(val_loader))
+print("len test_loader",len(test_loader))
+
 
 class GNN(torch.nn.Module):
     def __init__(self, in_channels, hidden_channels, out_channels,
@@ -230,7 +312,7 @@ else:
 embedding_size = dataset[0]['x'].shape[1]
 model = Net(max_nodes=dataset.max_nodes_in_dataset,pooling_factor=args.pooling_factor,embedding_size=embedding_size, pooling_layers = args.pooling_layers).to(device)
 print(model)
-optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate, capturable = True)
+optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.learning_rate, capturable = True)
 
 print("Model parameters:",f'{sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
 
@@ -247,7 +329,8 @@ def train(epoch,weight):
         except:
             print("broken slide with data",data, "label", data.y)
             assert 1==2
-        loss = F.nll_loss(output, data.y.view(-1), weight=weight)
+        loss = F.cross_entropy(output, data.y.view(-1))
+        #loss = F.nll_loss(output, data.y.view(-1), weight=weight)
         loss.backward()
         loss_all += data.y.size(0) * float(loss)
         optimizer.step()
@@ -289,11 +372,12 @@ for epoch in range(args.epochs):
     train_loss = train(epoch,weight)
     train_acc = test(train_loader)
     val_acc = test(val_loader)
+    #if val_acc > best_val_acc:
+    #test_acc = test(test_loader)
     if val_acc > best_val_acc:
-        test_acc = test(test_loader)
         best_val_acc = val_acc
     print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f} '
-          f'Val Acc: {val_acc:.4f}, Test Acc: {test_acc:.4f}')
+          f'Val Acc: {val_acc:.4f}')
     times.append(time.time() - start)
 print(f"Median time per epoch: {torch.tensor(times).median():.4f}s \n")
 
@@ -315,18 +399,18 @@ preds_int = [int(pred) for pred in preds]
 print("val set confusion matrix (predicted x axis, true y axis): ")
 print(confusion_matrix(labels,preds_int))
 try:
-    print("val set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds), "  F1:",f1_score(labels,preds),"\n")
+    print("val set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds), "  F1:",f1_score(labels,preds_int),"\n")
 except:
     print("val scores didn't work \n")
 
-preds, labels = test_all(test_loader)
-preds_int = [int(pred) for pred in preds]
-print("test set confusion matrix (predicted x axis, true y axis): ")
-print(confusion_matrix(labels,preds_int))
-try:
-    print("test set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds), "  F1:",f1_score(labels,preds))
-except:
-    print("test scores didn't work")
-print(balanced_accuracy_score(labels,preds_int))
-print(roc_auc_score(labels,preds))
-print(f1_score(labels,preds))
+#preds, labels = test_all(test_loader)
+#preds_int = [int(pred) for pred in preds]
+#print("test set confusion matrix (predicted x axis, true y axis): ")
+#print(confusion_matrix(labels,preds_int))
+#try:
+#    print("test set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds), "  F1:",f1_score(labels,preds_int))
+#except:
+#    print("test scores didn't work")
+#print(balanced_accuracy_score(labels,preds_int))
+#print(roc_auc_score(labels,preds))
+#print(f1_score(labels,preds_int))

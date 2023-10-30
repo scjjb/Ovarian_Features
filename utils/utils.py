@@ -70,13 +70,14 @@ def get_simple_loader(dataset, batch_size=1, num_workers=4):
         loader = DataLoader(dataset, batch_size=batch_size, sampler = sampler.SequentialSampler(dataset), collate_fn = collate, **kwargs)
         return loader 
 
-def get_split_loader(split_dataset, training = False, weighted = False, workers = 4):
+def get_split_loader(split_dataset, training = False, weighted = False, workers = 4, collate = None):
         """
                 return either the validation loader or training loader 
         """
         kwargs = {'num_workers': workers} if device.type == "cuda" else {}
         
-        collate=collate_MIL
+        if collate is None:
+            collate=collate_MIL
         if hasattr(split_dataset,'use_h5'):
             if split_dataset.use_h5:
                 collate=collate_MIL_coords 
