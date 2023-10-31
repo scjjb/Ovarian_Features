@@ -82,7 +82,7 @@ class GraphDataset(Dataset):
         slides = labels_df['slide_id']
         # Create a list of Data objects, each representing a graph
         data_list = []
-        label_dict = {'high_grade':0,'low_grade':1,'clear_cell':1,'endometrioid':1,'mucinous':1}
+        label_dict = {'high_grade':0,'low_grade':1,'clear_cell':2,'endometrioid':3,'mucinous':4}
 
         print("processing dataset")
         total_slides = len(slides)
@@ -116,15 +116,20 @@ class GraphDataset(Dataset):
         self.y = [data['y'] for data in data_list]
 
     def get_split_from_df(self, all_splits, split_key='train'):
+        print("split key",split_key)
         split = all_splits[split_key]
         split = split.dropna().reset_index(drop=True)
-
         if len(split) > 0:
+            print(self.slide_data)
             mask = self.slide_data['slide_id'].isin(split.tolist())
-            df_slice = self.slide_data[mask].reset_index(drop=True)
-            split = Generic_Split(df_slice, data=self.data, node_features_dir=self.node_features_dir,coordinates_dir=self.coordinates_dir, csv_path=self.csv_path, max_nodes = self.max_nodes, transform=self.transform, pre_transform=self.pre_transform)
+            #assert 1==2,int(mask)
+            #data = self.data[mask].reset_index(drop=True)
+            data = [item for item, use in zip(self.data, mask) if use]
+            #print(df_slice)
+            split = Generic_Split(data=data, node_features_dir=self.node_features_dir,coordinates_dir=self.coordinates_dir, csv_path=self.csv_path, max_nodes = self.max_nodes, transform=self.transform, pre_transform=self.pre_transform)
         else:
             split = None
+        print("split",split)
         return split
     
     def return_splits(self, csv_path=None):
@@ -138,6 +143,17 @@ class GraphDataset(Dataset):
         train_split = self.get_split_from_df(all_splits, 'train')
         val_split = self.get_split_from_df(all_splits, 'val')
         test_split = self.get_split_from_df(all_splits, 'test')
+        #print("train 0",train_split[0])
+        #print("train 1",train_split[1])
+        #print("train 2",train_split[2])
+        #print("train 3",train_split[3])
+        #print("train 4",train_split[4])
+        #print("val 0",val_split[0])
+        #print("val 1",val_split[1])
+        #print("val 2",val_split[2])
+        #print("val 3",val_split[3])
+        #print("val 4",val_split[4])
+        #assert 1==2,val_split[0]
         return train_split, val_split, test_split
     
     def num_classes(self):
@@ -147,27 +163,27 @@ class GraphDataset(Dataset):
         return Batch.from_data_list(batch)
 
     def len(self):
-        return len(self.data)
+        return len(self.slide_data)
 
     def get(self, idx):
-        return self.data[idx]
+        return self.slide_data[idx]
 
     def __getitem__(self, index):
         return self.data[index]
 
     def __len__(self):
-        return len(self.data)
+        return len(self.slide_data)
 
 class Generic_Split(GraphDataset):
-    def __init__(self, slide_data, data, node_features_dir=None, coordinates_dir=None, csv_path=None, max_nodes = 250, transform=None, pre_transform=None):
-        self.slide_data = slide_data
+    def __init__(self, data, node_features_dir=None, coordinates_dir=None, csv_path=None, max_nodes = 250, transform=None, pre_transform=None):
+        #self.slide_data = slide_data
         self.data = data
         self.node_features_dir = node_features_dir
         self.coordinates_dir = coordinates_dir
         self.max_nodes = max_nodes
         self.max_nodes_in_dataset = 0
     def __len__(self):
-        return len(self.slide_data)
+        return len(self.data)
 
 def get_split_loader(split_dataset, training = False, weighted = False, workers = 4):
     kwargs = {'num_workers': workers} if device.type == "cuda" else {}
@@ -190,8 +206,8 @@ dataset.process()
 args.split_dir = os.path.join('splits', args.split_dir)
 assert os.path.isdir(args.split_dir)
 
-i = 1
-train_dataset, val_dataset, test_dataset = dataset.return_splits(csv_path='{}/splits_{}.csv'.format(args.split_dir, i))
+#i = 1 for prototyping as i = 0 has the same size test and val, which is confusing
+train_dataset, val_dataset, test_dataset = dataset.return_splits(csv_path='{}/splits_{}.csv'.format(args.split_dir, 1))
 #datasets = (train_dataset, val_dataset, test_dataset)
 #n = (len(dataset) + 4) // 5
 #test_dataset = dataset[:n]
@@ -210,6 +226,9 @@ print(train_dataset)
 train_loader = DenseDataLoader(train_dataset, batch_size=1)
 val_loader = DenseDataLoader(val_dataset, batch_size=1)
 test_loader = DenseDataLoader(test_dataset, batch_size=1)
+
+#assert 1==2, str(len(train_loader))+str(len(val_loader))+str(len(test_loader))
+
 #print(len(loader))
 #assert 1==2, loader
 
@@ -271,7 +290,7 @@ class GNN(torch.nn.Module):
         
         if self.lin is not None:
             x = self.lin(x).relu()
-
+        
         return x
 
 
@@ -321,7 +340,7 @@ class Net(torch.nn.Module):
         else: 
             raise NotImplementedError
 
-    def forward(self, x, adj):
+    def forward(self, x, adj,training):
         model_type = 'TopK'       
         if model_type == 'dense_diff_pool':
             s = self.gnn1_pool(x, adj)
@@ -367,10 +386,11 @@ class Net(torch.nn.Module):
             x = x1 + x2 + x3
             #x = torch.cat([x1, x2, x3], dim=0)
             x = F.relu(self.lin1(x))
-            x = F.dropout(x, p=0.5, training=self.training)
+            x = F.dropout(x, p=0.5, training=training)
             x = F.relu(self.lin2(x))
+            ## Need to learn how to use log_softmax (with range [-inf,0]) if implementing it
             output = F.log_softmax(self.lin3(x), dim=-1), 0,0
-
+            #output = F.softmax(self.lin3(x), dim=-1), 0,0
         return output
 
 
@@ -398,7 +418,7 @@ def train(epoch,weight):
         optimizer.zero_grad()
         ## removed data.mask input
         try:
-            output, _, _ = model(data.x, data.adj)
+            output, _, _ = model(data.x, data.adj,training=True)
         except:
             print("broken slide with data",data, "label", data.y)
             assert 1==2
@@ -418,21 +438,24 @@ def test(loader):
     for data in loader:
         data = data.to(device)
         ## removed data.mask from the input
-        pred = model(data.x, data.adj)[0].max(dim=1)[1]
+        pred = model(data.x, data.adj,training=False)[0].max(dim=1)[1]
         correct += int(pred.eq(data.y.view(-1)).sum())
+        #print("output",  model(data.x, data.adj), "   pred ",pred,"  label", data.y.view(-1),"  correct",int(pred.eq(data.y.view(-1)).sum()))
     return correct / len(loader.dataset)
 
 def test_all(loader):
-    model.eval
+    model.eval()
     correct = 0
     preds=[]
     labels=[]
     for data in loader:
         data = data.to(device)
         ## removed data.mask from the input
-        pred = model(data.x, data.adj)[0].max(dim=1)[1]
-        preds.append(pred.cpu())
+        pred = model(data.x, data.adj,training=False)[0].detach().cpu().numpy()[0]
+        preds.append(pred)
         labels.append(data.y.cpu()[0])
+        #print("output",  model(data.x, data.adj), "   pred ",pred,"  label", data.y.view(-1),"  correct",int(pred.eq(data.y.view(-1)).sum()))
+    #print(labels)
     return preds, labels
 
 best_val_acc = test_acc = 0
@@ -446,44 +469,50 @@ for epoch in range(args.epochs):
     train_acc = test(train_loader)
     val_acc = test(val_loader)
     #if val_acc > best_val_acc:
-    #test_acc = test(test_loader)
+    test_acc = test(test_loader)
     if val_acc > best_val_acc:
         best_val_acc = val_acc
     print(f'Epoch: {epoch:03d}, Train Loss: {train_loss:.4f}, Train Acc: {train_acc:.4f} '
-          f'Val Acc: {val_acc:.4f}')
+            f'Val Acc: {val_acc:.4f}, Test Acc {test_acc:.4f}')
     times.append(time.time() - start)
 print(f"Median time per epoch: {torch.tensor(times).median():.4f}s \n")
 
 preds, labels = test_all(train_loader)
-preds_int = [int(pred) for pred in preds]
+preds = np.exp(np.asarray(preds))
+#num_classes = len(np.unique(labels))
+preds_int = [pred.argmax() for pred in preds]
 print("train set confusion matrix (predicted x axis, true y axis): ")
 print(confusion_matrix(labels,preds_int))
 try:
     print("train set balanced accuracy: ",balanced_accuracy_score(labels,preds_int)
             )
-    print("AUC: ",roc_auc_score(labels,preds)
+    #print(labels)
+    #print(preds)
+    print("AUC: ",roc_auc_score(labels,preds,multi_class='ovr')
             )
-    print( "F1:",f1_score(labels,preds_int),"\n")
-except:
-    print("train scores didn't work \n")
+    print( "F1:",f1_score(labels,preds_int,average='macro'),"\n")
 
+except:
+    print("training metrics broken")
 preds, labels = test_all(val_loader)
-preds_int = [int(pred) for pred in preds]
+preds = np.exp(np.asarray(preds))
+preds_int = [pred.argmax() for pred in preds]
 print("val set confusion matrix (predicted x axis, true y axis): ")
 print(confusion_matrix(labels,preds_int))
 try:
-    print("val set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds), "  F1:",f1_score(labels,preds_int),"\n")
+    print("val set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds,multi_class='ovr'), "  F1:",f1_score(labels,preds_int,average='macro'),"\n")
 except:
     print("val scores didn't work \n")
 
-#preds, labels = test_all(test_loader)
-#preds_int = [int(pred) for pred in preds]
-#print("test set confusion matrix (predicted x axis, true y axis): ")
-#print(confusion_matrix(labels,preds_int))
-#try:
-#    print("test set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds), "  F1:",f1_score(labels,preds_int))
-#except:
-#    print("test scores didn't work")
+preds, labels = test_all(test_loader)
+preds = np.exp(np.asarray(preds))
+preds_int = [pred.argmax() for pred in preds]
+print("test set confusion matrix (predicted x axis, true y axis): ")
+print(confusion_matrix(labels,preds_int))
+try:
+    print("test set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds,multi_class='ovr'), "  F1:",f1_score(labels,preds_int,average='macro'))
+except:
+    print("test scores didn't work")
 #print(balanced_accuracy_score(labels,preds_int))
-#print(roc_auc_score(labels,preds))
-#print(f1_score(labels,preds_int))
+#print(roc_auc_score(labels,preds,multi_class='ovr'))
+#print(f1_score(labels,preds_int,average='macro'))
