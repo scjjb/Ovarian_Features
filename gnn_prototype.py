@@ -34,7 +34,6 @@ from utils.utils import make_weights_for_balanced_classes_split
 import argparse
 
 
-CUDA_LAUNCH_BLOCKING=1
 
 parser = argparse.ArgumentParser(description='Graph neural network classifier for subtyping')
 parser.add_argument('--epochs', type=int, default=2,help='training epochs')
@@ -184,13 +183,14 @@ def get_split_loader(split_dataset, training = False, weighted = False, workers 
         if weighted:
             weights = make_weights_for_balanced_classes_split(split_dataset)
             #loader = DenseDataLoader(split_dataset, batch_size=1, sampler = WeightedRandomSampler(weights, len(weights)), **kwargs)    
-            loader = DenseDataLoader(split_dataset, batch_size=1)
+            loader = DenseDataLoader(split_dataset, batch_size=1,sampler = WeightedRandomSampler(weights, len(weights)), **kwargs)
         else:
             #loader = DenseDataLoader(split_dataset, batch_size=1, sampler = RandomSampler(split_dataset), **kwargs)
-            DenseDataLoader(split_dataset, batch_size=1)
+            loader = DenseDataLoader(split_dataset, batch_size=1,sampler = RandomSampler(split_dataset), **kwargs)
     else:
         #loader = DenseDataLoader(split_dataset, batch_size=1, sampler = SequentialSampler(split_dataset), **kwargs)
-        DenseDataLoader(split_dataset, batch_size=1)
+        loader = DenseDataLoader(split_dataset, batch_size=1,  sampler = SequentialSampler(split_dataset), **kwargs)
+    return loader
 data_dir = os.path.join(args.data_root_dir, args.features_folder)
 dataset = GraphDataset(node_features_dir=data_dir, coordinates_dir=args.coords_dir, csv_path = args.csv_path,max_nodes=args.max_nodes)
 
@@ -216,19 +216,19 @@ print("Testing on {} samples".format(len(test_dataset)))
 
 print(train_dataset)
 
-train_loader = DenseDataLoader(train_dataset, batch_size=1)
-val_loader = DenseDataLoader(val_dataset, batch_size=1)
-test_loader = DenseDataLoader(test_dataset, batch_size=1)
+#train_loader = DenseDataLoader(train_dataset, batch_size=1)
+#val_loader = DenseDataLoader(val_dataset, batch_size=1)
+#test_loader = DenseDataLoader(test_dataset, batch_size=1)
 
 #assert 1==2, str(len(train_loader))+str(len(val_loader))+str(len(test_loader))
 
 #print(len(loader))
 #assert 1==2, loader
 
-#workers = 4
-#train_loader = get_split_loader(train_dataset, training=True, weighted = args.weighted_sample, workers=workers)
-#val_loader = get_split_loader(val_dataset,  workers=workers)
-#test_loader = get_split_loader(test_dataset, workers=workers)
+workers = 4
+train_loader = get_split_loader(train_dataset, training=True, weighted = args.weighted_sample, workers=workers)
+val_loader = get_split_loader(val_dataset,  workers=workers)
+test_loader = get_split_loader(test_dataset, workers=workers)
 
 print("len train_loader",len(train_loader))
 print("len val_loader",len(val_loader))
@@ -396,9 +396,9 @@ elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
 else:
     device = torch.device('cpu')
 
-embedding_size = args.embedding_size 
+#embedding_size = args.embedding_size 
 #dataset[0]['x'].shape[1]
-model = Net(max_nodes=dataset.max_nodes_in_dataset,pooling_factor=args.pooling_factor,embedding_size=embedding_size, pooling_layers = args.pooling_layers).to(device)
+model = Net(max_nodes=dataset.max_nodes_in_dataset,pooling_factor=args.pooling_factor,embedding_size=args.embedding_size, pooling_layers = args.pooling_layers).to(device)
 print(model)
 optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.learning_rate, capturable = True, weight_decay = args.reg)
 
