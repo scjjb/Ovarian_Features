@@ -50,6 +50,8 @@ parser.add_argument('--csv_path',type=str,default='dataset_csv/miniprototype.csv
 parser.add_argument('--split_dir', type=str, default=None, help='specify the set of splits to use')
 parser.add_argument('--graph_pooling', type=str,choices=["diff","mincut"],default="diff",help="type of graph pooling to use - dense_diff_pool or dense_mincut_pool")
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
+parser.add_argument('--drop_out', type=float, default=0.5, help='proportion of dropout in linear layer during training to reduce overfitting')
+parser.add_argument('--reg', type=float, default=1e-5,help='weight decay (aka L2 regularisation) in Adam optimizer')
 args = parser.parse_args()
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -103,11 +105,7 @@ class GraphDataset(Dataset):
             adj = (adj - np.identity(adj.shape[0])).astype(np.float32)
             edge_indices = np.transpose(np.triu(adj,k=1).nonzero())
             adj = torch.from_numpy(edge_indices).t().contiguous()
-            #assert 1==2,adj.shape
-            #adj = normalize(adj, axis=1, norm='l1')
-            #adjacency_matrix = to_dense_adj(torch.tensor(coordinates), max_num_nodes=min(len(coordinates),self.max_nodes), edge_attr=None)
             x = node_features.clone().detach()
-            #adj = adjacency_matrix.clone().detach().squeeze(0)
             label_name = labels_df[labels_df['slide_id']==slide_name]['label'].values[0]
             label = torch.tensor(int(label_dict[label_name]))
             data = Data(x=x, adj=adj, y=label)
@@ -116,20 +114,15 @@ class GraphDataset(Dataset):
         self.y = [data['y'] for data in data_list]
 
     def get_split_from_df(self, all_splits, split_key='train'):
-        print("split key",split_key)
         split = all_splits[split_key]
         split = split.dropna().reset_index(drop=True)
         if len(split) > 0:
             print(self.slide_data)
             mask = self.slide_data['slide_id'].isin(split.tolist())
-            #assert 1==2,int(mask)
-            #data = self.data[mask].reset_index(drop=True)
             data = [item for item, use in zip(self.data, mask) if use]
-            #print(df_slice)
             split = Generic_Split(data=data, node_features_dir=self.node_features_dir,coordinates_dir=self.coordinates_dir, csv_path=self.csv_path, max_nodes = self.max_nodes, transform=self.transform, pre_transform=self.pre_transform)
         else:
             split = None
-        print("split",split)
         return split
     
     def return_splits(self, csv_path=None):
@@ -385,9 +378,11 @@ class Net(torch.nn.Module):
             #print("x2 shape",x2.shape)
             x = x1 + x2 + x3
             #x = torch.cat([x1, x2, x3], dim=0)
+            x = F.dropout(x, p=args.drop_out, training=training)
             x = F.relu(self.lin1(x))
-            x = F.dropout(x, p=0.5, training=training)
+            x = F.dropout(x, p=args.drop_out, training=training)
             x = F.relu(self.lin2(x))
+            x = F.dropout(x, p=args.drop_out, training=training)
             ## Need to learn how to use log_softmax (with range [-inf,0]) if implementing it
             output = F.log_softmax(self.lin3(x), dim=-1), 0,0
             #output = F.softmax(self.lin3(x), dim=-1), 0,0
@@ -405,7 +400,7 @@ embedding_size = args.embedding_size
 #dataset[0]['x'].shape[1]
 model = Net(max_nodes=dataset.max_nodes_in_dataset,pooling_factor=args.pooling_factor,embedding_size=embedding_size, pooling_layers = args.pooling_layers).to(device)
 print(model)
-optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.learning_rate, capturable = True)
+optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.learning_rate, capturable = True, weight_decay = args.reg)
 
 print("Model parameters:",f'{sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
 
@@ -484,14 +479,7 @@ preds_int = [pred.argmax() for pred in preds]
 print("train set confusion matrix (predicted x axis, true y axis): ")
 print(confusion_matrix(labels,preds_int))
 try:
-    print("train set balanced accuracy: ",balanced_accuracy_score(labels,preds_int)
-            )
-    #print(labels)
-    #print(preds)
-    print("AUC: ",roc_auc_score(labels,preds,multi_class='ovr')
-            )
-    print( "F1:",f1_score(labels,preds_int,average='macro'),"\n")
-
+    print("train set balanced accuracy: ",balanced_accuracy_score(labels,preds_int), "  AUC: ",roc_auc_score(labels,preds,multi_class='ovr'), "  F1:",f1_score(labels,preds_int,average='macro'))
 except:
     print("training metrics broken")
 preds, labels = test_all(val_loader)
