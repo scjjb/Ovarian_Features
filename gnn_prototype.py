@@ -111,6 +111,12 @@ class GraphDataset(Dataset):
             data_list.append(data)
         self.data = data_list
         self.y = [data['y'] for data in data_list]
+        
+        classes = len(np.unique(self.y))
+        self.slide_cls_ids = [[] for i in range(classes)]
+        y_vals = np.array([label.item() for label in self.y])
+        for i in range(classes):
+            self.slide_cls_ids[i] = np.where(y_vals == i)[0]
 
     def get_split_from_df(self, all_splits, split_key='train'):
         split = all_splits[split_key]
@@ -119,7 +125,8 @@ class GraphDataset(Dataset):
             print(self.slide_data)
             mask = self.slide_data['slide_id'].isin(split.tolist())
             data = [item for item, use in zip(self.data, mask) if use]
-            split = Generic_Split(data=data, node_features_dir=self.node_features_dir,coordinates_dir=self.coordinates_dir, csv_path=self.csv_path, max_nodes = self.max_nodes, transform=self.transform, pre_transform=self.pre_transform)
+            y = [item for item, use in zip(self.y, mask) if use]
+            split = Generic_Split(data=data,y=y, node_features_dir=self.node_features_dir,coordinates_dir=self.coordinates_dir, csv_path=self.csv_path, max_nodes = self.max_nodes, transform=self.transform, pre_transform=self.pre_transform)
         else:
             split = None
         return split
@@ -165,17 +172,35 @@ class GraphDataset(Dataset):
 
     def __len__(self):
         return len(self.slide_data)
+    
+    def getlabel(self, ids):
+        return self.y[ids]
+
 
 class Generic_Split(GraphDataset):
-    def __init__(self, data, node_features_dir=None, coordinates_dir=None, csv_path=None, max_nodes = 250, transform=None, pre_transform=None):
+    def __init__(self, data,y, node_features_dir=None, coordinates_dir=None, csv_path=None, max_nodes = 250, transform=None, pre_transform=None):
         #self.slide_data = slide_data
         self.data = data
         self.node_features_dir = node_features_dir
         self.coordinates_dir = coordinates_dir
         self.max_nodes = max_nodes
         self.max_nodes_in_dataset = 0
+        self.y = y
+
+        classes = len(np.unique(self.y))
+        self.slide_cls_ids = [[] for i in range(classes)]
+        y_vals = np.array([label.item() for label in self.y])
+        for i in range(classes):
+            self.slide_cls_ids[i] = np.where(y_vals == i)[0]
+        #assert 1==2,self.y.item()
+        #assert 1==2,self.num_classes
+        #assert 1==2,y_vals
+    
     def __len__(self):
         return len(self.data)
+    
+    def getlabel(self, ids):
+        return self.y[ids]
 
 def get_split_loader(split_dataset, training = False, weighted = False, workers = 4):
     kwargs = {'num_workers': workers} if device.type == "cuda" else {}
