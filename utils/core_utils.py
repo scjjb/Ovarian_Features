@@ -199,7 +199,6 @@ def train(datasets, cur, class_counts, args):
         else:
             model = MIL_fc(**model_dict)
     
-    #model.relocate()
     print("\nModel parameters:",f'{sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.to(device)
@@ -213,9 +212,6 @@ def train(datasets, cur, class_counts, args):
     print('Done!')
     
     print('\nInit Loaders...\n')
-    #if args.extract_features:
-    #    train_split.extract_features(True)
-    #    train_split.initialise_model(args.model_architecture, args.pretraining_dataset)
     if args.debug_loader:
         train_split.set_debug_loader(True)
         val_split.set_debug_loader(True)
@@ -238,15 +234,10 @@ def train(datasets, cur, class_counts, args):
     val_split.set_transforms()
     test_split.set_transforms()
         
-    #print("train downsample",train_split.custom_downsample)
-    #print("val downsample",val_split.custom_downsample)
-    #print("train extract_features",train_split.extract_features)
-    #print("val extract_features",val_split.extract_features)
-    workers = 1
+    workers = 4
     if args.debug_loader:
         workers = 1
     train_loader = get_split_loader(train_split, training=True, weighted = args.weighted_sample, workers=workers)
-    #print("len train loader",len(train_loader))
     val_loader = get_split_loader(val_split,  workers=workers)
     test_loader = get_split_loader(test_split, workers=workers)
     print('Done!')
@@ -383,7 +374,6 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
     train_error = 0.
 
     print('\n')
-    pil_image_transform=transforms.ToPILImage()
     for batch_idx, inputs in enumerate(loader):
         if len(inputs)==2:
             data,label = inputs
@@ -393,28 +383,19 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
 
         if debug_loader:
             continue
-        #data = data.to(device),
-        #label = label.to(device)
-        #data, label = data.to(device), label.to(device)
-        #print(batch_idx, data[0], label)
-        #print("len batched data",len(data))
         
-        plot_data=False
+        plot_data=False ##plot_data is not yet callable
         if plot_data:
+            pil_image_transform=transforms.ToPILImage()
             for patch in data:
                 plot_tensor = patch
-                #print("tensor shape",plot_tensor.shape)
-                #plot_image = PIL.Image.fromarray(plot_tensor)
                 plot_image=pil_image_transform(plot_tensor)
                 plot_image.save("../mount_outputs/patch_plots_hipt/{}.jpg".format(random.randint(0,100000)))
         data, label = data.to(device), label.to(device)
         
         if feature_extractor is not None:
-            #print("using feature extractor")
             with torch.no_grad():
                 data = feature_extractor(data)
-        #print("training label",label)
-        #print("data:",data)
         
         if len(inputs)==3:
             logits, Y_prob, Y_hat, _, _ = model(data, adj, training=True)
@@ -458,7 +439,6 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
-    # loader.dataset.update_mode(True)
     val_loss = 0.
     val_error = 0.
     
@@ -474,7 +454,6 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
                 adj = adj.to(device)
 
             data, label = data.to(device, non_blocking=True), label.to(device, non_blocking=True)
-            #print(len(data)," val data len")
             if feature_extractor:
                 data = feature_extractor(data)
             
@@ -518,7 +497,6 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
     if early_stopping:
         assert results_dir
         early_stopping(epoch, val_loss, model, ckpt_name = os.path.join(results_dir, "s_{}_checkpoint.pt".format(cur)))
-        #early_stopping(epoch, 1-auc, model, ckpt_name = os.path.join(results_dir, "s_{}_checkpoint.pt".format(cur)))
         if early_stopping.early_stop:
             with open(os.path.join(results_dir,'early_stopping{}.txt'.format(cur)), 'w') as f:
                 f.write('Finished at epoch {}'.format(epoch))
@@ -611,7 +589,6 @@ def validate_clam(cur, epoch, model, loader, n_classes, early_stopping = None, w
     if early_stopping:
         assert results_dir
         early_stopping(epoch, val_loss, model, ckpt_name = os.path.join(results_dir, "s_{}_checkpoint.pt".format(cur)))
-        #early_stopping(epoch, 1-auc, model, ckpt_name = os.path.join(results_dir, "s_{}_checkpoint.pt".format(cur)))
         if early_stopping.early_stop:
             with open(os.path.join(results_dir,'early_stopping{}.txt'.format(cur)), 'w') as f:
                 f.write('Finished at epoch {}'.format(epoch))
