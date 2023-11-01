@@ -9,6 +9,7 @@ import pdb
 import pickle
 from scipy import stats
 import random
+from tqdm import tqdm
 
 from torch.utils.data import Dataset
 import h5py
@@ -23,6 +24,10 @@ import openslide
 import timm
 from datasets.dataset_h5 import Whole_Slide_Bag_FP
 from utils.utils import collate_features
+
+## added for graph networks
+from torch_geometric.data import Batch, Data
+from scipy.spatial.distance import pdist, squareform
 
 def save_splits(split_datasets, column_keys, filename, boolean_style=False):
         splits = [split_datasets[i].slide_data['slide_id'] for i in range(len(split_datasets))]
@@ -57,7 +62,8 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 slide_ext=None,
                 data_h5_dir=None,
                 data_slide_dir=None,
-                max_patches_per_slide=None
+                max_patches_per_slide=None,
+                model_type=None
                 ):
                 """
                 Args:
@@ -82,6 +88,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 self.data_h5_dir = data_h5_dir
                 self.data_slide_dir = data_slide_dir
                 self.max_patches_per_slide = max_patches_per_slide
+                self.model_type = model_type
                 if not label_col:
                         label_col = 'label'
                 self.label_col = label_col
@@ -222,7 +229,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 if len(split) > 0:
                         mask = self.slide_data['slide_id'].isin(split.tolist())
                         df_slice = self.slide_data[mask].reset_index(drop=True)
-                        split = Generic_Split(df_slice, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide)
+                        split = Generic_Split(df_slice, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide)
                 else:
                         split = None
                 
@@ -238,7 +245,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 if len(split) > 0:
                         mask = self.slide_data['slide_id'].isin(merged_split)
                         df_slice = self.slide_data[mask].reset_index(drop=True)
-                        split = Generic_Split(df_slice, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide)
+                        split = Generic_Split(df_slice, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide)
                 else:
                         split = None
                 
@@ -251,21 +258,21 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 if from_id:
                         if len(self.train_ids) > 0:
                                 train_data = self.slide_data.loc[self.train_ids].reset_index(drop=True)
-                                train_split = Generic_Split(train_data, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide)
+                                train_split = Generic_Split(train_data, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide)
 
                         else:
                                 train_split = None
                         
                         if len(self.val_ids) > 0:
                                 val_data = self.slide_data.loc[self.val_ids].reset_index(drop=True)
-                                val_split = Generic_Split(val_data, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, batch_size = self.batch_size,max_patches_per_slide=np.inf)
+                                val_split = Generic_Split(val_data, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf)
 
                         else:
                                 val_split = None
                         
                         if len(self.test_ids) > 0:
                                 test_data = self.slide_data.loc[self.test_ids].reset_index(drop=True)
-                                test_split = Generic_Split(test_data, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, batch_size = self.batch_size,max_patches_per_slide=np.inf)
+                                test_split = Generic_Split(test_data, data_dir=self.data_dir, coords_path=self.coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf)
                         
                         else:
                                 test_split = None
@@ -373,6 +380,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                 custom_downsample=None, 
                 target_patch_size=None,
                 model_architecture=None,
+                model_type=None,
                 batch_size=None,
                 debug_loader=False,
                 **kwargs):
@@ -397,6 +405,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                 self.custom_downsample = custom_downsample
                 self.target_patch_size = target_patch_size
                 self.model_architecture = model_architecture
+                self.model_type = model_type
                 self.batch_size = batch_size
                 self.debug_loader = debug_loader
         def load_from_h5(self, toggle):
@@ -415,7 +424,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 
         def set_augment_features(self, toggle):
                 self.augment_features = toggle    
-                assert(self.extract_features, "augment_features requires extract_features")
+                assert self.extract_features, "augment_features requires extract_features"
                 if toggle:
                     print("augmenting features")
 
@@ -426,6 +435,9 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
         def use_augmentations(self, toggle):
                 self.use_augs = toggle
                 print("using augmentations")
+
+        def collate(self, batch):
+                return Batch.from_data_list(batch)
 
         def set_transforms(self):
                 if self.augment_features:
@@ -450,6 +462,41 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
         #        elif model_architecture=='levit_128s':
         #            self.model=timm.create_model('levit_256',pretrained=True, num_classes=0)
         #        self.model.to(device)
+
+        def create_graphs(self):
+            print("creating graphs for dataset")
+            slides = self.slide_data['slide_id']
+            data_list = []
+            label_dict = {'high_grade':0,'low_grade':1,'clear_cell':2,'endometrioid':3,'mucinous':4}
+            for i in tqdm(range(len(slides))):
+                slide_id = slides[i]
+                features = torch.load(os.path.join(self.data_dir, 'pt_files', '{}.pt'.format(slide_id)))
+                with h5py.File(os.path.join(self.coords_path, str(slide_id)+".h5"),'r') as hdf5_file:
+                    coordinates = hdf5_file['coords'][:]
+                #if len(features)>self.max_nodes:
+                #    features=features[:self.max_nodes]
+                #    coordinates=coordinates[:self.max_nodes]
+                distances = pdist(coordinates, 'euclidean')
+                dist_matrix = squareform(distances)
+                dist_threshold = 10000  # Adjust this threshold as needed
+                adj = (dist_matrix <= dist_threshold).astype(np.float32)
+                adj = (adj - np.identity(adj.shape[0])).astype(np.float32)
+                edge_indices = np.transpose(np.triu(adj,k=1).nonzero())
+                adj = torch.from_numpy(edge_indices).t().contiguous()
+                x = features.clone().detach()
+                label = self.slide_data[self.slide_data['slide_id']==slide_id]['label'].values[0]
+                #label_name = self.slide_data[self.slide_data['slide_id']==slide_id]['label'].values[0]
+                #label = torch.tensor(int(label_dict[label_name]))
+                data = Data(x=x, adj=adj, y=label)
+                data_list.append(data)
+            self.data = data_list
+            self.y = [data['y'] for data in data_list]
+            classes = len(np.unique(self.y))
+            self.slide_cls_ids = [[] for i in range(classes)]
+            y_vals = np.array([label for label in self.y])
+            for i in range(classes):
+                self.slide_cls_ids[i] = np.where(y_vals == i)[0]
+        
 
         def __getitem__(self, idx):
                 slide_id = self.slide_data['slide_id'][idx]
@@ -531,10 +578,29 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     features = features + noise
                                     #print("perturbed",features)
                                 #print("loaded :",full_path)
+                                
+                                if self.model_type == 'graph':
+                                    with h5py.File(os.path.join(self.coords_path, str(slide_id)+".h5"),'r') as hdf5_file:
+                                        coordinates = hdf5_file['coords'][:]
+                                    distances = pdist(coordinates, 'euclidean')
+                                    dist_matrix = squareform(distances)
+                                    dist_threshold = 10000  # Adjust this threshold as needed
+                                    adj = (dist_matrix <= dist_threshold).astype(np.float32)
+                                    adj = (adj - np.identity(adj.shape[0])).astype(np.float32)
+                                    edge_indices = np.transpose(np.triu(adj,k=1).nonzero())
+                                    adj = torch.from_numpy(edge_indices).t().contiguous()
+                                    x = features.clone().detach()
+                                    #label_name = labels_df[labels_df['slide_id']==slide_name]['label'].values[0]
+                                    #label = torch.tensor(int(label_dict[label_name]))
+                                    #features = features
+                                    #features = torch.tensor(data=Data(x=x, adj=adj, y=label))
+                                    return features, adj, label
                                 return features, label
-                        
                         else:
-                                return slide_id, label
+                            if self.model_type == 'graph':
+                                raise NotImplementedError
+
+                            return slide_id, label
 
                 else:
                     if self.coords_path is not None:
@@ -585,7 +651,8 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 
 
 class Generic_Split(Generic_MIL_Dataset):
-        def __init__(self, slide_data, data_dir=None, coords_path=None, num_classes=2, perturb_variance=0.1, number_of_augs = 1, max_patches_per_slide=None,data_h5_dir=None,data_slide_dir=None,slide_ext=None, pretrained=None, custom_downsample=None, target_patch_size=None, model_architecture=None, batch_size = None, extract_features = False):
+        def __init__(self, slide_data, data_dir=None, coords_path=None, num_classes=2, perturb_variance=0.1, number_of_augs = 1, max_patches_per_slide=None,data_h5_dir=None,data_slide_dir=None,slide_ext=None, pretrained=None, custom_downsample=None, target_patch_size=None, model_architecture=None, model_type = None, batch_size = None, extract_features = False):
+                self.augment_features = False
                 self.debug_loader = False
                 self.use_h5 = False
                 self.use_perturbs = False
@@ -605,6 +672,7 @@ class Generic_Split(Generic_MIL_Dataset):
                 self.custom_downsample = custom_downsample
                 self.target_patch_size = target_patch_size
                 self.model_architecture = model_architecture
+                self.model_type = model_type
                 self.batch_size = batch_size
                 self.extract_features = extract_features
                 for i in range(self.num_classes):

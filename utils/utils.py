@@ -5,6 +5,7 @@ import torch.nn as nn
 import pdb
 
 import torch
+from torch_geometric.data import Batch,Data
 import numpy as np
 import torch.nn as nn
 from torchvision import transforms
@@ -33,6 +34,12 @@ class SubsetSequentialSampler(Sampler):
 
         def __len__(self):
                 return len(self.indices)
+
+def collate_Graph(batch):
+        img = torch.cat([item[0] for item in batch], dim = 0)
+        adj = torch.cat([item[1] for item in batch], dim = 0)
+        label = torch.LongTensor([item[2] for item in batch])
+        return [img, adj, label]
 
 def collate_MIL(batch):
         img = torch.cat([item[0] for item in batch], dim = 0)
@@ -77,7 +84,11 @@ def get_split_loader(split_dataset, training = False, weighted = False, workers 
         kwargs = {'num_workers': workers} if device.type == "cuda" else {}
         
         if collate is None:
-            collate=collate_MIL
+            if len(split_dataset[0])==3:
+                collate=collate_Graph
+            else:
+                collate=collate_MIL
+
         if hasattr(split_dataset,'use_h5'):
             if split_dataset.use_h5:
                 collate=collate_MIL_coords 

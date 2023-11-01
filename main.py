@@ -18,7 +18,10 @@ from utils.core_utils_tuning import train_tuning
 from utils.core_utils_sampling import train_sampling
 from datasets.dataset_generic import Generic_MIL_Dataset
 from utils.tuning_utils import TrialPlateauStopper
+import warnings
 
+
+warnings.simplefilter(action='ignore', category=UserWarning)
 ## set maximum number of raytune trials pending at once to 20
 os.environ['TUNE_MAX_PENDING_TRIALS_PG'] = "20"
 
@@ -428,7 +431,7 @@ parser.add_argument('--opt', type=str, choices = ['adam', 'sgd'], default='adam'
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout p=0.25')
 parser.add_argument('--bag_loss', type=str, choices=['svm', 'ce', 'balanced_ce'], default='ce',
                      help='slide-level classification loss function (default: ce)')
-parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
+parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'graph'], default='clam_sb', 
                     help='type of model (default: clam_sb, clam w/ single attention branch)')
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
@@ -581,9 +584,12 @@ dataset = Generic_MIL_Dataset(csv_path = args.csv_path,
                             custom_downsample=args.custom_downsample, 
                             target_patch_size=args.target_patch_size,
                             model_architecture = args.model_architecture,
+                            model_type = args.model_type,
                             batch_size = args.batch_size,
                             ignore=[])
 
+#if args.model_type == 'graph':
+#    dataset.create_graphs()
     
 if not os.path.isdir(args.results_dir):
     os.mkdir(args.results_dir)

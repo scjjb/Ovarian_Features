@@ -5,6 +5,7 @@ import os
 from datasets.dataset_generic import save_splits
 from models.model_mil import MIL_fc, MIL_fc_mc
 from models.model_clam import CLAM_MB, CLAM_SB
+from models.model_graph import Graph_Model
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.metrics import auc as calc_auc
@@ -132,6 +133,7 @@ def train(datasets, cur, class_counts, args):
 
     print('\nInit train/val/test splits...', end=' ')
     train_split, val_split, test_split = datasets
+    
     train_split.max_patches_per_slide=args.max_patches_per_slide
     val_split.max_patches_per_slide=float('inf')
     test_split.max_patches_per_slide=float('inf')
@@ -188,13 +190,19 @@ def train(datasets, cur, class_counts, args):
         else:
             raise NotImplementedError
     
+    elif args.model_type == 'graph':
+        model = Graph_Model(num_features=train_split[0][0].shape[1], num_classes=args.n_classes,drop_out=args.drop_out)
+
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
             model = MIL_fc_mc(**model_dict)
         else:
             model = MIL_fc(**model_dict)
     
-    model.relocate()
+    #model.relocate()
+    print("\nModel parameters:",f'{sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
+    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
     if args.continue_training:
         model.load_state_dict(torch.load(os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur))))
     print('Done!')
@@ -215,19 +223,10 @@ def train(datasets, cur, class_counts, args):
     
     if args.extract_features:
         train_split.set_extract_features(True)
-        #val_split.extract_features(True)
-    else:
-        train_split.set_extract_features(False)
     if args.augment_features:
         train_split.set_augment_features(True)
-    else:
-        train_split.set_augment_features(False)
     train_split.set_transforms()
-    val_split.set_extract_features(False)
-    val_split.set_augment_features(False)
     val_split.set_transforms()
-    test_split.set_extract_features(False)
-    test_split.set_augment_features(False)
     if val_split.extract_features:
         print("WARNING: extracting validation set features")
         if val_split.augment_features:
@@ -243,7 +242,7 @@ def train(datasets, cur, class_counts, args):
     #print("val downsample",val_split.custom_downsample)
     #print("train extract_features",train_split.extract_features)
     #print("val extract_features",val_split.extract_features)
-    workers = 4
+    workers = 1
     if args.debug_loader:
         workers = 1
     train_loader = get_split_loader(train_split, training=True, weighted = args.weighted_sample, workers=workers)
@@ -385,7 +384,13 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
 
     print('\n')
     pil_image_transform=transforms.ToPILImage()
-    for batch_idx, (data,label) in enumerate(loader):
+    for batch_idx, inputs in enumerate(loader):
+        if len(inputs)==2:
+            data,label = inputs
+        else:
+            data,adj,label = inputs
+            adj = adj.to(device)
+
         if debug_loader:
             continue
         #data = data.to(device),
@@ -410,7 +415,11 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
                 data = feature_extractor(data)
         #print("training label",label)
         #print("data:",data)
-        logits, Y_prob, Y_hat, _, _ = model(data)
+        
+        if len(inputs)==3:
+            logits, Y_prob, Y_hat, _, _ = model(data, adj, training=True)
+        else:
+            logits, Y_prob, Y_hat, _, _ = model(data)
         
         acc_logger.log(Y_hat, label)
         loss = loss_fn(logits, label)
@@ -457,12 +466,22 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
     labels = np.zeros(len(loader))
 
     with torch.no_grad():
-        for batch_idx, (data, label) in enumerate(loader):
+        for batch_idx, inputs in enumerate(loader):
+            if len(inputs)==2:
+                data,label = inputs
+            else:
+                data,adj,label = inputs
+                adj = adj.to(device)
+
             data, label = data.to(device, non_blocking=True), label.to(device, non_blocking=True)
             #print(len(data)," val data len")
             if feature_extractor:
                 data = feature_extractor(data)
-            logits, Y_prob, Y_hat, _, _ = model(data)
+            
+            if len(inputs)==3:
+                logits, Y_prob, Y_hat, _, _ = model(data, adj, training=False)
+            else:
+                logits, Y_prob, Y_hat, _, _ = model(data)
 
             acc_logger.log(Y_hat, label)
             
@@ -613,12 +632,21 @@ def summary(model, loader, n_classes):
 
     slide_ids = loader.dataset.slide_data['slide_id']
 
-    for batch_idx, (data, label) in enumerate(loader):
+    for batch_idx, inputs in enumerate(loader):
+        if len(inputs)==2:
+            data,label = inputs
+        else:
+            data,adj,label = inputs
+            adj = adj.to(device)
+
         data, label = data.to(device), label.to(device)
         slide_id = slide_ids.iloc[batch_idx]
         with torch.no_grad():
-            logits, Y_prob, Y_hat, _, _ = model(data)
-
+            if len(inputs)==3:
+                logits, Y_prob, Y_hat, _, _ = model(data, adj, training=False)
+            else:
+                logits, Y_prob, Y_hat, _, _ = model(data)
+            
         acc_logger.log(Y_hat, label)
         probs = Y_prob.cpu().numpy()
         all_probs[batch_idx] = probs
