@@ -192,9 +192,6 @@ class Generic_Split(GraphDataset):
         y_vals = np.array([label.item() for label in self.y])
         for i in range(classes):
             self.slide_cls_ids[i] = np.where(y_vals == i)[0]
-        #assert 1==2,self.y.item()
-        #assert 1==2,self.num_classes
-        #assert 1==2,y_vals
     
     def __len__(self):
         return len(self.data)
@@ -207,13 +204,10 @@ def get_split_loader(split_dataset, training = False, weighted = False, workers 
     if training:
         if weighted:
             weights = make_weights_for_balanced_classes_split(split_dataset)
-            #loader = DenseDataLoader(split_dataset, batch_size=1, sampler = WeightedRandomSampler(weights, len(weights)), **kwargs)    
             loader = DenseDataLoader(split_dataset, batch_size=1,sampler = WeightedRandomSampler(weights, len(weights)), **kwargs)
         else:
-            #loader = DenseDataLoader(split_dataset, batch_size=1, sampler = RandomSampler(split_dataset), **kwargs)
             loader = DenseDataLoader(split_dataset, batch_size=1,sampler = RandomSampler(split_dataset), **kwargs)
     else:
-        #loader = DenseDataLoader(split_dataset, batch_size=1, sampler = SequentialSampler(split_dataset), **kwargs)
         loader = DenseDataLoader(split_dataset, batch_size=1,  sampler = SequentialSampler(split_dataset), **kwargs)
     return loader
 data_dir = os.path.join(args.data_root_dir, args.features_folder)
@@ -226,29 +220,10 @@ assert os.path.isdir(args.split_dir)
 
 #i = 1 for prototyping as i = 0 has the same size test and val, which is confusing
 train_dataset, val_dataset, test_dataset = dataset.return_splits(csv_path='{}/splits_{}.csv'.format(args.split_dir, 1))
-#datasets = (train_dataset, val_dataset, test_dataset)
-#n = (len(dataset) + 4) // 5
-#test_dataset = dataset[:n]
-#val_dataset = dataset[n:2 * n]
-#train_dataset = dataset[2 * n:]
-#test_loader = DenseDataLoader(test_dataset, batch_size=1)
-#val_loader = DenseDataLoader(val_dataset, batch_size=1)
-#train_loader = DenseDataLoader(train_dataset, batch_size=1)
 
 print("Training on {} samples".format(len(train_dataset)))
 print("Validating on {} samples".format(len(val_dataset)))
 print("Testing on {} samples".format(len(test_dataset)))
-
-print(train_dataset)
-
-#train_loader = DenseDataLoader(train_dataset, batch_size=1)
-#val_loader = DenseDataLoader(val_dataset, batch_size=1)
-#test_loader = DenseDataLoader(test_dataset, batch_size=1)
-
-#assert 1==2, str(len(train_loader))+str(len(val_loader))+str(len(test_loader))
-
-#print(len(loader))
-#assert 1==2, loader
 
 workers = 4
 train_loader = get_split_loader(train_dataset, training=True, weighted = args.weighted_sample, workers=workers)
@@ -302,9 +277,8 @@ class GNN(torch.nn.Module):
         x2 = self.bn(2, self.conv2(x1, adj).relu())
         x3 = self.bn(3, self.conv3(x2, adj).relu())
         
-        ## this appending of the different features levels is a bit weird and requires larger layers in the network
+        ## this appending of the different features levels is a bit weird and requires larger layers in the network, but is suggested in a few different pyg examples
         x = torch.cat([x1, x2, x3], dim=-1)
-        #x = torch.cat([x1, x2], dim=-1)
         
         if self.lin is not None:
             x = self.lin(x).relu()
@@ -364,10 +338,8 @@ class Net(torch.nn.Module):
             s = self.gnn1_pool(x, adj)
             x = self.gnn1_embed(x, adj)
         
-            #print("before pooling",adj)
             #x, adj, l1, e1 = self.pooling_layer(x, adj, s)
             x, adj =  self.pooling_layer(x, adj)
-            #print("after pooling",adj)
             #x, adj, l1, e1 = dense_diff_pool(x, adj, s)
             #print("after pooling size",adj.shape, x.shape)
             for i in range(len(self.hidden_layers)):
@@ -398,11 +370,8 @@ class Net(torch.nn.Module):
             x = F.relu(self.conv3(x, edge_index))
             x, edge_index, _, batch, _, _ = self.pool3(x, edge_index)
             x3 = torch.cat([gmp(x, batch), gap(x, batch)], dim=1)
-
-            #print("x1 shape",x1.shape)
-            #print("x2 shape",x2.shape)
+            
             x = x1 + x2 + x3
-            #x = torch.cat([x1, x2, x3], dim=0)
             x = F.dropout(x, p=args.drop_out, training=training)
             x = F.relu(self.lin1(x))
             x = F.dropout(x, p=args.drop_out, training=training)
@@ -421,8 +390,6 @@ elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
 else:
     device = torch.device('cpu')
 
-#embedding_size = args.embedding_size 
-#dataset[0]['x'].shape[1]
 model = Net(max_nodes=dataset.max_nodes_in_dataset,pooling_factor=args.pooling_factor,embedding_size=args.embedding_size, pooling_layers = args.pooling_layers).to(device)
 print(model)
 optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=args.learning_rate, capturable = True, weight_decay = args.reg)
@@ -442,8 +409,9 @@ def train(epoch,weight):
         except:
             print("broken slide with data",data, "label", data.y)
             assert 1==2
-        loss = F.cross_entropy(output, data.y.view(-1))
+        loss = F.cross_entropy(output, data.y.view(-1), weight = weight)
         #loss = F.nll_loss(output, data.y.view(-1), weight=weight)
+        #loss = F.nll_loss(output, data.y.view(-1))
         loss.backward()
         loss_all += data.y.size(0) * float(loss)
         optimizer.step()
@@ -482,7 +450,7 @@ best_val_acc = test_acc = 0
 times = []
 y = pd.DataFrame([data.y.item() for data in train_dataset])
 weight=torch.tensor(sklearn.utils.class_weight.compute_class_weight('balanced',classes=np.unique(y),y=y.values.reshape(-1))).to(device).float()
-print("loss weight",weight)
+print("loss weight (NOT CURRENTLY USED)",weight)
 for epoch in range(args.epochs):
     start = time.time()
     train_loss = train(epoch,weight)
