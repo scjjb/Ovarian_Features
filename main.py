@@ -5,6 +5,7 @@ import os
 import torch
 import pandas as pd
 import numpy as np
+import json
 
 from functools import partial
 from ray import tune
@@ -46,7 +47,7 @@ def main():
             if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest",]:
                 hardware={"cpu":32,"gpu":0.2}
             else:
-                hardware={"cpu":64,"gpu":0.3333}
+                hardware={"cpu":64,"gpu":0.5}
 
         else:
             if args.task =='treatment':
@@ -54,262 +55,12 @@ def main():
             else:
                 hardware={"cpu":2,"gpu":0.5}
 
-        if args.sampling:
-            if args.no_inst_cluster:
-                search_space = {
-                    "reg": tune.loguniform(1e-10,1e-2),
-                    "drop_out": tune.uniform(0.00,0.99),
-                    "lr": tune.loguniform(1e-5,1e-2),
-                    "no_sample": tune.choice([0,10,20,30,40]),
-                    "weight_smoothing": tune.loguniform(0.0001,0.5),
-                    "resampling_iterations": tune.choice([2,4,6,8,10,12,16]),
-                    "sampling_neighbors": tune.choice([4,8,16,32,64]),
-                    "sampling_random": tune.uniform(0.25,0.95),
-                    "sampling_random_delta": tune.loguniform(0.0001,0.5)
-                    }
-            else:
-                search_space = {
-                    "reg": tune.loguniform(1e-10,1e-2),
-                    "drop_out": tune.uniform(0.00,0.99),
-                    "lr": tune.loguniform(1e-5,1e-2),
-                    "B": tune.choice([4,6,16,32,64]),
-                    "no_sample": tune.choice([0,10,20,30,40]),
-                    "weight_smoothing": tune.loguniform(0.0001,0.5),
-                    "resampling_iterations": tune.choice([2,4,6,8,10,12,16]),
-                    "sampling_neighbors": tune.choice([4,8,16,32,64]),
-                    "sampling_random": tune.uniform(0.25,0.95),
-                    "sampling_random_delta": tune.loguniform(0.0001,0.5)
-                }
-        else:
-            if args.no_inst_cluster:
-                    ## ATEC23 HIPT-ABMIL first tuning
-                    #search_space={
-                    #    "A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
-                    #    "lr": tune.grid_search([0.001,0.0001,0.00001]),
-                    #    "patches": tune.grid_search([25,50, 75]),
-                    #    "drop_out": tune.grid_search([0.25,0.5, 0.75]),
-                    #    "reg": tune.grid_search([0.01, 0.001, 0.0001]),
-                    #    }
-                    
-                    ## ATEC23 HIPT-ABMIL second tuning
-                    #search_space={
-                    #        "A_model_size": tune.grid_search(["hipt_small","hipt_smaller","hipt_smallest"]),
-                    #        "lr": tune.grid_search([0.001,0.0005,0.0001]),
-                    #        "patches": tune.grid_search([25,50,75]),
-                    #        "drop_out": tune.grid_search([0.6, 0.75, 0.9]),
-                    #        "reg": tune.grid_search([0.1, 0.01, 0.001]),
-                    #        }
-                    
-                    ## ATEC hipt-ABMIL third tuning
-                    #search_space={
-                    #        "A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
-                    #        "lr": tune.grid_search([0.001,0.0005]),
-                    #        "patches": tune.grid_search([50,75,100]),
-                    #        "drop_out": tune.grid_search([0.85, 0.9, 0.95]),
-                    #        "reg": tune.grid_search([0.5,0.1, 0.05]),
-                    #        }
-                    
-                    ## ATEC hipt-ABMIL third tuning part 2
-                    #search_space={
-                    #        "A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
-                    #        "lr": tune.grid_search([0.001,0.0005]),
-                    #        "patches": tune.grid_search([50,75,100]),
-                    #        "drop_out": tune.grid_search([0.8]),
-                    #        "reg": tune.grid_search([0.5,0.1, 0.05]),
-                    #        }
 
-
-                    ## ATEC hipt-ABMIL third tuning part 3
-                    search_space={
-                            "A_model_size": tune.grid_search(["hipt_small","hipt_smaller"]),
-                            "lr": tune.grid_search([0.001,0.0005]),
-                            "patches": tune.grid_search([50,75,100]),
-                            "drop_out": tune.grid_search([0.8,0.85,0.9,0.95]),
-                            "reg": tune.grid_search([1]),
-                            }
-
-                    ## StagingVsIDS first tuning - just getting a grasp on lr and patches, will look at others later
-                    #search_space={
-                    #        "reg": tune.grid_search([0.0001]),
-                    #        "drop_out": tune.grid_search([0.5]),
-                    #        "lr": tune.grid_search([0.01,0.001,0.0001]),
-                    #        "A_patches": tune.grid_search([2500, 5000, 7500]),
-                    #        "model_size": tune.grid_search(["small"])
-                    #        }
-
-
-                    ## StagingVsIDS second tuning - fixing lr and patches, varying drop_out and model_size
-                    #search_space={
-                    #        "reg": tune.grid_search([0.0001]),
-                    #        "drop_out": tune.grid_search([0.25,0.5,0.75]),
-                    #        "lr": tune.grid_search([0.001]),
-                    #        "A_patches": tune.grid_search([2500]),
-                    #        "model_size": tune.grid_search(["tiny","small","big"])
-                    #        }
-
-
-                    ## StagingVsIDS third tuning - trying dropout vs lr as these have been most impactful so far
-                    #search_space={
-                    #        "reg": tune.grid_search([0.0001]),
-                    #        "drop_out": tune.grid_search([0.3,0.4,0.5,0.6]),
-                    #        "lr": tune.grid_search([0.005,0.001,0.0005,0.0001]),
-                    #        "A_patches": tune.grid_search([2500]),
-                    #        "model_size": tune.grid_search(["small"])
-                    #        }
-
-                    ## StagingVsIDS final staging only tuning - allowing up to 100 epochs instead of 50 previously
-                    #search_space={
-                    #        "reg": tune.grid_search([0.001,0.0001,0.00001]),
-                    #        "drop_out": tune.grid_search([0.5]),
-                    #        "lr": tune.grid_search([0.001,0.0005]),
-                    #        "A_patches": tune.grid_search([500,1500,2500,3500]),
-                    #        "model_size": tune.grid_search(["small","big"])
-                    #        }
-                    
-
-                    ## StagingVsIDS first Staging+IDS tuning - Getting a grasp on lr, patches
-                    #search_space={
-                    #        "reg": tune.grid_search([0.0001]),
-                    #        "drop_out": tune.grid_search([0.5]),
-                    #        "lr": tune.grid_search([0.01,0.001,0.0001]),
-                    #        "A_patches": tune.grid_search([2500, 5000, 7500]),
-                    #        "model_size": tune.grid_search(["small"])
-                    #        }
-
-                    ## StagingVsIDS second Staging+IDS tuning - fixing lr and patches, varying drop_out and model_size
-                    #search_space={
-                    #        "reg": tune.grid_search([0.0001]),
-                    #        "drop_out": tune.grid_search([0.25,0.5,0.75]),
-                    #        "lr": tune.grid_search([0.001]),
-                    #        "A_patches": tune.grid_search([7500]),
-                    #        "model_size": tune.grid_search(["tiny","small","big"])
-                    #        }
-            
-
-                    ## StagingVsIDS third Staging+IDS - trying dropout vs lr
-                    #search_space={
-                    #        "reg": tune.grid_search([0.0001]),
-                    #        "drop_out": tune.grid_search([0.3,0.4,0.5,0.6]),
-                    #        "lr": tune.grid_search([0.005,0.001,0.0005,0.0001]),
-                    #        "A_patches": tune.grid_search([7500]),
-                    #        "model_size": tune.grid_search(["small"])
-                    #        }
-
-                    ## StagingVsIDS final Staging+IDS - allowing up to 100 epochs instead of 50 previously
-                    #search_space={
-                    #        "reg": tune.grid_search([0.001,0.0001,0.00001]),
-                    #        "drop_out": tune.grid_search([0.3]),
-                    #        "lr": tune.grid_search([0.001,0.0005]),
-                    #        "A_patches": tune.grid_search([2500,7500]),
-                    #        "model_size": tune.grid_search(["small","big"])
-                    #        }
-
-
-                    ## HIPT_ABMIL ESGO staging data first tuning
-                    #search_space={
-                    #        "reg": tune.grid_search([0.0001]),
-                    #        "drop_out": tune.grid_search([0.25,0.5,0.75]),
-                    #        "lr": tune.grid_search([0.01,0.001,0.0001]),
-                    #        "patches": tune.grid_search([80,40]),
-                    #        "A_model_size": tune.grid_search(["hipt_mega_small","hipt_const","hipt_big"]),
-                    #        }
-
-                    ## HIPT_ABMIL ESGO staging data second tuning
-                    #search_space={
-                    #        "reg": tune.grid_search([0.0001]),
-                    #        "drop_out": tune.grid_search([0.25,0.5,0.75]),
-                    #        "lr": tune.grid_search([0.0001,0.00001,0.000001]),
-                    #        "patches": tune.grid_search([80,40]),
-                    #        "A_model_size": tune.grid_search(["hipt_mega_small","hipt_const","hipt_big"]),
-                    #        }
-                    
-                    ## HIPT_ABMIL ESGO staging data third tuning
-                    #search_space={
-                    #        "reg": tune.grid_search([0.0001]),
-                    #        "drop_out": tune.grid_search([0.25,0.5,0.75]),
-                    #        "lr": tune.grid_search([0.0001,0.00001,0.000001]),
-                    #        "patches": tune.grid_search([80,40]),
-                    #        "A_model_size": tune.grid_search(["hipt_mega_tiny","hipt_mega_big"]),
-                    #        }
-                     
-                    ## HIPT_ABMIL ESGO staging data fourth tuning
-                    # A very rough estimate puts hipt_mega_mega at similar number of parameters as normal model small
-                    #search_space={
-                    #        "reg": tune.grid_search([0.0001]),
-                    #        "drop_out": tune.grid_search([0.25,0.5,0.75]),
-                    #        "lr": tune.grid_search([0.0001,0.00001,0.000001]),
-                    #        "patches": tune.grid_search([80,40]),
-                    #        "A_model_size": tune.grid_search(["hipt_mega_mega"])
-                    #        }
-
-                    ## HIPT_ABMIL ESGO staging data fifth
-                    # hipt_mega_mega2 expands final dimension instead of intermediate
-                    #search_space={
-                    #        "reg": tune.grid_search([0.0001]),
-                    #        "drop_out": tune.grid_search([0.25,0.5,0.75]),
-                    #        "lr": tune.grid_search([0.0001,0.00001,0.000001]),
-                    #        "patches": tune.grid_search([80,40]),
-                    #        "A_model_size": tune.grid_search(["hipt_mega_mega2"])
-                    #        }
-            else:
-                if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest"]:
-                    search_space={
-                            ## first HIPT-CLAM:
-                            #"reg": tune.grid_search([0.01, 0.001, 0.0001]),
-                            #"drop_out": tune.grid_search([0.25, 0.5, 0.75]),
-                            #"lr": tune.grid_search([0.001,0.0001,0.00001]),
-                            #"patches": tune.grid_search([25, 50, 75]),
-                            #"B": tune.grid_search([4,6,8]),
-                            #"A_model_size": tune.grid_search(["hipt_medium","hipt_small","hipt_smaller"]),
-                            #}
-                            
-                            ## second HIPT_clam:
-                            #"reg": tune.grid_search([0.01,0.001]),
-                            #"drop_out": tune.grid_search([0.6, 0.75, 0.9]),
-                            #"lr": tune.grid_search([0.001,0.0005,0.0001]),
-                            #"patches": tune.grid_search([25, 50]),
-                            #"B": tune.grid_search([4,8]),
-                            #"A_model_size": tune.grid_search(["hipt_small","hipt_smaller","hipt_smallest"]),
-                            #}
-                    
-                         
-                            ## Third HIPT_CLAM
-                            "reg": tune.grid_search([0.1,0.01,0.001]),
-                            "drop_out": tune.grid_search([0.8, 0.85, 0.9, 0.95]),
-                            "lr": tune.grid_search([0.001,0.0005]),
-                            "patches": tune.grid_search([40,50,60]),
-                            "B": tune.grid_search([4,6]),
-                            "A_model_size": tune.grid_search(["hipt_smaller","hipt_smallest"]),
-                            }
-
-
-                            ## second HIPT-CLAM tuning:
-                            #"reg": tune.grid_search([0.001, 0.0001, 0.00001]),
-                            #"drop_out": tune.grid_search([0.0, 0.2, 0.4, 0.6]),
-                            #"lr": tune.grid_search([0.005,0.001,0.0005]),
-                            #"patches": tune.grid_search([15,25,35,45]),
-                            #"B": tune.grid_search([6,8,10]),
-                            #"A_model_size": tune.grid_search(["hipt_smaller","hipt_smallest"])
-                            #}
-                
-                            ##third HIPT-CLAM tuning - this is just using clam_mb on best hyperparams from clam_sb
-                            #"reg": tune.grid_search([0.001, 0.0001]),
-                            #"drop_out": tune.grid_search([0.0, 0.25]),
-                            #"lr": tune.grid_search([0.001,0.0005]),
-                            #"patches": tune.grid_search([25,50]),
-                            #"B": tune.grid_search([6,8]),
-                            #"A_model_size": tune.grid_search(["hipt_smaller","hipt_smallest"])
-                            #}
-
-
-                else:
-                    search_space = {
-                        "reg": tune.loguniform(1e-10,1e-2),
-                        "drop_out": tune.uniform(0.00,0.99),
-                        "lr": tune.loguniform(1e-5,1e-2),
-                        "B": tune.choice([4,6,16,32,64]),
-                    }
-            
+        with open(args.tuning_config_file) as f: 
+            search_space = f.read() 
+        search_space = json.loads(search_space) 
+        for key, value in search_space.items():
+            search_space[key] = eval(value)
 
         scheduler = tune.schedulers.ASHAScheduler(
             metric="loss",
@@ -484,6 +235,7 @@ parser.add_argument('--fully_random',action='store_true', default=False, help='T
 
 ## tuning options
 parser.add_argument('--tuning', action='store_true', default=False, help='run hyperparameter tuning')
+parser.add_argument('--tuning_config_file', type=str, default=None, help='full path to txt file containing search space dictionary') 
 parser.add_argument('--tuning_output_file',type=str,default="tuning_results/tuning_output.csv",help="where to save tuning outputs")
 parser.add_argument('--num_tuning_experiments',type=int,default=100,help="Number of tuning experiments. If using grid tuning this is how many times each config will repeat, if sampling in ranges then this will be the number of overall experiments.")
 parser.add_argument('--hardware',type=str, choices=['DGX','PC'], default='DGX',help='sets amount of CPU and GPU to use per experiment')

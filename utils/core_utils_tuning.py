@@ -99,6 +99,9 @@ def train_tuning(config, datasets, cur, class_counts, args):
     if not args.no_inst_cluster:
         args.B=config["B"]
     args.lr=config["lr"]
+    args.beta1=config["beta1"]
+    args.beta2=config["beta2"]
+    args.eps=config["eps"]
     args.reg=config["reg"]
     args.drop_out=config["drop_out"]
     try:
@@ -194,18 +197,10 @@ def train_tuning(config, datasets, cur, class_counts, args):
 
     if args.extract_features:
         train_split.set_extract_features(True)
-    else:
-        train_split.set_extract_features(False)
     if args.augment_features:
         train_split.set_augment_features(True)
-    else:
-        train_split.set_augment_features(False)
     train_split.set_transforms()
-    val_split.set_extract_features(False)
-    val_split.set_augment_features(False)
     val_split.set_transforms()
-    test_split.set_extract_features(False)
-    test_split.set_augment_features(False)
     val_split.set_transforms()
     test_split.set_transforms()
 
