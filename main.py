@@ -150,16 +150,26 @@ def main():
 
 # Generic training settings
 parser = argparse.ArgumentParser(description='Configurations for WSI Training')
+
+## Folders 
 parser.add_argument('--data_root_dir', type=str, default="/", 
                     help='directory containing features folders')
 parser.add_argument('--features_folder', type=str, default="/",
                     help='folder within data_root_dir containing the features - must contain pt_files/h5_files subfolder')
 parser.add_argument('--coords_path', type=str, default=None,
                     help='path to coords pt files if needed')
+parser.add_argument('--csv_path',type=str,default=None,help='path to dataset_csv file')
+parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
+parser.add_argument('--log_data', action='store_true', default=False, help='log data using tensorboard')
+
+## Training settings
 parser.add_argument('--max_epochs', type=int, default=200,
                     help='maximum number of epochs to train (default: 200)')
 parser.add_argument('--min_epochs', type=int, default=20,
                     help='minimum number of epochs to train (default: 20)')
+parser.add_argument('--early_stopping', action='store_true', default=False, help='enable early stopping')
+parser.add_argument('--continue_training', action='store_true', default=False, help='Continue model training from latest checkpoint')
+parser.add_argument('--opt', type=str, choices = ['adam', 'sgd'], default='adam', help='optimizer for model training')
 parser.add_argument('--lr', type=float, default=1e-4,
                     help='learning rate (default: 0.0001)')
 parser.add_argument('--beta1', type=float, default=0.9,
@@ -168,10 +178,24 @@ parser.add_argument('--beta2', type=float, default=0.999,
                     help='beta2 in Adam optimizer')
 parser.add_argument('--eps', type=float, default=1e-8,
                     help='eps in Adam optimizer')
+parser.add_argument('--reg', type=float, default=1e-5,
+                    help='weight decay (L2 regularisation) in Adam optimizer')
+parser.add_argument('--max_patches_per_slide', type=int, default=float('inf'), help='number of patches to sample per slide during training')
+parser.add_argument('--perturb', action='store_true', default=False, help='perturb features during training')
+parser.add_argument('--perturb_variance', type=float, default=0.1, help='variance of feature perturbations')
+parser.add_argument('--drop_out', type=float, default=0.25, help='proportion of weights dropped out before fully connected layers')
+parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling during training')
+parser.add_argument('--bag_loss', type=str, choices=['svm', 'ce', 'balanced_ce'], default='ce',
+                     help='slide-level classification loss function (default: ce)')
+
+## Model settings
+parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'graph'], default='clam_sb', help='type of model (default: clam_sb, clam w/ single attention branch)')
+parser.add_argument('--model_size', type=str, choices=['256','tinier3','tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier', 'tiny128','tiny','small', 'big','hipt_mega_tiny','hipt_mega_small','hipt_mega_big','hipt_mega_mega','hipt_mega_mega2','hipt_const','hipt_big','hipt_medium','hipt_small','hipt_smaller','hipt_smallest'], default='small', help='size of model, does not affect mil')
+parser.add_argument('--task', type=str, choices=['ovarian_5class','ovarian_1vsall','nsclc','treatment','treatment_switched'])
+
+## Data settings
 parser.add_argument('--label_frac', type=float, default=1.0,
                     help='fraction of training labels (default: 1.0)')
-parser.add_argument('--reg', type=float, default=1e-5,
-                    help='weight decay (default: 1e-5)')
 parser.add_argument('--seed', type=int, default=1, 
                     help='random seed for reproducible experiment (default: 1)')
 parser.add_argument('--k', type=int, default=10, help='number of folds (default: 10)')
@@ -181,32 +205,12 @@ parser.add_argument('--results_dir', default='./results', help='results director
 parser.add_argument('--split_dir', type=str, default=None, 
                     help='manually specify the set of splits to use, ' 
                     +'instead of infering from the task and label_frac argument (default: None)')
-parser.add_argument('--log_data', action='store_true', default=False, help='log data using tensorboard')
-parser.add_argument('--continue_training', action='store_true', default=False, help='Continue model training from latest checkpoint')
-parser.add_argument('--early_stopping', action='store_true', default=False, help='enable early stopping')
-parser.add_argument('--opt', type=str, choices = ['adam', 'sgd'], default='adam')
-parser.add_argument('--drop_out', type=float, default=0.25, help='dropout p=0.25')
-parser.add_argument('--bag_loss', type=str, choices=['svm', 'ce', 'balanced_ce'], default='ce',
-                     help='slide-level classification loss function (default: ce)')
-parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'graph'], default='clam_sb', 
-                    help='type of model (default: clam_sb, clam w/ single attention branch)')
-parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
-parser.add_argument('--weighted_sample', action='store_true', default=False, help='enable weighted sampling')
-parser.add_argument('--model_size', type=str, choices=['256','tinier3','tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier', 'tiny128','tiny','small', 'big','hipt_mega_tiny','hipt_mega_small','hipt_mega_big','hipt_mega_mega','hipt_mega_mega2','hipt_const','hipt_big','hipt_medium','hipt_small','hipt_smaller','hipt_smallest'], default='small', help='size of model, does not affect mil')
-parser.add_argument('--task', type=str, choices=['ovarian_5class','ovarian_1vsall','nsclc','treatment','treatment_switched'])
-parser.add_argument('--profile', action='store_true', default=False, 
-                    help='show profile of longest running code sections')
-parser.add_argument('--profile_rows', type=int, default=10, help='number of rows to show from profiler (requires --profile to show any)')
-parser.add_argument('--csv_path',type=str,default=None,help='path to dataset_csv file')
-parser.add_argument('--perturb', action='store_true', default=False, help='perturb features during training')
-parser.add_argument('--perturb_variance', type=float, default=0.1, help='variance of feature perturbations')
-parser.add_argument('--use_augs', action='store_true', default=False, help='use augmented versions of the training slides during training. The features to be saved in the same place as the non-augmented features, with the addition of "aug0", "aug1" etc. before the .pt in each filename')
+parser.add_argument('--use_augs', action='store_true', default=False, help='use pre-augmented versions of the training slides during training. The features to be saved in the same place as the non-augmented features, with the addition of "aug0", "aug1" etc. before the .pt in each filename')
 parser.add_argument('--number_of_augs', type=int, default=1, help='number of augmented versions of each real image that are available')
 
-## feature extraction options
+## On-line feature extraction options (disregard if using pre-extracted features)
 parser.add_argument('--extract_features', action='store_true', default=False, help='extract features during training')
 parser.add_argument('--augment_features', action='store_true', default=False, help='if extracting features, whether to apply augmentations before feature extraction')
-parser.add_argument('--max_patches_per_slide', type=int, default=float('inf'), help='number of patches to use per slide each iteration when extracting features during training')
 parser.add_argument('--model_architecture',type=str,choices=['resnet18','resnet50','levit_128s'],default='resnet50')
 parser.add_argument('--batch_size', type=int, default=256)
 parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
@@ -216,7 +220,7 @@ parser.add_argument('--slide_ext', type=str, default= '.svs')
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 
-## sampling options
+## Old sampling options - developed for https://github.com/scjjb/DRAS-MIL but not used for a while, now just using max_patches_per_slide instead
 parser.add_argument('--sampling', action='store_true', default=False, help='sampling for faster training')
 parser.add_argument('--sampling_type', type=str, choices=['spatial','textural','newest'],default='spatial',help='type of sampling to use')
 parser.add_argument('--samples_per_iteration', type=int, default=100, help='number of patches to sample per sampling iteration')
@@ -232,17 +236,16 @@ parser.add_argument('--use_all_samples',action='store_true', default=False, help
 parser.add_argument('--no_sampling_epochs',type=int,default=20,help='number of epochs to complete full slide processing before beginning sampling')
 parser.add_argument('--fully_random',action='store_true', default=False, help='Take entirely random samples (no active sampling)')
 
-
-## tuning options
+## Tuning options
 parser.add_argument('--tuning', action='store_true', default=False, help='run hyperparameter tuning')
 parser.add_argument('--tuning_config_file', type=str, default=None, help='full path to txt file containing search space dictionary') 
 parser.add_argument('--tuning_output_file',type=str,default="tuning_results/tuning_output.csv",help="where to save tuning outputs")
 parser.add_argument('--num_tuning_experiments',type=int,default=100,help="Number of tuning experiments. If using grid tuning this is how many times each config will repeat, if sampling in ranges then this will be the number of overall experiments.")
 parser.add_argument('--hardware',type=str, choices=['DGX','PC'], default='DGX',help='sets amount of CPU and GPU to use per experiment')
 
-### CLAM specific options
+### CLAM options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
-                     help='disable instance-level clustering')
+                     help='disable instance-level clustering to use ABMIL rather than CLAM')
 parser.add_argument('--inst_loss', type=str, choices=['svm', 'ce', None], default=None,
                      help='instance-level clustering loss function (default: None)')
 parser.add_argument('--subtyping', action='store_true', default=False, 
@@ -251,9 +254,13 @@ parser.add_argument('--bag_weight', type=float, default=0.7,
                     help='clam: weight coefficient for bag-level loss (default: 0.7)')
 parser.add_argument('--B', type=int, default=8, help='numbr of positive/negative patches to sample for clam')
 
-## debugging arg
+## Developer settings
 parser.add_argument('--debug_loader', action='store_true', default=False,
-                        help='debugger arg which runs through the loader but doesnt train models')
+                        help='debugger arg which runs through the loader without training the model')
+parser.add_argument('--profile', action='store_true', default=False,
+                    help='show profile of longest running code sections')
+parser.add_argument('--profile_rows', type=int, default=10, help='number of rows to show from profiler (requires --profile to show any)')
+
 
 args = parser.parse_args()
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")

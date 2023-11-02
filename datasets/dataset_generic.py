@@ -452,38 +452,6 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                     self.transforms = transforms.Compose(
                                             [transforms.ToTensor()])
 
-
-        def create_graphs(self):
-            print("creating graphs for dataset")
-            slides = self.slide_data['slide_id']
-            data_list = []
-            label_dict = {'high_grade':0,'low_grade':1,'clear_cell':2,'endometrioid':3,'mucinous':4}
-            for i in tqdm(range(len(slides))):
-                slide_id = slides[i]
-                features = torch.load(os.path.join(self.data_dir, 'pt_files', '{}.pt'.format(slide_id)))
-                with h5py.File(os.path.join(self.coords_path, str(slide_id)+".h5"),'r') as hdf5_file:
-                    coordinates = hdf5_file['coords'][:]
-                
-                distances = pdist(coordinates, 'euclidean')
-                dist_matrix = squareform(distances)
-                dist_threshold = 10000  # Adjust this threshold as needed
-                adj = (dist_matrix <= dist_threshold).astype(np.float32)
-                adj = (adj - np.identity(adj.shape[0])).astype(np.float32)
-                edge_indices = np.transpose(np.triu(adj,k=1).nonzero())
-                adj = torch.from_numpy(edge_indices).t().contiguous()
-                x = features.clone().detach()
-                label = self.slide_data[self.slide_data['slide_id']==slide_id]['label'].values[0]
-                data = Data(x=x, adj=adj, y=label)
-                data_list.append(data)
-            self.data = data_list
-            self.y = [data['y'] for data in data_list]
-            classes = len(np.unique(self.y))
-            self.slide_cls_ids = [[] for i in range(classes)]
-            y_vals = np.array([label for label in self.y])
-            for i in range(classes):
-                self.slide_cls_ids[i] = np.where(y_vals == i)[0]
-        
-
         def __getitem__(self, idx):
                 slide_id = self.slide_data['slide_id'][idx]
                 label = self.slide_data['label'][idx]
