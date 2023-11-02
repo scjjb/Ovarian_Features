@@ -452,16 +452,6 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                     self.transforms = transforms.Compose(
                                             [transforms.ToTensor()])
 
-        #def initialise_model(self, model_architecture, pretraining_dataset):
-        #        device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        #        print('loading {} pretrained model {}'.format(pretraining_dataset, model_architecture))
-        #        if model_architecture=='resnet18':
-        #            self.model = resnet18_baseline(pretrained=True,dataset=pretraining_dataset)
-        #        elif model_architecture=='resnet50':
-        #            self.model = resnet50_baseline(pretrained=True,dataset=pretraining_dataset)    
-        #        elif model_architecture=='levit_128s':
-        #            self.model=timm.create_model('levit_256',pretrained=True, num_classes=0)
-        #        self.model.to(device)
 
         def create_graphs(self):
             print("creating graphs for dataset")
@@ -473,9 +463,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                 features = torch.load(os.path.join(self.data_dir, 'pt_files', '{}.pt'.format(slide_id)))
                 with h5py.File(os.path.join(self.coords_path, str(slide_id)+".h5"),'r') as hdf5_file:
                     coordinates = hdf5_file['coords'][:]
-                #if len(features)>self.max_nodes:
-                #    features=features[:self.max_nodes]
-                #    coordinates=coordinates[:self.max_nodes]
+                
                 distances = pdist(coordinates, 'euclidean')
                 dist_matrix = squareform(distances)
                 dist_threshold = 10000  # Adjust this threshold as needed
@@ -485,8 +473,6 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                 adj = torch.from_numpy(edge_indices).t().contiguous()
                 x = features.clone().detach()
                 label = self.slide_data[self.slide_data['slide_id']==slide_id]['label'].values[0]
-                #label_name = self.slide_data[self.slide_data['slide_id']==slide_id]['label'].values[0]
-                #label = torch.tensor(int(label_dict[label_name]))
                 data = Data(x=x, adj=adj, y=label)
                 data_list.append(data)
             self.data = data_list
@@ -508,41 +494,12 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                         data_dir = self.data_dir
 
                 if self.extract_features:
-                    #torch.multiprocessing.set_start_method('spawn')
                     h5_file_path = os.path.join(self.data_h5_dir, 'patches', slide_id+".h5")
                     file_path = os.path.join(self.data_slide_dir, slide_id+self.slide_ext)
                     wsi = openslide.open_slide(file_path)
                     dataset = Whole_Slide_Bag_FP(file_path=h5_file_path, wsi=wsi, custom_transforms=self.transforms, pretrained=self.pretrained,custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size, max_patches_per_slide = self.max_patches_per_slide,model_architecture = self.model_architecture, batch_size = self.batch_size, extract_features = self.extract_features)
-                    #print("IN GETITEM len dataset before update",len(dataset))
                     dataset.update_sample(np.random.choice(len(dataset),self.max_patches_per_slide))
-                    #print("IN GETITEM len dataset after update",len(dataset))
-                    #print("dataset len",len(dataset))
-                    
-                    #x, y = dataset[0]
-                    #device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-                    ## cannot split num workers as this is an inner loop
-                    #if self.model_architecture=='resnet18':
-                    #    kwargs = {'num_workers': 1, 'pin_memory': True} if device.type == "cuda" else {}
-                    #elif self.model_architecture=='resnet50':
-                    #    kwargs = {'num_workers': 1, 'pin_memory': True} if device.type == "cuda" else {}
-                    #elif self.model_architecture=='levit_128s':
-                    #    kwargs = {'num_workers': 1, 'pin_memory': True} if device.type == "cuda" else {}
-                    #    tfms=torch.nn.Sequential(transforms.CenterCrop(224))
-                    #kwargs = {}
-                    #loader = DataLoader(dataset=dataset, batch_size=self.batch_size, **kwargs, collate_fn=collate_features,multiprocessing_context='spawn')
-                    #all_features=[]
-                    #for count, (batch, coords) in enumerate(loader):
-                    #    with torch.no_grad():   
-                    #        batch = batch.to(device, non_blocking=True)
-                    #        if args.model_type=='levit_128s':
-                    #            batch=tfms(batch)
-                    #        features = model(batch)
-                    #        features = features.cpu().numpy()
-                    #        all_features = all_features+features
-                    #print("IN GETITEM after update dataset",dataset)
                     patches = [data for data in dataset]
-                    #print(patches[0][0].shape)
-                    #print(patches[0][1])
                     label = torch.tensor(label)
                     return patches, label
 
@@ -553,35 +510,32 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                     aug_number = random.randint(0,self.number_of_augs)
                     if aug_number>0:
                         slide_id=slide_id+"aug{}".format(aug_number)
-                    #print(self.number_of_augs)
-                    #print(slide_id)
+                
                 if not self.use_h5:
                         if self.data_dir:
                                 full_path = os.path.join(data_dir, 'pt_files', '{}.pt'.format(slide_id))
-                                #print("loading :",full_path)
                                 if self.debug_loader:
                                     print(slide_id)
                                 try:
                                     features = torch.load(full_path)
                                 except:
                                     assert 1==2, "Error caused by slide {}".format(slide_id)
-                                #print("max patches per slide:",self.max_patches_per_slide)
-                                #print("len features:",len(features))
-                                if self.max_patches_per_slide < len(features):
-                                    sampled_idxs=np.random.choice(len(features),self.max_patches_per_slide)
-                                    features = features[sampled_idxs]
-                                #print("len features after:",len(features))
-                                if self.use_perturbs:
-                                    #print("features",features)
-                                    #print("variance:",self.perturb_variance)
-                                    noise = torch.randn_like(features)*self.perturb_variance
-                                    features = features + noise
-                                    #print("perturbed",features)
-                                #print("loaded :",full_path)
                                 
                                 if self.model_type == 'graph':
                                     with h5py.File(os.path.join(self.coords_path, str(slide_id)+".h5"),'r') as hdf5_file:
                                         coordinates = hdf5_file['coords'][:]
+
+                                if self.max_patches_per_slide < len(features):
+                                    sampled_idxs=np.random.choice(len(features),self.max_patches_per_slide)
+                                    features = features[sampled_idxs]
+                                    if self.model_type == 'graph':
+                                        coordinates = coordinates[sampled_idxs]
+
+                                if self.use_perturbs:
+                                    noise = torch.randn_like(features)*self.perturb_variance
+                                    features = features + noise
+                                
+                                if self.model_type == 'graph':
                                     distances = pdist(coordinates, 'euclidean')
                                     dist_matrix = squareform(distances)
                                     dist_threshold = 10000  # Adjust this threshold as needed
@@ -590,10 +544,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     edge_indices = np.transpose(np.triu(adj,k=1).nonzero())
                                     adj = torch.from_numpy(edge_indices).t().contiguous()
                                     x = features.clone().detach()
-                                    #label_name = labels_df[labels_df['slide_id']==slide_name]['label'].values[0]
-                                    #label = torch.tensor(int(label_dict[label_name]))
-                                    #features = features
-                                    #features = torch.tensor(data=Data(x=x, adj=adj, y=label))
+                                    #print(x.shape)
                                     return features, adj, label
                                 return features, label
                         else:
@@ -604,42 +555,17 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 
                 else:
                     if self.coords_path is not None:
-                        #h5_path = os.path.join(data_dir,'h5_files','{}.h5'.format(slide_id))
-                        ## Next line is not a replacement for line above as the coords change from the patches to the h5 file
-                        #h5_path = os.path.join('../mount_outputs/patches','{}.h5'.format(slide_id))
-                        
-                        
-                        #with h5py.File(h5_path,'r') as hdf5_file:
-                                #features_h5 = hdf5_file['features'][:]
-                                #coords = hdf5_file['coords'][:]
-                                #print(hdf5_file)
-                                #print(hdf5_file.keys())
-                                #assert 1==2,"testing"
-                                #coords = hdf5_file['coords'][:]
-                                #print(coords)
-                                #assert 1==2,"testing"
-                        #coords=torch.load(h5_path)
-                        
                         full_path = os.path.join(data_dir, 'pt_files', '{}.pt'.format(slide_id))
                         features = torch.load(full_path)
-                        
-                        
-                        #coords_path=os.path.join("../mount_outputs/coords","{}.pt".format(slide_id))
                         coords_path=os.path.join(self.coords_path,"{}.pt".format(slide_id))
                         coords=torch.load(coords_path)
                         
-                        #print(coords)
-                        #assert 1==2,"testing"
-
-                        #features = torch.from_numpy(features_h5)
                     else:
                         full_path = os.path.join(data_dir,'h5_files','{}.h5'.format(slide_id))
                         with h5py.File(full_path,'r') as hdf5_file:
                             features = hdf5_file['features'][:]
                             coords = hdf5_file['coords'][:]
                         features = torch.from_numpy(features)
-                    #print("max patches per slide:",self.max_patches_per_slide)
-                    #print("len features:",len(features))
                     if self.max_patches_per_slide < len(features):
                         sampled_idxs=np.random.choice(len(features),self.max_patches_per_slide)
                         features = features[sampled_idxs]
