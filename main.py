@@ -411,6 +411,12 @@ parser.add_argument('--min_epochs', type=int, default=20,
                     help='minimum number of epochs to train (default: 20)')
 parser.add_argument('--lr', type=float, default=1e-4,
                     help='learning rate (default: 0.0001)')
+parser.add_argument('--beta1', type=float, default=0.9,
+                    help='beta1 in Adam optimizer')
+parser.add_argument('--beta2', type=float, default=0.999,
+                    help='beta2 in Adam optimizer')
+parser.add_argument('--eps', type=float, default=1e-8,
+                    help='eps in Adam optimizer')
 parser.add_argument('--label_frac', type=float, default=1.0,
                     help='fraction of training labels (default: 1.0)')
 parser.add_argument('--reg', type=float, default=1e-5,
@@ -522,6 +528,9 @@ settings = {'num_splits': args.k,
             'max_epochs': args.max_epochs, 
             'results_dir': args.results_dir, 
             'lr': args.lr,
+            'beta1': args.beta1,
+            'beta2': args.beta2,
+            'eps': args.eps,
             'experiment': args.exp_code,
             'reg': args.reg,
             'label_frac': args.label_frac,
