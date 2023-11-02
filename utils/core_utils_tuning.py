@@ -5,11 +5,15 @@ import os
 from datasets.dataset_generic import save_splits
 from models.model_mil import MIL_fc, MIL_fc_mc
 from models.model_clam import CLAM_MB, CLAM_SB
+from models.model_graph import Graph_Model
 from sklearn.preprocessing import label_binarize
 from sklearn.metrics import roc_auc_score, roc_curve
 from sklearn.metrics import auc as calc_auc
 import pandas as pd
 from ray import tune
+import warnings
+warnings.simplefilter(action='ignore', category=UserWarning)
+
 
 class Accuracy_Logger(object):
     """Accuracy logger"""
@@ -138,6 +142,7 @@ def train_tuning(config, datasets, cur, class_counts, args):
     print("Testing on {} samples".format(len(test_split)))
 
     print('\nInit loss function...', end=' ')
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     if args.bag_loss == 'svm':
         from topk.svm import SmoothTop1SVM
         loss_fn = SmoothTop1SVM(n_classes = args.n_classes)
@@ -179,13 +184,19 @@ def train_tuning(config, datasets, cur, class_counts, args):
         else:
             raise NotImplementedError
 
+    elif args.model_type == 'graph':
+        model = Graph_Model(num_features=train_split[0][0].shape[1], num_classes=args.n_classes,drop_out=args.drop_out)
+
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
             model = MIL_fc_mc(**model_dict)
         else:
             model = MIL_fc(**model_dict)
 
-    model.relocate()
+    print("\nModel parameters:",f'{sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
+    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    model.to(device)
+    #model.relocate()
     if args.continue_training:
         model.load_state_dict(torch.load(os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur))))
     print('Done!')
@@ -353,11 +364,20 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
     train_error = 0.
 
     print('\n')
-    for batch_idx, (data, label) in enumerate(loader):
-        #print("len batched data",len(data))
+    for batch_idx,inputs in enumerate(loader):
+        if len(inputs)==2:
+            data,label = inputs
+        else:
+            data,adj,label = inputs
+            adj = adj.to(device)
+        
         data, label = data.to(device), label.to(device)
 
-        logits, Y_prob, Y_hat, _, _ = model(data)
+        ## len(inputs)==3 implies graph model, len(inputs)==2 otherwise
+        if len(inputs)==3:
+            logits, Y_prob, Y_hat, _, _ = model(data, adj, training=True)
+        else:
+            logits, Y_prob, Y_hat, _, _ = model(data)
 
         acc_logger.log(Y_hat, label)
         loss = loss_fn(logits, label)
@@ -404,10 +424,18 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
     labels = np.zeros(len(loader))
 
     with torch.no_grad():
-        for batch_idx, (data, label) in enumerate(loader):
-            data, label = data.to(device, non_blocking=True), label.to(device, non_blocking=True)
+        for batch_idx, inputs in enumerate(loader):
+            if len(inputs)==2:
+                data,label = inputs
+            else:
+                data,adj,label = inputs
+                adj = adj.to(device)
+            data, label = data.to(device), label.to(device)
 
-            logits, Y_prob, Y_hat, _, _ = model(data)
+            if len(inputs)==3:
+                logits, Y_prob, Y_hat, _, _ = model(data, adj, training=False)
+            else:
+                logits, Y_prob, Y_hat, _, _ = model(data)
 
             acc_logger.log(Y_hat, label)
 
@@ -554,11 +582,21 @@ def summary(model, loader, n_classes):
 
     slide_ids = loader.dataset.slide_data['slide_id']
 
-    for batch_idx, (data, label) in enumerate(loader):
+    for batch_idx, inputs in enumerate(loader):
+        if len(inputs)==2:
+            data,label = inputs
+        else:
+            data,adj,label = inputs
+            adj = adj.to(device)
         data, label = data.to(device), label.to(device)
+        
         slide_id = slide_ids.iloc[batch_idx]
+        
         with torch.no_grad():
-            logits, Y_prob, Y_hat, _, _ = model(data)
+            if len(inputs)==3:
+                logits, Y_prob, Y_hat, _, _ = model(data, adj, training=False)
+            else:
+                logits, Y_prob, Y_hat, _, _ = model(data)
 
         acc_logger.log(Y_hat, label)
         probs = Y_prob.cpu().numpy()
