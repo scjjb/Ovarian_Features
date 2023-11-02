@@ -243,7 +243,7 @@ parser.add_argument('--tuning_output_file',type=str,default="tuning_results/tuni
 parser.add_argument('--num_tuning_experiments',type=int,default=100,help="Number of tuning experiments. If using grid tuning this is how many times each config will repeat, if sampling in ranges then this will be the number of overall experiments.")
 parser.add_argument('--hardware',type=str, choices=['DGX','PC'], default='DGX',help='sets amount of CPU and GPU to use per experiment')
 
-### CLAM options
+## CLAM options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
                      help='disable instance-level clustering to use ABMIL rather than CLAM')
 parser.add_argument('--inst_loss', type=str, choices=['svm', 'ce', None], default=None,
@@ -252,7 +252,10 @@ parser.add_argument('--subtyping', action='store_true', default=False,
                      help='subtyping problem')
 parser.add_argument('--bag_weight', type=float, default=0.7,
                     help='clam: weight coefficient for bag-level loss (default: 0.7)')
-parser.add_argument('--B', type=int, default=8, help='numbr of positive/negative patches to sample for clam')
+parser.add_argument('--B', type=int, default=8, help='number of positive/negative patches to sample for clam')
+
+## Graph model options
+parser.add_argument('--graph_edge_distance',type=int,default=750,help="Maximum distance between nodes in graph to add edges.")
 
 ## Developer settings
 parser.add_argument('--debug_loader', action='store_true', default=False,
@@ -301,7 +304,8 @@ settings = {'num_splits': args.k,
             "use_early_stopping": args.early_stopping,
             "use_sampling": args.sampling,
             'weighted_sample': args.weighted_sample,
-            'opt': args.opt}
+            'opt': args.opt,
+            'graph_edge_distance': args.graph_edge_distance}
 
 if args.model_type in ['clam_sb', 'clam_mb']:
    settings.update({'bag_weight': args.bag_weight,
@@ -316,8 +320,6 @@ print('\nLoad Dataset')
 if args.task == 'ovarian_5class':
     args.n_classes=5
     args.label_dict = {'high_grade':0,'low_grade':1,'clear_cell':2,'endometrioid':3,'mucinous':4}
-    #if args.model_type in ['clam_sb', 'clam_mb']:
-        #assert args.subtyping
 
 elif args.task == 'ovarian_1vsall':
     args.n_classes=2
@@ -354,6 +356,7 @@ dataset = Generic_MIL_Dataset(csv_path = args.csv_path,
                             model_architecture = args.model_architecture,
                             model_type = args.model_type,
                             batch_size = args.batch_size,
+                            graph_edge_distance = args.graph_edge_distance,
                             ignore=[])
 
 #if args.model_type == 'graph':
