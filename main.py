@@ -47,7 +47,7 @@ def main():
             if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest",]:
                 hardware={"cpu":32,"gpu":0.2}
             else:
-                hardware={"cpu":64,"gpu":0.333}
+                hardware={"cpu":64,"gpu":0.5}
 
         else:
             if args.task =='treatment':
@@ -65,7 +65,7 @@ def main():
         scheduler = tune.schedulers.ASHAScheduler(
             metric="loss",
             mode="min",
-            grace_period=min(50,args.max_epochs),
+            grace_period=min(100,args.max_epochs),
             reduction_factor=3,
             max_t=args.max_epochs)
 
