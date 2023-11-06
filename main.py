@@ -62,11 +62,12 @@ def main():
         for key, value in search_space.items():
             search_space[key] = eval(value)
 
+        ## currently disabled the ASHA early stopping by setting a very high grace period
         scheduler = tune.schedulers.ASHAScheduler(
             metric="loss",
             mode="min",
-            grace_period=min(100,args.max_epochs),
-            reduction_factor=1,
+            grace_period=min(1000,args.max_epochs),
+            reduction_factor=2,
             max_t=args.max_epochs)
 
 
