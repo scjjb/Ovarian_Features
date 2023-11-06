@@ -2,7 +2,7 @@
 "drop_out": "tune.grid_search([0.5])",
 "lr": "tune.grid_search([0.001])",
 "A_patches": "tune.grid_search([50000])",
-"model_size": "tune.grid_search(['big','small','smaller'])",
+"model_size": "tune.grid_search(['big','small','tiny'])",
 "beta1":  "tune.grid_search([0.95])",
 "beta2": "tune.grid_search([0.99])",
 "eps": "tune.grid_search([1e-8])"}
