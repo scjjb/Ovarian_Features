@@ -62,11 +62,12 @@ def main():
         for key, value in search_space.items():
             search_space[key] = eval(value)
 
+        ## currently disabled the ASHA early stopping by setting a very high grace period
         scheduler = tune.schedulers.ASHAScheduler(
             metric="loss",
             mode="min",
-            grace_period=min(100,args.max_epochs),
-            reduction_factor=3,
+            grace_period=min(1000,args.max_epochs),
+            reduction_factor=2,
             max_t=args.max_epochs)
 
 
@@ -103,7 +104,7 @@ def main():
 
         if args.tuning:
             seed_torch(args.seed)
-            stopper=TrialPlateauStopper(metric="loss",mode="min",num_results=30,grace_period=40)
+            stopper=TrialPlateauStopper(metric="loss",mode="min",num_results=10,grace_period=10)
             if args.sampling:
                 tuner = tune.Tuner(tune.with_resources(partial(train_sampling,datasets=datasets,cur=i,class_counts=class_counts,args=args),hardware),param_space=search_space, run_config=RunConfig(name="test_run",stop=stopper, progress_reporter=reporter),tune_config=tune.TuneConfig(scheduler=scheduler,num_samples=args.num_tuning_experiments))
             else:
