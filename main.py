@@ -104,7 +104,7 @@ def main():
 
         if args.tuning:
             seed_torch(args.seed)
-            stopper=TrialPlateauStopper(metric="loss",mode="min",num_results=30,grace_period=40)
+            stopper=TrialPlateauStopper(metric="loss",mode="min",num_results=10,grace_period=10)
             if args.sampling:
                 tuner = tune.Tuner(tune.with_resources(partial(train_sampling,datasets=datasets,cur=i,class_counts=class_counts,args=args),hardware),param_space=search_space, run_config=RunConfig(name="test_run",stop=stopper, progress_reporter=reporter),tune_config=tune.TuneConfig(scheduler=scheduler,num_samples=args.num_tuning_experiments))
             else:
