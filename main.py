@@ -157,8 +157,12 @@ parser.add_argument('--data_root_dir', type=str, default="/",
                     help='directory containing features folders')
 parser.add_argument('--features_folder', type=str, default="/",
                     help='folder within data_root_dir containing the features - must contain pt_files/h5_files subfolder')
+parser.add_argument('--small_features_folder', type=str, default="/",
+                    help='folder within data_root_dir containing the small features if needed (only used in graph_ms)- must contain pt_files/h5_files subfolder')
 parser.add_argument('--coords_path', type=str, default=None,
                     help='path to coords pt files if needed')
+parser.add_argument('--small_coords_path', type=str, default=None,
+                    help='path to small coords pt files if needed (only used in graph_ms)')
 parser.add_argument('--csv_path',type=str,default=None,help='path to dataset_csv file')
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--log_data', action='store_true', default=False, help='log data using tensorboard')
@@ -190,7 +194,7 @@ parser.add_argument('--bag_loss', type=str, choices=['svm', 'ce', 'balanced_ce']
                      help='slide-level classification loss function (default: ce)')
 
 ## Model settings
-parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'graph'], default='clam_sb', help='type of model (default: clam_sb, clam w/ single attention branch)')
+parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'graph', 'graph_ms'], default='clam_sb', help='type of model (default: clam_sb, clam w/ single attention branch)')
 parser.add_argument('--model_size', type=str, choices=['256','tinier3','tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier', 'tiny128','tiny','small', 'big','hipt_mega_tiny','hipt_mega_small','hipt_mega_big','hipt_mega_mega','hipt_mega_mega2','hipt_const','hipt_big','hipt_medium','hipt_small','hipt_smaller','hipt_smallest'], default='small', help='size of model, does not affect mil')
 parser.add_argument('--task', type=str, choices=['ovarian_5class','ovarian_1vsall','nsclc','treatment','treatment_switched'])
 
@@ -338,11 +342,13 @@ else:
     raise NotImplementedError
 
 dataset = Generic_MIL_Dataset(csv_path = args.csv_path,
-                            data_dir= os.path.join(args.data_root_dir, args.features_folder),
+                            data_dir = os.path.join(args.data_root_dir, args.features_folder),
+                            small_data_dir = os.path.join(args.data_root_dir, args.small_features_folder),
                             max_patches_per_slide=args.max_patches_per_slide,
                             perturb_variance=args.perturb_variance,
                             number_of_augs=args.number_of_augs,
                             coords_path = args.coords_path,
+                            small_coords_path = args.small_coords_path,
                             shuffle = False, 
                             seed = args.seed, 
                             print_info = True,

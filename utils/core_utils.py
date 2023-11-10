@@ -190,7 +190,7 @@ def train(datasets, cur, class_counts, args):
         else:
             raise NotImplementedError
     
-    elif args.model_type == 'graph':
+    elif args.model_type in ['graph','graph_ms']:
         model = Graph_Model(num_features=train_split[0][0].shape[1], num_classes=args.n_classes,drop_out=args.drop_out)
 
     else: # args.model_type == 'mil'
