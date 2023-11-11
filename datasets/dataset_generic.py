@@ -553,10 +553,10 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     ## renumber the small patches 
                                     adj_small = torch.add(adj_small,coordinates.shape[0])
                                     
-                                    ## finally get the edges between magnifications, currently hardcoded the distances, but in general the offset in cdist should be half of the small patch size, and the distance thresholf should equal the small patch size  
+                                    ## finally get the edges between magnifications, currently hardcoded the distances, but in general the offset in cdist should be half of the small patch size, and the distance threshold should equal the small patch size, though have it set to half of this seems to be working now  
                                     #print("need to properly implement distance between magnifications")
                                     distances = cdist(small_coordinates,coordinates+512, 'euclidean')
-                                    adj = (dist_matrix <= 1024).astype(np.float32)
+                                    adj = (dist_matrix <= 512).astype(np.float32)
                                     edge_indices = np.transpose(adj.nonzero())
                                     adj_between = torch.from_numpy(edge_indices).t().contiguous()
                                     ## renumber the small patches
@@ -565,6 +565,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     ## combine the adjacencies and features
                                     adj = torch.cat((adj_big, adj_small, adj_between),dim=1)
                                     x = torch.cat((x_big,x_small),dim=0)
+                                    #print("nodes:",x.shape[0],".   total edges:",adj.shape[1],".  between edges:",adj_between.shape[1],".  big edges:",adj_big.shape[1],".  small edges:",adj_small.shape[1])
                                     return x, adj, label
                                 
                                 return features, label

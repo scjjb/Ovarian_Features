@@ -47,7 +47,9 @@ n_classes = args.n_classes
 label_dict = {'high_grade':0,'low_grade':1,'clear_cell':1,'endometrioid':1,'mucinous':1}
 dataset = Generic_MIL_Dataset(csv_path = csv_path,
                         data_dir= os.path.join(data_root_dir, features_folder),
+                        small_data_dir=None,
                         coords_path = coords_path,
+                        small_coords_path=None,
                         shuffle = False, 
                         seed = 0, 
                         print_info = True,
