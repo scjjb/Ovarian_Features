@@ -140,7 +140,9 @@ else:
 
 dataset = Generic_MIL_Dataset(csv_path = args.csv_path,
                                 coords_path=args.coords_path,
+                                small_coords_path=None,
                                 data_dir= os.path.join(args.data_root_dir, args.features_folder),
+                                small_data_dir=None,
                                 shuffle = False,
                                 print_info = True,
                                 label_dict = args.label_dict,

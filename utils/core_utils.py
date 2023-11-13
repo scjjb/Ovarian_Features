@@ -244,7 +244,7 @@ def train(datasets, cur, class_counts, args):
 
     print('\nSetup EarlyStopping...', end=' ')
     if args.early_stopping:
-        early_stopping = EarlyStopping(min_epochs = args.min_epochs, patience = 50, stop_epoch=50, verbose = True)
+        early_stopping = EarlyStopping(min_epochs = args.min_epochs, patience = 10, stop_epoch=10, verbose = True)
 
     else:
         early_stopping = None
