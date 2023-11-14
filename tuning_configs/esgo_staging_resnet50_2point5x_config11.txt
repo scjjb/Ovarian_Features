@@ -1,0 +1,8 @@
+{"reg": "tune.grid_search([0.001,0.0001,0.00001])",
+"drop_out": "tune.grid_search([0.7])",
+"lr": "tune.grid_search([0.001])",
+"A_patches": "tune.grid_search([40])",
+"model_size": "tune.grid_search(['tiny'])",
+"beta1":  "tune.grid_search([0.9])",
+"beta2": "tune.grid_search([0.9999])",
+"eps": "tune.grid_search([1e-4])"}
