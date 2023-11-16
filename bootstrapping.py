@@ -1,6 +1,6 @@
 import argparse
 import pandas as pd
-from sklearn.metrics import confusion_matrix, f1_score, accuracy_score,balanced_accuracy_score, roc_auc_score, roc_curve, auc
+from sklearn.metrics import confusion_matrix, f1_score, accuracy_score,balanced_accuracy_score, roc_auc_score, roc_curve, auc, precision_score, recall_score
 import matplotlib.pyplot as plt
 import os
 import numpy as np
@@ -64,7 +64,14 @@ for model_name in model_names:
         
         print("confusion matrix (predicted x axis, true y axis): \n")
         print(confusion_matrix(all_Ys,all_Yhats),"\n")
-        print("average ce loss: ",np.mean(all_losses), "(not bootstrapped)")
+
+        for i in range(len(np.unique(all_Ys))):
+            #indxs = [index for index, value in enumerate(all_Ys) if value == i]
+            #precision = precision_score([all_Ys[index] for index in indxs],[all_Yhats[index] for index in indxs])
+            print("class {} precision: {:.5f} recall: {:.5f} f1: {:.5f}".format(i,precision_score(all_Ys,all_Yhats,labels=[i],average='macro'),recall_score(all_Ys,all_Yhats,labels=[i],average='macro'),f1_score(all_Ys,all_Yhats,labels=[i],average='macro')))
+            #print("class {} recall: {}".format(i,recall_score(all_Ys,all_Yhats,labels=[i],average='macro')))        
+            #print("class {} F1: {}".format(i,f1_score(all_Ys,all_Yhats,labels=[i],average='macro')))
+        print("\naverage ce loss: ",np.mean(all_losses), "(not bootstrapped)")
 
         if args.plot_roc_curves:
             fpr, tpr, threshold = roc_curve(all_Ys, all_p1s)
