@@ -4,6 +4,7 @@ from sklearn.metrics import confusion_matrix, f1_score, accuracy_score,balanced_
 import matplotlib.pyplot as plt
 import os
 import numpy as np
+import torch
 
 parser = argparse.ArgumentParser(description='Model names input split by commas')
 parser.add_argument('--model_names', type=str, default=None,help='models to plot')
@@ -17,6 +18,7 @@ parser.add_argument('--data_csv', type=str, default='set_all_714.csv')
 parser.add_argument('--num_classes',type=int,default=2)
 parser.add_argument('--plot_roc_curves', action='store_true', default=False, help="Plot an ROC curve for each run repeat")
 parser.add_argument('--roc_plot_dir', type=str, default='../mount_outputs/roc_plots/',help='directory to plot ROC curves')
+parser.add_argument('--ensemble', action='store_true', default=False, help="Ensemble the predictions from different folds into one prediction. Only works if all folds test sets are identical.")
 args = parser.parse_args()
 model_names=args.model_names.split(",")
 bootstraps=args.bootstraps
@@ -55,6 +57,19 @@ for model_name in model_names:
                     all_probs=full_df.iloc[:,-args.num_classes:]
                 else:
                     all_probs=all_probs.append(full_df.iloc[:,-args.num_classes:])
+
+
+        if args.ensemble:
+            num_of_samples = int(len(all_Ys)/args.folds)
+            all_Ys=all_Ys[:num_of_samples]
+            ensemble_probs = all_probs.head(num_of_samples)
+            ensemble_Yhats = ['None'] * num_of_samples
+            for i in range(num_of_samples):
+                ensemble_probs.iloc[i] = all_probs.iloc[i::num_of_samples].mean(axis=0)
+                ensemble_Yhats[i] = torch.topk(torch.tensor(ensemble_probs.iloc[i]), 1, dim = 0)[1].item()
+            all_probs = ensemble_probs
+            all_Yhats = ensemble_Yhats
+
 
         AUC_scores=[]
         err_scores=[]
