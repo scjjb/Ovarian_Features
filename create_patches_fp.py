@@ -217,6 +217,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
                 patch_times += patch_time_elapsed
                 stitch_times += stitch_time_elapsed
 
+        print("total time: {}".format(seg_times+patch_times+stitch_times))
         seg_times /= total
         patch_times /= total
         stitch_times /= total
