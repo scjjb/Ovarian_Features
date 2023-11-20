@@ -250,8 +250,8 @@ def main():
 if __name__ == "__main__":
     if args.profile:
         ## import is here because it doesn't work on all systems
-        from streamlit import legacy_caching as caching
-        caching.clear_cache()
+        #from streamlit import legacy_caching as caching
+        #caching.clear_cache()
         profiler = cProfile.Profile()
         profiler.enable()
         main()
