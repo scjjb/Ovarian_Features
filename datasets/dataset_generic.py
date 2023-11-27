@@ -29,6 +29,12 @@ from utils.utils import collate_features
 from torch_geometric.data import Batch, Data
 from scipy.spatial.distance import cdist, pdist, squareform
 
+## added for plotting
+import torch_geometric
+import networkx as nx
+import matplotlib
+import matplotlib.pyplot as plt
+
 def save_splits(split_datasets, column_keys, filename, boolean_style=False):
         splits = [split_datasets[i].slide_data['slide_id'] for i in range(len(split_datasets))]
         if not boolean_style:
@@ -555,17 +561,86 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     
                                     ## finally get the edges between magnifications, currently hardcoded the distances, but in general the offset in cdist should be half of the small patch size, and the distance threshold should equal the small patch size, though have it set to half of this seems to be working now  
                                     #print("need to properly implement distance between magnifications")
-                                    distances = cdist(small_coordinates,coordinates+512, 'euclidean')
-                                    adj = (dist_matrix <= 512).astype(np.float32)
+                                    offset = 2048
+                                    distances = cdist(coordinates+offset,small_coordinates, 'euclidean')
+                                    adj = (distances <= 2*offset).astype(np.float32)
                                     edge_indices = np.transpose(adj.nonzero())
                                     adj_between = torch.from_numpy(edge_indices).t().contiguous()
                                     ## renumber the small patches
-                                    adj_between[0] += coordinates.shape[0]
+                                    adj_between[1] += coordinates.shape[0]
                                     
                                     ## combine the adjacencies and features
                                     adj = torch.cat((adj_big, adj_small, adj_between),dim=1)
                                     x = torch.cat((x_big,x_small),dim=0)
                                     #print("nodes:",x.shape[0],".   total edges:",adj.shape[1],".  between edges:",adj_between.shape[1],".  big edges:",adj_big.shape[1],".  small edges:",adj_small.shape[1])
+                                    
+                                    #plot="separate"
+                                    #plot="together"
+                                    plot = None
+                                    if plot=="together":   
+                                        fig, ax = plt.subplots()
+                                        all_coordinates = np.append(coordinates+offset,small_coordinates,axis=0)
+                                        print("edges between magnifications",adj_between.shape)
+                                        print("coordinates",all_coordinates.shape)
+                                        ## convert coordinates to dictionary for nx
+                                        nodes = list(range(len(all_coordinates)))
+                                        pos = {node: tuple(coord) for node, coord in zip(nodes, all_coordinates)}
+                                        data = x
+                                        plot_data = torch_geometric.data.Data(x=data, edge_index=adj)
+                                        g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
+                                        print("slide id",slide_id)
+                                        print("data shape",data.shape)
+                                        print("adj shape",adj.shape)
+                                        options = {"node_size": 80, "node_color": "red", "width": 2, "style":"--"}
+                                        #nx.draw(g,pos=nx.kamada_kawai_layout(g), ax=fig.add_subplot(),**options)
+                                        nx.draw(g,pos=pos, ax=ax,**options)
+                                        
+                                        matplotlib.use("Agg")
+                                        # Reflect the plot along the y-axis
+                                        matplotlib.pyplot.gca().invert_yaxis()
+                                        fig.savefig("/mnt/results/graph.png")
+                                        assert 1==2,"plotting in datasets/dataset_generic.py"
+
+                                    elif plot=="separate":
+                                        fig, ax = plt.subplots()
+                                        all_coordinates = np.append(coordinates+offset,small_coordinates,axis=0)
+                                        print("edges between magnifications",adj_between.shape)
+                                        big_nodes = list(range(len(coordinates)))
+                                        ## add the offset
+                                        big_pos = {node: tuple(coord+offset) for node, coord in zip(big_nodes, coordinates)}
+                                        plot_data = torch_geometric.data.Data(x=x_big, edge_index=adj_big)
+                                        g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
+                                        options = {"node_size": 20, "node_color": "black", "edge_color": "red", "width": 1, "style":"--"}
+                                        nx.draw(g,pos=big_pos, ax=ax,**options)
+
+                                        small_nodes = list(range(len(small_coordinates)))
+                                        small_pos = {node: tuple(coord) for node, coord in zip(small_nodes, small_coordinates)}
+                                        
+                                        print("x_small",x_small.shape)
+                                        print("small_coords",small_coordinates.shape)
+                                        ## unrenumber the small adjs
+                                        adj_small = torch.add(adj_small,-coordinates.shape[0])
+                                        plot_data = torch_geometric.data.Data(x=x_small, edge_index=adj_small)
+                                        g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
+                                        #fig = matplotlib.pyplot.figure()
+                                        options = {"node_size": 10, "node_color": "blue", "edge_color": "blue", "width": 1}
+                                        nx.draw(g,pos=small_pos, ax=ax,**options)
+                                        
+                                        all_nodes = list(range(len(all_coordinates)))
+                                        all_pos = {node: tuple(coord) for node, coord in zip(all_nodes, all_coordinates)}
+                                        #placeholder = adj_between[1].clone()
+                                        #adj_between[1] = adj_between[0]
+                                        #adj_between[0] = placeholder
+                                        
+                                        plot_data = torch_geometric.data.Data(x=x, edge_index=adj_between)
+                                        g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
+                                        options = {"node_size": 0, "node_color": "black", "edge_color":"black", "width": 2}
+                                        nx.draw(g,pos=all_pos, ax=ax,**options)
+
+                                        matplotlib.use("Agg")
+                                        plt.gca().invert_yaxis()
+                                        fig.savefig("/mnt/results/graph.png")
+                                        assert 1==2,"plotting in datasets/dataset_generic.py"
                                     return x, adj, label
                                 
                                 return features, label
