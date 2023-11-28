@@ -261,6 +261,8 @@ parser.add_argument('--B', type=int, default=8, help='number of positive/negativ
 
 ## Graph model options
 parser.add_argument('--graph_edge_distance',type=int,default=750,help="Maximum distance between nodes in graph to add edges.")
+parser.add_argument('--offset',type=int,default=512,help="The offset applied to the larger patches in graph_ms, which will typically be half of the size of the smaller magnification patches. This is needed due to coords being top-left rather than centre")
+parser.add_argument('--plot_graph',choices=["none","together","seperate"],default="none",help="whether to plot a graph in graph_ms, only seperate actually works at the minute")
 
 ## Developer settings
 parser.add_argument('--debug_loader', action='store_true', default=False,
@@ -364,6 +366,8 @@ dataset = Generic_MIL_Dataset(csv_path = args.csv_path,
                             model_type = args.model_type,
                             batch_size = args.batch_size,
                             graph_edge_distance = args.graph_edge_distance,
+                            offset = args.offset,
+                            plot_graph = args.plot_graph,
                             ignore=[])
 
 #if args.model_type == 'graph':

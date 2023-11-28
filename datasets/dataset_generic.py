@@ -235,7 +235,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 if len(split) > 0:
                         mask = self.slide_data['slide_id'].isin(split.tolist())
                         df_slice = self.slide_data[mask].reset_index(drop=True)
-                        split = Generic_Split(df_slice, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance)
+                        split = Generic_Split(df_slice, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph)
                 else:
                         split = None
                 
@@ -251,7 +251,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 if len(split) > 0:
                         mask = self.slide_data['slide_id'].isin(merged_split)
                         df_slice = self.slide_data[mask].reset_index(drop=True)
-                        split = Generic_Split(df_slice, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance)
+                        split = Generic_Split(df_slice, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph)
                 else:
                         split = None
                 
@@ -264,21 +264,21 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 if from_id:
                         if len(self.train_ids) > 0:
                                 train_data = self.slide_data.loc[self.train_ids].reset_index(drop=True)
-                                train_split = Generic_Split(train_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance)
+                                train_split = Generic_Split(train_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph)
 
                         else:
                                 train_split = None
                         
                         if len(self.val_ids) > 0:
                                 val_data = self.slide_data.loc[self.val_ids].reset_index(drop=True)
-                                val_split = Generic_Split(val_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf,graph_edge_distance=self.graph_edge_distance)
+                                val_split = Generic_Split(val_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph)
 
                         else:
                                 val_split = None
                         
                         if len(self.test_ids) > 0:
                                 test_data = self.slide_data.loc[self.test_ids].reset_index(drop=True)
-                                test_split = Generic_Split(test_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf,graph_edge_distance=self.graph_edge_distance)
+                                test_split = Generic_Split(test_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph)
                         
                         else:
                                 test_split = None
@@ -392,6 +392,8 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                 batch_size=None,
                 debug_loader=False,
                 graph_edge_distance=None,
+                offset=None,
+                plot_graph=None,
                 **kwargs):
         
                 super(Generic_MIL_Dataset, self).__init__(**kwargs)
@@ -420,6 +422,9 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                 self.batch_size = batch_size
                 self.debug_loader = debug_loader
                 self.graph_edge_distance = graph_edge_distance
+                self.offset = offset
+                self.plot_graph = plot_graph
+
         def load_from_h5(self, toggle):
                 self.use_h5 = toggle
                 print("use_h5 is currently not set to use h5 but to instead get coords from pt")
@@ -458,7 +463,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                             transforms.RandomVerticalFlip(p=0.5),
                                             transforms.RandomAffine(degrees=5,translate=(0.1,0.1), scale=(0.9,1.1),shear=0.1),
                                             transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.3),
-                                            transforms.ToTensor()
+                            self.transforms.ToTensor()
                                             ])
                 else:
                     self.transforms = transforms.Compose(
@@ -561,9 +566,9 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     
                                     ## finally get the edges between magnifications, currently hardcoded the distances, but in general the offset in cdist should be half of the small patch size, and the distance threshold should equal the small patch size, though have it set to half of this seems to be working now  
                                     #print("need to properly implement distance between magnifications")
-                                    offset = 2048
-                                    distances = cdist(coordinates+offset,small_coordinates, 'euclidean')
-                                    adj = (distances <= 2*offset).astype(np.float32)
+                                    #offset = 2048
+                                    distances = cdist(coordinates+self.offset,small_coordinates, 'euclidean')
+                                    adj = (distances <= 2*self.offset).astype(np.float32)
                                     edge_indices = np.transpose(adj.nonzero())
                                     adj_between = torch.from_numpy(edge_indices).t().contiguous()
                                     ## renumber the small patches
@@ -576,10 +581,10 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     
                                     #plot="separate"
                                     #plot="together"
-                                    plot = None
-                                    if plot=="together":   
+                                    #plot = None
+                                    if self.plot_graph=="together":   
                                         fig, ax = plt.subplots()
-                                        all_coordinates = np.append(coordinates+offset,small_coordinates,axis=0)
+                                        all_coordinates = np.append(coordinates+self.offset,small_coordinates,axis=0)
                                         print("edges between magnifications",adj_between.shape)
                                         print("coordinates",all_coordinates.shape)
                                         ## convert coordinates to dictionary for nx
@@ -601,13 +606,13 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                         fig.savefig("/mnt/results/graph.png")
                                         assert 1==2,"plotting in datasets/dataset_generic.py"
 
-                                    elif plot=="separate":
+                                    elif self.plot_graph=="seperate":
                                         fig, ax = plt.subplots()
-                                        all_coordinates = np.append(coordinates+offset,small_coordinates,axis=0)
+                                        all_coordinates = np.append(coordinates+self.offset,small_coordinates,axis=0)
                                         print("edges between magnifications",adj_between.shape)
                                         big_nodes = list(range(len(coordinates)))
                                         ## add the offset
-                                        big_pos = {node: tuple(coord+offset) for node, coord in zip(big_nodes, coordinates)}
+                                        big_pos = {node: tuple(coord+self.offset) for node, coord in zip(big_nodes, coordinates)}
                                         plot_data = torch_geometric.data.Data(x=x_big, edge_index=adj_big)
                                         g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
                                         options = {"node_size": 20, "node_color": "black", "edge_color": "red", "width": 1, "style":"--"}
@@ -674,7 +679,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 
 
 class Generic_Split(Generic_MIL_Dataset):
-        def __init__(self, slide_data, data_dir=None, small_data_dir=None, coords_path=None, small_coords_path=None, num_classes=2, perturb_variance=0.1, number_of_augs = 1, max_patches_per_slide=None,data_h5_dir=None,data_slide_dir=None,slide_ext=None, pretrained=None, custom_downsample=None, target_patch_size=None, model_architecture=None, model_type = None, batch_size = None, extract_features = False, graph_edge_distance = None):
+        def __init__(self, slide_data, data_dir=None, small_data_dir=None, coords_path=None, small_coords_path=None, num_classes=2, perturb_variance=0.1, number_of_augs = 1, max_patches_per_slide=None,data_h5_dir=None,data_slide_dir=None,slide_ext=None, pretrained=None, custom_downsample=None, target_patch_size=None, model_architecture=None, model_type = None, batch_size = None, extract_features = False, graph_edge_distance = None, offset = None, plot_graph = None):
                 self.augment_features = False
                 self.debug_loader = False
                 self.use_h5 = False
@@ -701,6 +706,8 @@ class Generic_Split(Generic_MIL_Dataset):
                 self.batch_size = batch_size
                 self.extract_features = extract_features
                 self.graph_edge_distance = graph_edge_distance
+                self.offset = offset
+                self.plot_graph = plot_graph
                 for i in range(self.num_classes):
                         self.slide_cls_ids[i] = np.where(self.slide_data['label'] == i)[0]
 
