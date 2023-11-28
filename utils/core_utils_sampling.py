@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 from utils.utils import *
 from utils.sampling_utils import generate_sample_idxs, generate_features_array, update_sampling_weights
-from utils.core_utils import train_loop, train_loop_clam,validate,validate_clam
+from utils.core_utils import train_loop, train_loop_clam, evaluate
 from datasets.dataset_generic import Generic_MIL_Dataset
 import os
 from datasets.dataset_generic import save_splits
@@ -247,17 +247,14 @@ def train_sampling(config,datasets, cur, class_counts, args):
             assert args.final_sample_size>=args.B, "B too large for final sample"
             if epoch<args.no_sampling_epochs:
                 train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn)
-                stop, val_error, val_loss,val_auc = validate_clam(cur, epoch, model, val_loader, args.n_classes, 
-                    early_stopping, writer, loss_fn, args.results_dir)
+                stop, val_error, val_loss,val_auc,_,_ = evaluate(model, val_loader, args.n_classes, "validation",cur,epoch, early_stopping, writer, loss_fn, args.results_dir,clam=True)
             else:
                 train_loop_clam_sampling(epoch, model, train_loader_h5, optimizer, args.n_classes, args.bag_weight, args, writer, loss_fn, nbrs_dict, X_dict)
-                stop, val_error, val_loss,val_auc = validate_clam_sampling(cur, epoch, model, val_loader, args.n_classes,
-                    early_stopping, writer, loss_fn, args.results_dir)
+                stop, val_error, val_loss,val_auc = validate_clam_sampling(cur, epoch, model, val_loader, args.n_classes,early_stopping, writer, loss_fn, args.results_dir)
         else:
             if epoch<args.no_sampling_epochs:
                 train_loop(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn)
-                stop, val_error, val_loss,val_auc = validate(cur, epoch, model, val_loader, args.n_classes, 
-                    early_stopping, writer, loss_fn, args.results_dir)
+                stop, val_error, val_loss,val_auc,_,_ = evaluate(model, val_loader, args.n_classes,"validation",cur,epoch, early_stopping, writer, loss_fn, args.results_dir)
             else:
                 train_loop_sampling(epoch, model, train_loader_h5, optimizer, args.n_classes, args, writer, loss_fn)
                 stop, val_error, val_loss, val_auc = validate_sampling(cur, epoch, model, val_loader, args.n_classes,
@@ -277,10 +274,10 @@ def train_sampling(config,datasets, cur, class_counts, args):
     else:
         torch.save(model.state_dict(), os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur)))
 
-    val_error, val_auc, _= summary(model, val_loader, args.n_classes)
+    _,val_error, val_auc, _,_,_= evaluate(model, val_loader, args.n_classes,"testing")
     print('Val error: {:.4f}, ROC AUC: {:.4f}'.format(val_error, val_auc))
 
-    test_error, test_auc, acc_logger = summary(model, test_loader, args.n_classes)
+    _,test_error, test_auc, acc_logger,_,_ = evaluate(model, test_loader, args.n_classes,"testing")
     print('Test error: {:.4f}, ROC AUC: {:.4f}'.format(test_error, test_auc))
 
     for i in range(args.n_classes):
@@ -823,48 +820,3 @@ def validate_clam_sampling(cur, epoch, model, loader, n_classes, early_stopping 
 
     return False, val_error, val_loss, auc
 
-def summary(model, loader, n_classes):
-    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    acc_logger = Accuracy_Logger(n_classes=n_classes)
-    model.eval()
-    test_loss = 0.
-    test_error = 0.
-
-    all_probs = np.zeros((len(loader), n_classes))
-    all_labels = np.zeros(len(loader))
-
-    slide_ids = loader.dataset.slide_data['slide_id']
-
-    for batch_idx, (data, label) in enumerate(loader):
-        data, label = data.to(device), label.to(device)
-        slide_id = slide_ids.iloc[batch_idx]
-        with torch.no_grad():
-            logits, Y_prob, Y_hat, _, _ = model(data)
-
-        acc_logger.log(Y_hat, label)
-        probs = Y_prob.cpu().numpy()
-        all_probs[batch_idx] = probs
-        all_labels[batch_idx] = label.item()
-        
-        error = calculate_error(Y_hat, label)
-        test_error += error
-
-    test_error /= len(loader)
-
-    if n_classes == 2:
-        auc = roc_auc_score(all_labels, all_probs[:, 1])
-        aucs = []
-    else:
-        aucs = []
-        binary_labels = label_binarize(all_labels, classes=[i for i in range(n_classes)])
-        for class_idx in range(n_classes):
-            if class_idx in all_labels:
-                fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], all_probs[:, class_idx])
-                aucs.append(calc_auc(fpr, tpr))
-            else:
-                aucs.append(float('nan'))
-
-        auc = np.nanmean(np.array(aucs))
-
-
-    return test_error, auc, acc_logger

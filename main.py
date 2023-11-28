@@ -370,9 +370,6 @@ dataset = Generic_MIL_Dataset(csv_path = args.csv_path,
                             plot_graph = args.plot_graph,
                             ignore=[])
 
-#if args.model_type == 'graph':
-#    dataset.create_graphs()
-    
 if not os.path.isdir(args.results_dir):
     os.mkdir(args.results_dir)
 
