@@ -369,6 +369,9 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
     if writer:
         writer.add_scalar('train/loss', train_loss, epoch)
         writer.add_scalar('train/accuracy', accuracy, epoch)
+        writer.add_scalar('train/bal_accuracy', balanced_accuracy, epoch)
+        writer.add_scalar('train/f1', f1, epoch)
+        writer.add_scalar('train/auc', auc, epoch)
         writer.add_scalar('train/clustering_loss', train_inst_loss, epoch)
 
 def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_fn = None, feature_extractor = None, debug_loader=False):   
@@ -447,6 +450,9 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
     if writer:
         writer.add_scalar('train/loss', train_loss, epoch)
         writer.add_scalar('train/accuracy', accuracy, epoch)
+        writer.add_scalar('train/bal_accuracy', balanced_accuracy, epoch)
+        writer.add_scalar('train/f1', f1, epoch)
+        writer.add_scalar('train/auc', auc, epoch)
 
 
 def compute_metrics(probs,preds,labels,n_classes):
@@ -533,12 +539,13 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
                 acc, correct, count = inst_logger.get_summary(i)
                 print('class {} clustering acc {}: correct {}/{}'.format(i, acc, correct, count))
     
-
     if mode == "validation":
         if writer:
             writer.add_scalar('val/loss', loss, epoch)
-            writer.add_scalar('val/auc', auc, epoch)
             writer.add_scalar('val/accuracy', accuracy, epoch)
+            writer.add_scalar('val/bal_accuracy', balanced_accuracy, epoch)
+            writer.add_scalar('val/f1', f1, epoch)
+            writer.add_scalar('val/auc', auc, epoch)
             if clam:
                  writer.add_scalar('val/inst_loss', val_inst_loss, epoch)
 
