@@ -7,7 +7,7 @@ from models.model_mil import MIL_fc, MIL_fc_mc
 from models.model_clam import CLAM_MB, CLAM_SB
 from models.model_graph import Graph_Model
 from sklearn.preprocessing import label_binarize
-from sklearn.metrics import roc_auc_score, roc_curve, balanced_accuracy_score, f1_score
+from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, balanced_accuracy_score, f1_score
 from sklearn.metrics import auc as calc_auc
 import PIL
 import random
@@ -283,9 +283,9 @@ def train(datasets, cur, class_counts, args):
             writer.add_scalar('final/test_class_{}_acc'.format(i), acc, 0)
 
     if writer:
-        writer.add_scalar('final/val_error', val_error, 0)
+        writer.add_scalar('final/val_accuracy', val_acc, 0)
         writer.add_scalar('final/val_auc', val_auc, 0)
-        writer.add_scalar('final/test_error', test_error, 0)
+        writer.add_scalar('final/test_accuracy', test_acc, 0)
         writer.add_scalar('final/test_auc', test_auc, 0)
         writer.close()
     return test_auc, val_auc, test_acc, val_acc 
@@ -298,9 +298,13 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
     inst_logger = Accuracy_Logger(n_classes=n_classes)
     
     train_loss = 0.
-    train_error = 0.
     train_inst_loss = 0.
     inst_count = 0
+
+    all_probs = np.zeros((len(loader), n_classes))
+    all_preds = np.zeros(len(loader))
+    all_labels = np.zeros(len(loader))
+
 
     print('\n')
     for batch_idx, (data, label) in enumerate(loader):
@@ -327,23 +331,24 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         inst_labels = instance_dict['inst_labels']
         inst_logger.log_batch(inst_preds, inst_labels)
 
+        probs = Y_prob.detach().cpu().numpy()
+        all_probs[batch_idx] = probs
+        all_preds[batch_idx] = Y_hat.item()
+        all_labels[batch_idx] = label.item()
+
         train_loss += loss_value
         if (batch_idx + 1) % 1000 == 0:
             print('batch {}, loss: {:.4f}, instance_loss: {:.4f}, weighted_loss: {:.4f}, '.format(batch_idx, loss_value, instance_loss_value, total_loss.item()) + 
                 'label: {}, bag_size: {}'.format(label.item(), data.size(0)))
 
-        error = calculate_error(Y_hat, label)
-        train_error += error
-        
         # backward pass
         total_loss.backward()
         # step
         optimizer.step()
         optimizer.zero_grad()
 
-    # calculate loss and error for epoch
+    # calculate loss for epoch
     train_loss /= len(loader)
-    train_error /= len(loader)
     
     if inst_count > 0:
         train_inst_loss /= inst_count
@@ -351,8 +356,10 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         for i in range(2):
             acc, correct, count = inst_logger.get_summary(i)
             print('class {} clustering acc {}: correct {}/{}'.format(i, acc, correct, count))
-
-    print('Epoch: {}, train_loss: {:.4f}, train_clustering_loss:  {:.4f}, train_error: {:.4f}'.format(epoch, train_loss, train_inst_loss,  train_error))
+    
+    accuracy, balanced_accuracy, f1, auc = compute_metrics(all_probs, all_preds, all_labels, n_classes)
+    print('Epoch: {}, train_loss: {:.4f}, acc: {:.4f}, bal_acc: {:.4f}, f1: {:.4f}, auc: {:.4f}'.format(epoch,loss, accuracy, balanced_accuracy, f1, auc))
+    
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
@@ -361,7 +368,7 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
 
     if writer:
         writer.add_scalar('train/loss', train_loss, epoch)
-        writer.add_scalar('train/error', train_error, epoch)
+        writer.add_scalar('train/accuracy', accuracy, epoch)
         writer.add_scalar('train/clustering_loss', train_inst_loss, epoch)
 
 def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_fn = None, feature_extractor = None, debug_loader=False):   
@@ -371,7 +378,10 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         feature_extractor.eval()
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     train_loss = 0.
-    train_error = 0.
+
+    all_probs = np.zeros((len(loader), n_classes))
+    all_preds = np.zeros(len(loader))
+    all_labels = np.zeros(len(loader))
 
     print('\n')
     for batch_idx, inputs in enumerate(loader):
@@ -407,23 +417,27 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         loss_value = loss.item()
         
         train_loss += loss_value
+        
+        probs = Y_prob.detach().cpu().numpy()
+        all_probs[batch_idx] = probs
+        all_preds[batch_idx] = Y_hat.item()
+        all_labels[batch_idx] = label.item()
+
         if (batch_idx + 1) % 1000 == 0:
             print('batch {}, loss: {:.4f}, label: {}, bag_size: {}'.format(batch_idx, loss_value, label.item(), data.size(0)))
            
-        error = calculate_error(Y_hat, label)
-        train_error += error
-        
         # backward pass
         loss.backward()
         # step
         optimizer.step()
         optimizer.zero_grad()
 
-    # calculate loss and error for epoch
+    # calculate loss
     train_loss /= len(loader)
-    train_error /= len(loader)
 
-    print('Epoch: {}, train_loss: {:.4f}, train_error: {:.4f}'.format(epoch, train_loss, train_error))
+    accuracy, balanced_accuracy, f1, auc = compute_metrics(all_probs, all_preds, all_labels, n_classes)
+    print('Epoch: {}, train_loss: {:.4f}, acc: {:.4f}, bal_acc: {:.4f}, f1: {:.4f}, auc: {:.4f}'.format(epoch,loss, accuracy, balanced_accuracy, f1, auc))
+
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
@@ -432,8 +446,21 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
 
     if writer:
         writer.add_scalar('train/loss', train_loss, epoch)
-        writer.add_scalar('train/error', train_error, epoch)
+        writer.add_scalar('train/accuracy', accuracy, epoch)
 
+
+def compute_metrics(probs,preds,labels,n_classes):
+    accuracy = accuracy_score(labels,preds)
+    balanced_accuracy = balanced_accuracy_score(labels,preds)
+    
+    if n_classes == 2:
+        auc = roc_auc_score(labels, probs[:, 1])
+        f1 = f1_score(labels,preds)
+    else:
+        auc = roc_auc_score(labels, probs,multi_class='ovr')
+        f1 = f1_score(labels,preds,average='macro')
+    
+    return accuracy, balanced_accuracy, f1, auc
 
 def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping = None, writer = None, loss_fn = None, results_dir=None, feature_extractor = None, clam=False):
     assert mode in ["validation","testing"]
@@ -441,7 +468,6 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     model.eval()
     loss = 0.
-    error = 0.
     
     if clam:
         inst_logger = Accuracy_Logger(n_classes=n_classes)
@@ -486,28 +512,15 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
                 inst_labels = instance_dict['inst_labels']
                 inst_logger.log_batch(inst_preds, inst_labels)
 
-
         probs = Y_prob.cpu().numpy()
         all_probs[batch_idx] = probs
         all_preds[batch_idx] = Y_hat.item()
         all_labels[batch_idx] = label.item()
         
-        new_error = calculate_error(Y_hat, label)
-        error += new_error
-
     loss /= len(loader)
-    error /= len(loader)
-    accuracy = 1-error
-
-    balanced_accuracy = balanced_accuracy_score(all_labels,all_preds)
-
-    if n_classes == 2:
-        auc = roc_auc_score(all_labels, all_probs[:, 1])
-        f1 = f1_score(all_labels,all_preds)    
-    else:
-        auc = roc_auc_score(all_labels, all_probs,multi_class='ovr')
-        f1 = f1_score(all_labels,all_preds,average='macro')
-
+    
+    accuracy, balanced_accuracy, f1, auc = compute_metrics(all_probs,all_preds,all_labels,n_classes)
+    
     print("\nEvaluation")
     for i in range(n_classes):
          acc, correct, count = acc_logger.get_summary(i)
@@ -525,7 +538,7 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
         if writer:
             writer.add_scalar('val/loss', loss, epoch)
             writer.add_scalar('val/auc', auc, epoch)
-            writer.add_scalar('val/error', error, epoch)
+            writer.add_scalar('val/accuracy', accuracy, epoch)
             if clam:
                  writer.add_scalar('val/inst_loss', val_inst_loss, epoch)
 
