@@ -510,13 +510,14 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     with h5py.File(os.path.join(self.coords_path, str(slide_id)+".h5"),'r') as hdf5_file:
                                         coordinates = hdf5_file['coords'][:]
 
-                                if self.max_patches_per_slide < len(features):
+                                elif self.max_patches_per_slide < len(features):
                                     sampled_idxs=np.random.choice(len(features),self.max_patches_per_slide)
                                     features = features[sampled_idxs]
                                     if self.model_type == 'graph':
                                         coordinates = coordinates[sampled_idxs]
-                                    elif self.model_type == 'graph_ms':
-                                        raise NotImplementedError("can't yet subsample multi-scale graphs")
+                                    #elif self.model_type == 'graph_ms':
+                                    ## is done in the dataloader further down
+                                    #    raise NotImplementedError("can't yet subsample multi-scale graphs")
 
                                 if self.use_perturbs:
                                     noise = torch.randn_like(features)*self.perturb_variance
@@ -543,14 +544,33 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     with h5py.File(os.path.join(self.small_coords_path, str(slide_id)+".h5"),'r') as hdf5_file:
                                         small_coordinates = hdf5_file['coords'][:]
 
+
+                                    x_big = features.clone().detach()
+                                    x_small = small_features.clone().detach()
+
+                                    total_coords = len(coordinates)+len(small_coordinates)
+                                    if self.max_patches_per_slide < total_coords:
+                                        sampled_idxs = np.random.choice(total_coords,self.max_patches_per_slide,replace=False)
+                                        coords_idxs = [idx for idx in sampled_idxs if idx < len(coordinates)]
+                                        small_coords_idxs = [idx-len(coordinates) for idx in sampled_idxs if idx >= len(coordinates)]
+                                        #print("len coords and x_small",len(small_coordinates),len(x_small))
+                                        #print("len coords and x_big",len(coordinates),len(x_big))
+                                        if self.debug_loader:
+                                            assert len(small_coordinates)==len(x_small),"error in small features for slide {}".format(slide_id)
+                                            assert len(coordinates)==len(x_big),"error in big features for slide {}".format(slide_id)
+
+                                        coordinates = coordinates[coords_idxs]
+                                        x_big = x_big[coords_idxs]
+                                        small_coordinates = small_coordinates[small_coords_idxs]
+                                        x_small = x_small[small_coords_idxs]
                                     ## first get the features and edges for the big (lower magnification) patches
+
                                     distances = pdist(coordinates, 'euclidean')
                                     dist_matrix = squareform(distances)
                                     adj = (dist_matrix <= self.graph_edge_distance).astype(np.float32)
                                     adj = (adj - np.identity(adj.shape[0])).astype(np.float32)
                                     edge_indices = np.transpose(np.triu(adj,k=1).nonzero())
                                     adj_big = torch.from_numpy(edge_indices).t().contiguous()
-                                    x_big = features.clone().detach()
                                     
                                     ## then get the features and edges for the small (higher magnification) patches
                                     ## maximum distance for neighbours is halved for this
@@ -560,7 +580,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     adj = (adj - np.identity(adj.shape[0])).astype(np.float32)
                                     edge_indices = np.transpose(np.triu(adj,k=1).nonzero())
                                     adj_small = torch.from_numpy(edge_indices).t().contiguous()
-                                    x_small = small_features.clone().detach()
+                                    #x_small = small_features.clone().detach()
                                     ## renumber the small patches 
                                     adj_small = torch.add(adj_small,coordinates.shape[0])
                                     
@@ -572,11 +592,29 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     edge_indices = np.transpose(adj.nonzero())
                                     adj_between = torch.from_numpy(edge_indices).t().contiguous()
                                     ## renumber the small patches
+                                    #print(len(coordinates))
+                                    #print(coordinates.shape)
                                     adj_between[1] += coordinates.shape[0]
                                     
                                     ## combine the adjacencies and features
                                     adj = torch.cat((adj_big, adj_small, adj_between),dim=1)
                                     x = torch.cat((x_big,x_small),dim=0)
+                                    
+                                    #print("x and xsmall and adj",x.shape,x_small.shape,adj.shape)
+
+                                    adj_checker = [str(digit.item()) for digit in adj[0]]
+                                    adj_checker += [str(digit.item()) for digit in adj[1]]
+                                    x_checker = [str(digit) for digit in range(len(x))]
+                                    #print("x checker",x_checker)
+                                    solo_nodes = [node for node in x_checker if node not in adj_checker]
+                                    #print("x",x_checker)
+                                    #print("adj",adj_checker)
+                                    #print("solo nodes",len(solo_nodes))
+                                    #print("solo nodes",solo_nodes)
+                                    #print("x and xsmall and adj",x.shape,x_small.shape,adj.shape)
+                                    #print("x and adj squeezed",x.squeeze().shape, adj.squeeze().shape)
+                                    #print("max adj",adj.max())
+                                    #print("slide",slide_id)
                                     #print("nodes:",x.shape[0],".   total edges:",adj.shape[1],".  between edges:",adj_between.shape[1],".  big edges:",adj_big.shape[1],".  small edges:",adj_small.shape[1])
                                     
                                     #plot="separate"
@@ -609,7 +647,6 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     elif self.plot_graph=="seperate":
                                         fig, ax = plt.subplots()
                                         all_coordinates = np.append(coordinates+self.offset,small_coordinates,axis=0)
-                                        #print("edges between magnifications",adj_between.shape)
                                         big_nodes = list(range(len(coordinates)))
                                         ## add the offset
                                         big_pos = {node: tuple(coord+self.offset) for node, coord in zip(big_nodes, coordinates)}
@@ -620,31 +657,24 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 
                                         small_nodes = list(range(len(small_coordinates)))
                                         small_pos = {node: tuple(coord) for node, coord in zip(small_nodes, small_coordinates)}
-                                        
-                                        #print("x_small",x_small.shape)
-                                        #print("small_coords",small_coordinates.shape)
-                                        ## unrenumber the small adjs
+                                        #print("shape",x_small.shape)
                                         adj_small = torch.add(adj_small,-coordinates.shape[0])
                                         plot_data = torch_geometric.data.Data(x=x_small, edge_index=adj_small)
                                         g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
-                                        #fig = matplotlib.pyplot.figure()
                                         options = {"node_size": 10, "node_color": "blue", "edge_color": "blue", "width": 1}
                                         nx.draw(g,pos=small_pos, ax=ax,**options)
                                         
                                         all_nodes = list(range(len(all_coordinates)))
                                         all_pos = {node: tuple(coord) for node, coord in zip(all_nodes, all_coordinates)}
-                                        #placeholder = adj_between[1].clone()
-                                        #adj_between[1] = adj_between[0]
-                                        #adj_between[0] = placeholder
-                                        
                                         plot_data = torch_geometric.data.Data(x=x, edge_index=adj_between)
                                         g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
-                                        options = {"node_size": 0, "node_color": "black", "edge_color":"black", "width": 2}
+                                        options = {"node_size": 5, "node_color": "black", "edge_color":"black", "width": 2}
                                         nx.draw(g,pos=all_pos, ax=ax,**options)
 
                                         matplotlib.use("Agg")
                                         plt.gca().invert_yaxis()
-                                        fig.savefig("/mnt/results/graph{}.png".format(slide_id))
+                                        fig.savefig("/mnt/results/graphplots/graphsubset{}.png".format(slide_id))
+                                        plt.close(fig)
                                         print("plotting graph {}".format(slide_id))
                                     return x, adj, label
                                 
