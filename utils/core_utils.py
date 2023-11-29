@@ -214,6 +214,10 @@ def train(datasets, cur, class_counts, args):
     print('Done!')
     
     print('\nInit Loaders...\n')
+    if args.plot_graph == "seperate":
+        max_epochs=1
+        args.debug_loader=True
+
     if args.debug_loader:
         train_split.set_debug_loader(True)
         val_split.set_debug_loader(True)

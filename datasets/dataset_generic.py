@@ -609,7 +609,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     elif self.plot_graph=="seperate":
                                         fig, ax = plt.subplots()
                                         all_coordinates = np.append(coordinates+self.offset,small_coordinates,axis=0)
-                                        print("edges between magnifications",adj_between.shape)
+                                        #print("edges between magnifications",adj_between.shape)
                                         big_nodes = list(range(len(coordinates)))
                                         ## add the offset
                                         big_pos = {node: tuple(coord+self.offset) for node, coord in zip(big_nodes, coordinates)}
@@ -621,8 +621,8 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                         small_nodes = list(range(len(small_coordinates)))
                                         small_pos = {node: tuple(coord) for node, coord in zip(small_nodes, small_coordinates)}
                                         
-                                        print("x_small",x_small.shape)
-                                        print("small_coords",small_coordinates.shape)
+                                        #print("x_small",x_small.shape)
+                                        #print("small_coords",small_coordinates.shape)
                                         ## unrenumber the small adjs
                                         adj_small = torch.add(adj_small,-coordinates.shape[0])
                                         plot_data = torch_geometric.data.Data(x=x_small, edge_index=adj_small)
@@ -644,8 +644,8 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 
                                         matplotlib.use("Agg")
                                         plt.gca().invert_yaxis()
-                                        fig.savefig("/mnt/results/graph.png")
-                                        assert 1==2,"plotting in datasets/dataset_generic.py"
+                                        fig.savefig("/mnt/results/graph{}.png".format(slide_id))
+                                        print("plotting graph {}".format(slide_id))
                                     return x, adj, label
                                 
                                 return features, label
