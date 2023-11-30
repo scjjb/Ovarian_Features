@@ -17,49 +17,46 @@ import cProfile, pstats
 
 # Evaluation settings
 parser = argparse.ArgumentParser(description='CLAM Evaluation Script')
-parser.add_argument('--csv_path', type=str, default=None, help='path to dataset_csv file')
+
+## Folders
+parser.add_argument('--data_root_dir', type=str, default=None,help='directory containing features folders')
+parser.add_argument('--features_folder', type=str, default=None,help='folder within data_root_dir containing the features - must contain pt_files/h5_files subfolder')
+parser.add_argument('--small_features_folder', type=str, default="/",help='folder within data_root_dir containing the small features if needed (only used in graph_ms) - must contain pt_files/h5_files subfolder')
 parser.add_argument('--coords_path', type=str, default=None,help='path to coords pt files if needed')
-parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
-parser.add_argument('--slide_ext', type=str, default= '.svs')
-parser.add_argument('--data_h5_dir', type=str, default=None)
-parser.add_argument('--data_slide_dir', type=str, default=None)
-parser.add_argument('--eval_features',default=False, action='store_true',help='extract features during sampling')
-parser.add_argument('--batch_size', type=int, default=256)
-parser.add_argument('--custom_downsample', type=int, default=1)
-parser.add_argument('--target_patch_size', type=int, default=-1)
-parser.add_argument('--data_root_dir', type=str, default=None,
-                    help='directory containing features folders')
-parser.add_argument('--features_folder', type=str, default=None,
-                    help='folder within data_root_dir containing the features - must contain pt_files/h5_files subfolder')
-parser.add_argument('--results_dir', type=str, default='./results',
-                    help='relative path to results folder, i.e. '+
-                    'the directory containing models_exp_code relative to project root (default: ./results)')
-parser.add_argument('--save_exp_code', type=str, default=None,
-                    help='experiment code to save eval results')
-parser.add_argument('--models_exp_code', type=str, default=None,
-                    help='experiment code to load trained models (directory under results_dir containing model checkpoints')
-parser.add_argument('--splits_dir', type=str, default=None,
-                    help='splits directory, if using custom splits other than what matches the task (default: None)')
-parser.add_argument('--model_size', type=str, choices=['tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier','tiny128','tiny','small', 'big','hipt_mega_tiny','hipt_mega_small','hipt_mega_big','hipt_mega_mega','hipt_const','hipt_smallest','hipt_small','hipt_medium','hipt_big','hipt_smaller'], default='small', 
-                    help='size of model (default: small)')
-parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil'], default='clam_sb', 
-                    help='type of model (default: clam_sb)')
+parser.add_argument('--small_coords_path', type=str, default=None,help='path to small coords pt files if needed (only used in graph_ms)')
+parser.add_argument('--csv_path', type=str, default=None, help='path to dataset_csv file')
+parser.add_argument('--models_exp_code', type=str, default=None,help='experiment code to load trained models (directory under results_dir containing model checkpoints')
+parser.add_argument('--save_exp_code', type=str, default=None,help='experiment code to save eval results')
+
+## Model settings
+parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'graph', 'graph_ms'], default='clam_sb', help='type of model (default: clam_sb)')
+parser.add_argument('--model_size', type=str, choices=['tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier','tiny128','tiny','small', 'big','hipt_mega_tiny','hipt_mega_small','hipt_mega_big','hipt_mega_mega','hipt_const','hipt_smallest','hipt_small','hipt_medium','hipt_big','hipt_smaller'], default='small', help='size of model (default: small)')
+parser.add_argument('--task', type=str, choices=['ovarian_5class','ovarian_1vsall','nsclc','treatment'])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout p=0.25')
+parser.add_argument('--graph_edge_distance',type=int,default=750,help="Maximum distance between nodes in graph to add edges.")
+parser.add_argument('--offset',type=int,default=512,help="The offset applied to the larger patches in graph_ms, which will typically be half of the size of the smaller magnification patches. This is needed due to coords being top-left rather than centre")
+
+## Data settings
 parser.add_argument('--k', type=int, default=10, help='number of folds (default: 10)')
 parser.add_argument('--k_start', type=int, default=-1, help='start fold (default: -1, last fold)')
 parser.add_argument('--k_end', type=int, default=-1, help='end fold (default: -1, first fold)')
 parser.add_argument('--fold', type=int, default=-1, help='single fold to evaluate')
-parser.add_argument('--micro_average', action='store_true', default=False, 
-                    help='use micro_average instead of macro_avearge for multiclass AUC')
 parser.add_argument('--split', type=str, choices=['train', 'val', 'test', 'all'], default='test')
-parser.add_argument('--task', type=str, choices=['ovarian_5class','ovarian_1vsall','nsclc','treatment'])
-parser.add_argument('--profile', action='store_true', default=False, 
-                    help='show profile of longest running code sections')
-parser.add_argument('--profile_rows', type=int, default=10, help='number of rows to show from profiler (requires --profile to show any)')
-parser.add_argument('--label_dict',type=str,help='Convert labels to numbers')
-parser.add_argument('--cpu_only',action='store_true',default=False,help='Use CPU only')
+parser.add_argument('--split_dir', type=str, default=None,help='splits directory, if using custom splits other than what matches the task (default: None)')
+parser.add_argument('--results_dir', type=str, default='./results',help='relative path to results folder, i.e. the directory containing models_exp_code relative to project root (default: ./results)')
 
-## Sampling args
+## On-line feature extraction options (disregard if using pre-extracted features)
+parser.add_argument('--eval_features',default=False, action='store_true',help='extract features during sampling')
+parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
+## missing --model_architecture
+parser.add_argument('--batch_size', type=int, default=256)
+parser.add_argument('--data_h5_dir', type=str, default=None)
+parser.add_argument('--data_slide_dir', type=str, default=None)
+parser.add_argument('--slide_ext', type=str, default= '.svs')
+parser.add_argument('--custom_downsample', type=int, default=1)
+parser.add_argument('--target_patch_size', type=int, default=-1)
+
+## Old sampling options - developed for https://github.com/scjjb/DRAS-MIL but not used for a while, now just using max_patches_per_slide during training and no sampling during evaluation.
 parser.add_argument('--sampling', action='store_true', default=False, help='sampling for faster evaluation')
 parser.add_argument('--sampling_type', type=str, choices=['spatial','textural'],default='spatial',help='type of sampling to use')
 parser.add_argument('--samples_per_iteration', type=int, default=100, help='number of patches to sample per sampling iteration')
@@ -81,13 +78,22 @@ parser.add_argument('--sampling_average',action='store_true',default=False,help=
 parser.add_argument('--weight_smoothing',type=float,default=0.15,help='Power applied to attention scores to generate sampling weights')
 parser.add_argument('--fully_random',action='store_true', default=False, help='Take entirely random samples (no active sampling)')
 
-## tuning options
+## Tuning options
 parser.add_argument('--tuning', action='store_true', default=False, help='run hyperparameter tuning')
 parser.add_argument('--tuning_output_file',type=str,default="tuning_results/tuning_output.csv",help="where to save tuning outputs")
 parser.add_argument('--num_tuning_experiments',type=int,default=100,help="number of tuning experiments")
 parser.add_argument('--same_slide_repeats',type=int,default=1,help='number of times to repeat evaluating each slide to help account for randomness')
 parser.add_argument('--hardware',type=str, choices=['DGX','PC'], default='DGX',help='sets amount of CPU and GPU to use per experiment')
+
+## Developer Settings
+parser.add_argument('--micro_average', action='store_true', default=False,
+                    help='use micro_average instead of macro_avearge for multiclass AUC')
+parser.add_argument('--profile', action='store_true', default=False,
+                    help='show profile of longest running code sections')
+parser.add_argument('--profile_rows', type=int, default=10, help='number of rows to show from profiler (requires --profile to show any)')
+parser.add_argument('--cpu_only',action='store_true',default=False,help='Use CPU only')
 args = parser.parse_args()
+
 
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
 if args.cpu_only:
@@ -99,11 +105,11 @@ args.models_dir = os.path.join(args.results_dir, str(args.models_exp_code))
 
 os.makedirs(args.save_dir, exist_ok=True)
 
-if args.splits_dir is None:
-    args.splits_dir = args.models_dir
+if args.split_dir is None:
+    args.split_dir = args.models_dir
 
 assert os.path.isdir(args.models_dir)
-assert os.path.isdir(args.splits_dir)
+assert os.path.isdir(args.split_dir)
 
 settings = {'task': args.task,
             'split': args.split,
@@ -139,15 +145,25 @@ else:
     raise NotImplementedError
 
 dataset = Generic_MIL_Dataset(csv_path = args.csv_path,
-                                coords_path=args.coords_path,
-                                small_coords_path=None,
-                                data_dir= os.path.join(args.data_root_dir, args.features_folder),
-                                small_data_dir=None,
-                                shuffle = False,
-                                print_info = True,
-                                label_dict = args.label_dict,
-                                patient_strat=False,
-                                ignore=[])
+                            data_dir = os.path.join(args.data_root_dir, args.features_folder),
+                            small_data_dir = os.path.join(args.data_root_dir, args.small_features_folder),
+                            coords_path = args.coords_path,
+                            small_coords_path = args.small_coords_path,
+                            shuffle = False, 
+                            print_info = True,
+                            label_dict = args.label_dict,
+                            patient_strat=False,
+                            data_h5_dir=args.data_h5_dir,
+                            data_slide_dir=args.data_slide_dir,
+                            slide_ext=args.slide_ext,
+                            pretrained=True, 
+                            custom_downsample=args.custom_downsample, 
+                            target_patch_size=args.target_patch_size,
+                            model_type = args.model_type,
+                            batch_size = args.batch_size,
+                            graph_edge_distance = args.graph_edge_distance,
+                            offset = args.offset,
+                            ignore=[])
 
 if args.k_start == -1:
     start = 0
@@ -210,7 +226,7 @@ def main():
             if datasets_id[args.split] < 0:
                 split_dataset = dataset	
             else:	
-                csv_path = '{}/splits_{}.csv'.format(args.splits_dir, folds[ckpt_idx])	
+                csv_path = '{}/splits_{}.csv'.format(args.split_dir, folds[ckpt_idx])	
                 datasets = dataset.return_splits(from_id=False, csv_path=csv_path)	
                 split_dataset = datasets[datasets_id[args.split]]
             

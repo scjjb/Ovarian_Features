@@ -4,10 +4,11 @@ import torch
 import torch.nn as nn
 from models.model_mil import MIL_fc, MIL_fc_mc
 from models.model_clam import CLAM_SB, CLAM_MB
+from models.model_graph import Graph_Model
 import os
 import pandas as pd
 from utils.utils import *
-from utils.core_utils import Accuracy_Logger
+from utils.core_utils import Accuracy_Logger, evaluate
 from utils.sampling_utils import generate_sample_idxs, generate_features_array, update_sampling_weights, plot_sampling, plot_sampling_gif, plot_weighting, plot_weighting_gif
 from sklearn.metrics import roc_auc_score, roc_curve, auc
 from sklearn.preprocessing import label_binarize
@@ -22,7 +23,7 @@ from datasets.dataset_generic import Generic_MIL_Dataset
 from ray import tune
 
 
-def initiate_model(args, ckpt_path):
+def initiate_model(args, ckpt_path, num_features=0):
     print('Init Model')    
     model_dict = {"dropout": args.drop_out, 'n_classes': args.n_classes}
     
@@ -33,6 +34,8 @@ def initiate_model(args, ckpt_path):
         model = CLAM_SB(**model_dict)
     elif args.model_type =='clam_mb':
         model = CLAM_MB(**model_dict)
+    elif args.model_type in ['graph','graph_ms']:
+         model = Graph_Model(num_features=num_features, num_classes=args.n_classes,drop_out=args.drop_out)
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
             model = MIL_fc_mc(**model_dict)
@@ -80,7 +83,7 @@ def extract_features(args,loader,feature_extraction_model,use_cpu):
 
 
 def eval(config, dataset, args, ckpt_path):
-    model = initiate_model(args, ckpt_path)
+    model = initiate_model(args, ckpt_path, dataset[0][0].shape[1])
     print("model on device:",next(model.parameters()).device)
     print('Init Loaders')
     
@@ -103,80 +106,16 @@ def eval(config, dataset, args, ckpt_path):
         test_error, auc, df, _ = summary_sampling(model,dataset, args)
     else:
         loader = get_simple_loader(dataset)
-        test_error, auc, df, _, loss = summary(model, loader, args)
-    
+        ## old version 
+        #test_error, auc, df, _, loss = summary(model, loader, args)
+        _, acc, bal_acc, f1, auc, loss, _, df = evaluate(model, loader, args.n_classes, "testing")
+        test_error = 1-acc
+
     if args.tuning:
         tune.report(accuracy=1-test_error, auc=auc)    
     print('test_error: ', test_error)
     print('auc: ', auc)
     return test_error, auc, df, loss
-
-
-def summary(model, loader, args, loss_fn = None):
-    if loss_fn is None:
-        loss_fn = nn.CrossEntropyLoss()
-    
-    acc_logger = Accuracy_Logger(n_classes=args.n_classes)
-    model.eval()
-    test_loss = 0.
-    test_error = 0.
-    loss_value = 0.
-
-    all_probs = np.zeros((len(loader), args.n_classes))
-    all_labels = np.zeros(len(loader))
-    all_preds = np.zeros(len(loader))
-
-    slide_ids = loader.dataset.slide_data['slide_id']
-    for batch_idx, (data, label) in enumerate(loader):
-        data, label = data.to(device), label.to(device)
-        slide_id = slide_ids.iloc[batch_idx]
-        with torch.no_grad():
-            logits, Y_prob, Y_hat, _, results_dict = model(data)
-        acc_logger.log(Y_hat, label)
-        
-        probs = Y_prob.cpu().numpy()
-
-        all_probs[batch_idx] = probs
-        all_labels[batch_idx] = label.item()
-        all_preds[batch_idx] = Y_hat.item()
-
-        loss = loss_fn(logits, label)
-        loss_value += loss.item()
-        
-        error = calculate_error(Y_hat, label)
-        test_error += error
-
-    del data
-    test_error /= len(loader)
-    loss_value /= len(loader)
-
-    aucs = []
-    if len(np.unique(all_labels)) == 1:
-        auc_score = -1
-
-    else: 
-        if args.n_classes == 2:
-            auc_score = roc_auc_score(all_labels, all_probs[:, 1])
-        else:
-            binary_labels = label_binarize(all_labels, classes=[i for i in range(args.n_classes)])
-            for class_idx in range(args.n_classes):
-                if class_idx in all_labels:
-                    fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], all_probs[:, class_idx])
-                    aucs.append(auc(fpr, tpr))
-                else:
-                    aucs.append(float('nan'))
-            if args.micro_average:
-                binary_labels = label_binarize(all_labels, classes=[i for i in range(args.n_classes)])
-                fpr, tpr, _ = roc_curve(binary_labels.ravel(), all_probs.ravel())
-                auc_score = auc(fpr, tpr)
-            else:
-                auc_score = np.nanmean(np.array(aucs))
-
-    results_dict = {'slide_id': slide_ids, 'Y': all_labels, 'Y_hat': all_preds}
-    for c in range(args.n_classes):
-        results_dict.update({'p_{}'.format(c): all_probs[:,c]})
-    df = pd.DataFrame(results_dict)
-    return test_error, auc_score, df, acc_logger, loss_value
 
 
 def summary_sampling(model, dataset, args):

@@ -14,6 +14,7 @@ import random
 
 from models.resnet_custom import resnet18_baseline,resnet50_baseline
 import timm
+import pandas as pd
 
 class Accuracy_Logger(object):
     """Accuracy logger"""
@@ -260,10 +261,10 @@ def train(datasets, cur, class_counts, args):
         ## train a loop and evaluate validation set
         if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:     
             train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn, feature_extractor=feature_extractor_model)
-            stop, _, _, _, _, _ = evaluate(model, val_loader, args.n_classes, "validation", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model,clam=True)
+            stop, _, _, _, _, _, _, _ = evaluate(model, val_loader, args.n_classes, "validation", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model,clam=True)
         else:
             train_loop(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn, feature_extractor=feature_extractor_model, debug_loader=args.debug_loader)
-            stop, _, _, _, _, _ = evaluate(model, val_loader, args.n_classes, "validation", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model)
+            stop, _, _, _, _, _, _, _ = evaluate(model, val_loader, args.n_classes, "validation", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model)
         
         if stop: 
             break
@@ -273,10 +274,10 @@ def train(datasets, cur, class_counts, args):
     else:
         torch.save(model.state_dict(), os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur)))
 
-    _, val_acc, val_bal_acc, val_f1, val_auc, _= evaluate(model, val_loader, args.n_classes, "testing")
+    _, val_acc, val_bal_acc, val_f1, val_auc, _, _, _= evaluate(model, val_loader, args.n_classes, "testing")
     print('Val acc: {:.4f}, bal acc: {:.4f}, f1: {:.4f}, ROC AUC: {:.4f}'.format(val_acc, val_bal_acc, val_f1, val_auc))
 
-    _, test_acc, test_bal_acc, test_f1, test_auc, acc_logger = evaluate(model, test_loader, args.n_classes, "testing")
+    _, test_acc, test_bal_acc, test_f1, test_auc, _, acc_logger, _ = evaluate(model, test_loader, args.n_classes, "testing")
     print('Test acc: {:.4f}, bal acc: {:.4f}, f1: {:.4f}, ROC AUC: {:.4f}'.format(test_acc, test_bal_acc, test_f1, test_auc))
 
     for i in range(args.n_classes):
@@ -511,9 +512,10 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
                     logits, Y_prob, Y_hat, _, _ = model(data)
         
         acc_logger.log(Y_hat, label)
-        if mode=="validation":
+        if loss_fn is not None:
             new_loss = loss_fn(logits, label)
             loss += new_loss.item()
+        if mode=="validation":
             if clam:
                 instance_loss = instance_dict['instance_loss']
                 inst_count += 1
@@ -561,6 +563,10 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
                 with open(os.path.join(results_dir,'early_stopping{}.txt'.format(cur)), 'w') as f:
                     f.write('Finished at epoch {}'.format(epoch))
                 print("Early stopping")
-                return True, accuracy, balanced_accuracy, f1, auc, acc_logger
-
-    return False, accuracy, balanced_accuracy, f1, auc, acc_logger
+                return True, accuracy, balanced_accuracy, f1, auc, loss, acc_logger, None
+    
+    results_dict = {'slide_id': slide_ids, 'Y': all_labels, 'Y_hat': all_preds}
+    for c in range(n_classes):
+        results_dict.update({'p_{}'.format(c): all_probs[:,c]})
+    df = pd.DataFrame(results_dict)
+    return False, accuracy, balanced_accuracy, f1, auc, loss, acc_logger, df
