@@ -106,8 +106,6 @@ def eval(config, dataset, args, ckpt_path):
         test_error, auc, df, _ = summary_sampling(model,dataset, args)
     else:
         loader = get_simple_loader(dataset)
-        ## old version 
-        #test_error, auc, df, _, loss = summary(model, loader, args)
         _, acc, bal_acc, f1, auc, loss, _, df = evaluate(model, loader, args.n_classes, "testing")
         test_error = 1-acc
 

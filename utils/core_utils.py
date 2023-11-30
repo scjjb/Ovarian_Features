@@ -479,7 +479,9 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
     acc_logger = Accuracy_Logger(n_classes=n_classes)
     model.eval()
     loss = 0.
-    
+    if loss_fn is None:
+        loss_fn = nn.CrossEntropyLoss()
+
     if clam:
         inst_logger = Accuracy_Logger(n_classes=n_classes)
         inst_loss = 0.
@@ -512,9 +514,8 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
                     logits, Y_prob, Y_hat, _, _ = model(data)
         
         acc_logger.log(Y_hat, label)
-        if loss_fn is not None:
-            new_loss = loss_fn(logits, label)
-            loss += new_loss.item()
+        new_loss = loss_fn(logits, label)
+        loss += new_loss.item()
         if mode=="validation":
             if clam:
                 instance_loss = instance_dict['instance_loss']
