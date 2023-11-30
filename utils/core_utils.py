@@ -443,9 +443,9 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
     # calculate loss
     train_loss /= len(loader)
 
+    
     accuracy, balanced_accuracy, f1, auc = compute_metrics(all_probs, all_preds, all_labels, n_classes)
     print('Epoch: {}, train_loss: {:.4f}, acc: {:.4f}, bal_acc: {:.4f}, f1: {:.4f}, auc: {:.4f}'.format(epoch,loss, accuracy, balanced_accuracy, f1, auc))
-
     for i in range(n_classes):
         acc, correct, count = acc_logger.get_summary(i)
         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
@@ -468,7 +468,10 @@ def compute_metrics(probs,preds,labels,n_classes):
         auc = roc_auc_score(labels, probs[:, 1])
         f1 = f1_score(labels,preds)
     else:
-        auc = roc_auc_score(labels, probs,multi_class='ovr')
+        try:
+            auc = roc_auc_score(labels, probs,multi_class='ovr')
+        except:
+            auc = -1.
         f1 = f1_score(labels,preds,average='macro')
     
     return accuracy, balanced_accuracy, f1, auc
