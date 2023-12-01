@@ -463,7 +463,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                             transforms.RandomVerticalFlip(p=0.5),
                                             transforms.RandomAffine(degrees=5,translate=(0.1,0.1), scale=(0.9,1.1),shear=0.1),
                                             transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.3, hue=0.3),
-                            self.transforms.ToTensor()
+                                            transforms.ToTensor()
                                             ])
                 else:
                     self.transforms = transforms.Compose(
@@ -479,9 +479,19 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                         data_dir = self.data_dir
 
                 if self.extract_features:
-                    h5_file_path = os.path.join(self.data_h5_dir, 'patches', slide_id+".h5")
-                    file_path = os.path.join(self.data_slide_dir, slide_id+self.slide_ext)
-                    wsi = openslide.open_slide(file_path)
+                    h5_file_path = os.path.join(self.data_h5_dir, 'patches', str(slide_id)+".h5")
+                    ## this is a hacky fix because I have data stored in three different folders
+                    try:
+                        file_path = os.path.join(self.data_slide_dir, str(slide_id)+self.slide_ext)
+                        wsi = openslide.open_slide(file_path)
+                    except:
+                        try:
+                            file_path = os.path.join(self.data_slide_dir,"../idrive", str(slide_id)+self.slide_ext)
+                            wsi = openslide.open_slide(file_path)
+                        except:
+                            file_path = os.path.join(self.data_slide_dir,"../Set30to37", str(slide_id)+self.slide_ext)
+                            wsi = openslide.open_slide(file_path)
+
                     dataset = Whole_Slide_Bag_FP(file_path=h5_file_path, wsi=wsi, custom_transforms=self.transforms, pretrained=self.pretrained,custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size, max_patches_per_slide = self.max_patches_per_slide,model_architecture = self.model_architecture, batch_size = self.batch_size, extract_features = self.extract_features)
                     dataset.update_sample(np.random.choice(len(dataset),self.max_patches_per_slide))
                     patches = [data for data in dataset]

@@ -340,9 +340,8 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         all_probs[batch_idx] = probs
         all_preds[batch_idx] = Y_hat.item()
         all_labels[batch_idx] = label.item()
-
         train_loss += loss_value
-        if (batch_idx + 1) % 1000 == 0:
+        if (batch_idx + 1) % 5 == 0:
             print('batch {}, loss: {:.4f}, instance_loss: {:.4f}, weighted_loss: {:.4f}, '.format(batch_idx, loss_value, instance_loss_value, total_loss.item()) + 
                 'label: {}, bag_size: {}'.format(label.item(), data.size(0)))
 
@@ -431,7 +430,7 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         all_preds[batch_idx] = Y_hat.item()
         all_labels[batch_idx] = label.item()
 
-        if (batch_idx + 1) % 1000 == 0:
+        if (batch_idx + 1) % 10 == 0:
             print('batch {}, loss: {:.4f}, label: {}, bag_size: {}'.format(batch_idx, loss_value, label.item(), data.size(0)))
            
         # backward pass
