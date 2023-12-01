@@ -33,8 +33,14 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
 parser.add_argument('--model_size', type=str, choices=['tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier','tiny128','tiny','small', 'big','hipt_mega_tiny','hipt_mega_small','hipt_mega_big','hipt_mega_mega','hipt_const','hipt_smallest','hipt_small','hipt_medium','hipt_big','hipt_smaller'], default='small', help='size of model (default: small)')
 parser.add_argument('--task', type=str, choices=['ovarian_5class','ovarian_1vsall','nsclc','treatment'])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout p=0.25')
+
+## Graph model settings
 parser.add_argument('--graph_edge_distance',type=int,default=750,help="Maximum distance between nodes in graph to add edges.")
 parser.add_argument('--offset',type=int,default=512,help="The offset applied to the larger patches in graph_ms, which will typically be half of the size of the smaller magnification patches. This is needed due to coords being top-left rather than centre")
+parser.add_argument('--pooling_factor',type=float,default=0.8,help="proportion of nodes remaining after each graph pooling layer")
+parser.add_argument('--pooling_layers',type=int,default=3,help="number of graph message passing and pooling layers")
+parser.add_argument('--embedding_size',type=int,default=128,help="size of graph node embeddings")
+
 
 ## Data settings
 parser.add_argument('--k', type=int, default=10, help='number of folds (default: 10)')
