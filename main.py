@@ -23,8 +23,8 @@ import warnings
 
 
 warnings.simplefilter(action='ignore', category=UserWarning)
-## set maximum number of raytune trials pending at once to 20
-os.environ['TUNE_MAX_PENDING_TRIALS_PG'] = "20"
+## set maximum number of raytune trials pending at once to 5
+os.environ['TUNE_MAX_PENDING_TRIALS_PG'] = "5"
 
 def main():
     # create results directory if necessary
