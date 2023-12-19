@@ -1,6 +1,6 @@
 import torch
 from torch_geometric.nn import GraphConv, GATv2Conv 
-from torch_geometric.nn import TopKPooling 
+from torch_geometric.nn import TopKPooling, SAGPooling 
 from torch_geometric.nn import global_max_pool as gmp
 from torch_geometric.nn import global_mean_pool as gap
 from torch import nn
@@ -16,7 +16,7 @@ args:
 model adapted from https://github.com/pyg-team/pytorch_geometric/blob/master/examples/proteins_topk_pool.py
 """
 class Graph_Model(torch.nn.Module):
-    def __init__(self, pooling_factor = 0.8, pooling_layers = 3, message_passings = 1, embedding_size = 128, num_features=196, num_classes=2, max_nodes=250, drop_out=0.5, message_passing = 'standard'):
+    def __init__(self, pooling_factor = 0.8, pooling_layers = 3, message_passings = 1, embedding_size = 128, num_features=196, num_classes=2, max_nodes=250, drop_out=0.5, message_passing = 'standard', pooling = 'topk'):
         super().__init__()
         
         self.drop_out = drop_out
@@ -33,16 +33,25 @@ class Graph_Model(torch.nn.Module):
                 graph_layers.append(GATv2Conv(embedding_size, embedding_size))
         else:
             raise NotImplementedError
-        
-        graph_layers.append(TopKPooling(embedding_size, ratio=pooling_factor))
-        
+
+        if pooling == 'topk':
+            graph_layers.append(TopKPooling(embedding_size, ratio=pooling_factor))
+        elif pooling == 'sag':
+            graph_layers.append(SAGPooling(embedding_size, ratio=pooling_factor))
+        else:
+            raise NotImplementedError
+
         for _ in range(pooling_layers-1):
             for _ in range(message_passings):
                 if message_passing == 'standard':
                     graph_layers.append(GraphConv(embedding_size, embedding_size))
                 elif message_passing == 'gatv2':
                     graph_layers.append(GATv2Conv(embedding_size, embedding_size))
-            graph_layers.append(TopKPooling(embedding_size, ratio=pooling_factor))
+            if pooling == 'topk':
+                graph_layers.append(TopKPooling(embedding_size, ratio=pooling_factor))
+            elif pooling == 'sag':
+                graph_layers.append(SAGPooling(embedding_size, ratio=pooling_factor))
+        
         self.graph_layers=nn.ModuleList(graph_layers)
         self.lin1 = torch.nn.Linear(2*embedding_size,embedding_size)
         self.lin2 = torch.nn.Linear(embedding_size,int(embedding_size/2))
