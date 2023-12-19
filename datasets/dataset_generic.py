@@ -662,7 +662,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                         big_pos = {node: tuple(coord+self.offset) for node, coord in zip(big_nodes, coordinates)}
                                         plot_data = torch_geometric.data.Data(x=x_big, edge_index=adj_big)
                                         g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
-                                        options = {"node_size": 20, "node_color": "black", "edge_color": "red", "width": 1, "style":"--"}
+                                        options = {"node_size": 2.5, "node_color": "black", "edge_color": "red", "width": 0.8, "style":"--"}
                                         nx.draw(g,pos=big_pos, ax=ax,**options)
 
                                         small_nodes = list(range(len(small_coordinates)))
@@ -671,14 +671,14 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                         adj_small = torch.add(adj_small,-coordinates.shape[0])
                                         plot_data = torch_geometric.data.Data(x=x_small, edge_index=adj_small)
                                         g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
-                                        options = {"node_size": 10, "node_color": "blue", "edge_color": "blue", "width": 1}
+                                        options = {"node_size": 2.5, "node_color": "blue", "edge_color": "blue", "width": 0.8}
                                         nx.draw(g,pos=small_pos, ax=ax,**options)
                                         
                                         all_nodes = list(range(len(all_coordinates)))
                                         all_pos = {node: tuple(coord) for node, coord in zip(all_nodes, all_coordinates)}
                                         plot_data = torch_geometric.data.Data(x=x, edge_index=adj_between)
                                         g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
-                                        options = {"node_size": 5, "node_color": "black", "edge_color":"black", "width": 2}
+                                        options = {"node_size": 1, "node_color": "black", "edge_color":"black", "width": 1}
                                         nx.draw(g,pos=all_pos, ax=ax,**options)
 
                                         matplotlib.use("Agg")
