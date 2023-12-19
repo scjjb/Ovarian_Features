@@ -35,7 +35,7 @@ def initiate_model(args, ckpt_path, num_features=0):
     elif args.model_type =='clam_mb':
         model = CLAM_MB(**model_dict)
     elif args.model_type in ['graph','graph_ms']:
-         model = Graph_Model(pooling_factor=args.pooling_factor, pooling_layers=args.pooling_layers, embedding_size=args.embedding_size,num_features=num_features, num_classes=args.n_classes,drop_out=args.drop_out)
+         model = Graph_Model(pooling_factor=args.pooling_factor, pooling_layers=args.pooling_layers,  message_passings=args.message_passings, embedding_size=args.embedding_size,num_features=num_features, num_classes=args.n_classes,drop_out=args.drop_out, message_passing=args.message_passing)
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
             model = MIL_fc_mc(**model_dict)
