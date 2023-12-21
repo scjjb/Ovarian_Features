@@ -87,8 +87,13 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 self.patient_strat = patient_strat
                 self.train_ids, self.val_ids, self.test_ids  = (None, None, None)
                 self.data_dir = None
+                self.small_data_dir = None
                 self.coords_path = coords_path
+                self.small_coords_path = None
                 self.perturb_variance = perturb_variance
+                self.graph_edge_distance = None
+                self.offset = None
+                self.plot_graph = False
                 self.number_of_augs = number_of_augs
                 self.slide_ext = slide_ext
                 self.data_h5_dir = data_h5_dir
@@ -375,9 +380,9 @@ class Generic_WSI_Classification_Dataset(Dataset):
 class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
         def __init__(self,
                 data_dir,
-                small_data_dir,
-                coords_path,
-                small_coords_path,
+                small_data_dir=None,
+                coords_path=None,
+                small_coords_path=None,
                 perturb_variance=0.1,
                 number_of_augs=1,
                 max_patches_per_slide=float('inf'),

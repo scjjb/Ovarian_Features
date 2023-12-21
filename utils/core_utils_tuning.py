@@ -100,22 +100,26 @@ def train_tuning(config, datasets, cur, class_counts, args):
     print('\nTraining Fold {}!'.format(cur))
 
     assert not args.sampling, "Error in code - should be in core_utils_sampling when sampling even if also tuning"
-    if not args.no_inst_cluster:
-        args.B=config["B"]
+    if args.model_type in ["graph","graph_ms"]:
+        args.graph_edge_distance=config["edge_distance"]
+        args.pooling_layers=config["poolings"]
+        args.message_passings=config["passings"]
+    else:
+        if not args.no_inst_cluster:
+            args.B=config["B"]
+        try:
+            args.model_size=config["A_model_size"]
+        except:
+            args.model_size=config["model_size"]
     args.lr=config["lr"]
     args.beta1=config["beta1"]
     args.beta2=config["beta2"]
     args.eps=config["eps"]
     args.reg=config["reg"]
-    args.drop_out=config["drop_out"]
     try:
         args.max_patches_per_slide=config["patches"]
     except:
         args.max_patches_per_slide=config["A_patches"]
-    try:
-        args.model_size=config["A_model_size"]
-    except:
-        args.model_size=config["model_size"]
     writer_dir = os.path.join(args.results_dir, str(cur))
     if not os.path.isdir(writer_dir):
         os.mkdir(writer_dir)
@@ -456,8 +460,11 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
         auc = roc_auc_score(labels, prob[:, 1])
 
     else:
-        auc = roc_auc_score(labels, prob, multi_class='ovr')
-
+        ## using a try statement as occassionally this just completely crashes from the model doing poorly
+        try:
+            auc = roc_auc_score(labels, prob, multi_class='ovr')
+        except:
+            auc = 0.0000001
 
     if writer:
         writer.add_scalar('val/loss', val_loss, epoch)
