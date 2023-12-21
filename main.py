@@ -41,13 +41,13 @@ def main():
         end = args.k_end
     
     if args.tuning:
-        ray.init(num_gpus=1,runtime_env={"TUNE_MAX_PENDING_TRIALS_PG": 7})
+        ray.init(num_gpus=1,runtime_env={"TUNE_MAX_PENDING_TRIALS_PG": 8})
             
         if args.hardware=='DGX':
             if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest",]:
                 hardware={"cpu":32,"gpu":0.2}
             else:
-                hardware={"cpu":16,"gpu":0.3333}
+                hardware={"cpu":16,"gpu":0.25}
 
         else:
             if args.task =='treatment':
@@ -62,14 +62,24 @@ def main():
         for key, value in search_space.items():
             search_space[key] = eval(value)
 
-        ## currently disabled the ASHA early stopping by setting a very high grace period
-        scheduler = tune.schedulers.ASHAScheduler(
-            metric="loss",
-            mode="min",
-            grace_period=min(1000,args.max_epochs),
-            reduction_factor=2,
-            max_t=args.max_epochs)
+        if args.tuning_type == "asha":
+            scheduler = tune.schedulers.ASHAScheduler(
+                metric="loss",
+                mode="min",
+                grace_period=min(20,args.max_epochs),
+                reduction_factor=2,
+                max_t=args.max_epochs)
 
+        elif args.tuning_type == "grid":
+            scheduler = tune.schedulers.ASHAScheduler(
+                metric="loss",
+                mode="min",
+                grace_period=args.max_epochs,
+                reduction_factor=1,
+                max_t=args.max_epochs)
+
+        else:
+            raise NotImplementedError
 
         reporter = tune.CLIReporter(
             metric_columns=["loss", "auc", "training_iteration"],
@@ -255,6 +265,7 @@ parser.add_argument('--fully_random',action='store_true', default=False, help='T
 
 ## Tuning options
 parser.add_argument('--tuning', action='store_true', default=False, help='run hyperparameter tuning')
+parser.add_argument('--tuning_type',type=str, choices=['grid','asha'], default='grid',help='Grid is for rigorous comparison of a few options, Asha is for exploration of wider search spaces with weaker options stopped much earlier')
 parser.add_argument('--tuning_config_file', type=str, default=None, help='full path to txt file containing search space dictionary') 
 parser.add_argument('--tuning_output_file',type=str,default="tuning_results/tuning_output.csv",help="where to save tuning outputs")
 parser.add_argument('--num_tuning_experiments',type=int,default=100,help="Number of tuning experiments. If using grid tuning this is how many times each config will repeat, if sampling in ranges then this will be the number of overall experiments.")

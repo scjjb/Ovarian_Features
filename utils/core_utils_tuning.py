@@ -460,8 +460,11 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
         auc = roc_auc_score(labels, prob[:, 1])
 
     else:
-        auc = roc_auc_score(labels, prob, multi_class='ovr')
-
+        ## using a try statement as occassionally this just completely crashes from the model doing poorly
+        try:
+            auc = roc_auc_score(labels, prob, multi_class='ovr')
+        except:
+            auc = 0.0000001
 
     if writer:
         writer.add_scalar('val/loss', val_loss, epoch)
