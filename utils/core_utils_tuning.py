@@ -444,6 +444,9 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
             acc_logger.log(Y_hat, label)
 
             loss = loss_fn(logits, label)
+            if math.isnan(loss):
+                loss = 10
+
 
             prob[batch_idx] = Y_prob.cpu().numpy()
             labels[batch_idx] = label.item()
