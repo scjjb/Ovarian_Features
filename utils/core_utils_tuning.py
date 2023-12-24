@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+import math
 from utils.utils import *
 import os
 from datasets.dataset_generic import save_splits
@@ -444,6 +445,9 @@ def validate(cur, epoch, model, loader, n_classes, early_stopping = None, writer
             acc_logger.log(Y_hat, label)
 
             loss = loss_fn(logits, label)
+            if math.isnan(loss):
+                assert 1==2,[logits,label,data.shape,adj.shape]
+
 
             prob[batch_idx] = Y_prob.cpu().numpy()
             labels[batch_idx] = label.item()
