@@ -423,7 +423,8 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         acc_logger.log(Y_hat, label)
         loss = loss_fn(logits, label)
         loss_value = loss.item()
-        
+        if math.isnan(loss_value):
+            assert 1==2,[logits,label,data.shape,adj.shape]
         train_loss += loss_value
         
         probs = Y_prob.detach().cpu().numpy()
