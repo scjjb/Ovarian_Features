@@ -387,7 +387,8 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         acc_logger.log(Y_hat, label)
         loss = loss_fn(logits, label)
         loss_value = loss.item()
-
+        if math.isnan(loss_value):
+            assert 1==2,["training",logits,label,data.shape,adj.shape]
         train_loss += loss_value
         if (batch_idx + 1) % 1000 == 0:
             print('batch {}, loss: {:.4f}, label: {}, bag_size: {}'.format(batch_idx, loss_value, label.item(), data.size(0)))
