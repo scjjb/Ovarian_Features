@@ -324,7 +324,8 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         acc_logger.log(Y_hat, label)
         loss = loss_fn(logits, label)
         loss_value = loss.item()
-
+        if math.isnan(loss_value):
+            assert 1==2,[logits,label,data.shape,adj.shape]
         instance_loss = instance_dict['instance_loss']
         inst_count+=1
         instance_loss_value = instance_loss.item()
