@@ -1,0 +1,10 @@
+{"reg": "tune.loguniform(1e-8,1e-3)",
+"drop_out": "tune.uniform(0.0,0.75)",
+"lr": "tune.loguniform(5e-5,5e-3)",
+"A_patches": "tune.randint(200,700)",
+"beta1":  "tune.choice([0.8,0.9,0.99])",
+"beta2": "tune.choice([0.99,0.999,0.9999])",
+"eps": "tune.loguniform(1e-3,1e-2)",
+"edge_distance": "tune.choice([9000])",
+"poolings": "tune.choice([1,2,3,4])",
+"passings": "tune.choice([1,2,3])"}
