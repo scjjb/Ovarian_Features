@@ -261,10 +261,10 @@ def train(datasets, cur, class_counts, args):
         ## train a loop and evaluate validation set
         if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:     
             train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn, feature_extractor=feature_extractor_model)
-            stop, _, _, _, _, _, _, _ = evaluate(model, val_loader, args.n_classes, "validation", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model,clam=True)
+            stop, _, _, _, _, _, _, _ = evaluate(model, val_loader, args.n_classes, "validate", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model,clam=True)
         else:
             train_loop(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn, feature_extractor=feature_extractor_model, debug_loader=args.debug_loader)
-            stop, _, _, _, _, _, _, _ = evaluate(model, val_loader, args.n_classes, "validation", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model)
+            stop, _, _, _, _, _, _, _ = evaluate(model, val_loader, args.n_classes, "validate", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model)
         
         if stop: 
             break
@@ -274,18 +274,11 @@ def train(datasets, cur, class_counts, args):
     else:
         torch.save(model.state_dict(), os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur)))
 
-    _, val_acc, val_bal_acc, val_f1, val_auc, _, _, _= evaluate(model, val_loader, args.n_classes, "testing")
-    print('Val acc: {:.4f}, bal acc: {:.4f}, f1: {:.4f}, ROC AUC: {:.4f}'.format(val_acc, val_bal_acc, val_f1, val_auc))
+    _, val_acc, val_bal_acc, val_f1, val_auc, _, _, _= evaluate(model, val_loader, args.n_classes, "final")
+    print('Final val acc: {:.4f}, bal acc: {:.4f}, f1: {:.4f}, ROC AUC: {:.4f}'.format(val_acc, val_bal_acc, val_f1, val_auc))
 
-    _, test_acc, test_bal_acc, test_f1, test_auc, _, acc_logger, _ = evaluate(model, test_loader, args.n_classes, "testing")
-    print('Test acc: {:.4f}, bal acc: {:.4f}, f1: {:.4f}, ROC AUC: {:.4f}'.format(test_acc, test_bal_acc, test_f1, test_auc))
-
-    for i in range(args.n_classes):
-        acc, correct, count = acc_logger.get_summary(i)
-        #print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-
-        if writer:
-            writer.add_scalar('final/test_class_{}_acc'.format(i), acc, 0)
+    _, test_acc, test_bal_acc, test_f1, test_auc, _, _, _ = evaluate(model, test_loader, args.n_classes, "final")
+    print('Final test acc: {:.4f}, bal acc: {:.4f}, f1: {:.4f}, ROC AUC: {:.4f}'.format(test_acc, test_bal_acc, test_f1, test_auc))
 
     if writer:
         writer.add_scalar('final/val_accuracy', val_acc, 0)
@@ -384,7 +377,6 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
     model.train()
     if feature_extractor is not None:
         feature_extractor.eval()
-    acc_logger = Accuracy_Logger(n_classes=n_classes)
     train_loss = 0.
 
     all_probs = np.zeros((len(loader), n_classes))
@@ -420,7 +412,6 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         else:
             logits, Y_prob, Y_hat, _, _ = model(data)
         
-        acc_logger.log(Y_hat, label)
         loss = loss_fn(logits, label)
         loss_value = loss.item()
         if math.isnan(loss_value):
@@ -432,8 +423,8 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         all_preds[batch_idx] = Y_hat.item()
         all_labels[batch_idx] = label.item()
 
-        if (batch_idx + 1) % 1000 == 0:
-            print('batch {}, loss: {:.4f}, label: {}, bag_size: {}'.format(batch_idx, loss_value, label.item(), data.size(0)))
+        #if (batch_idx + 1) % 1000 == 0:
+        #    print('batch {}, loss: {:.4f}, label: {}, bag_size: {}'.format(batch_idx, loss_value, label.item(), data.size(0)))
            
         # backward pass
         loss.backward()
@@ -444,14 +435,9 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
     # calculate loss
     train_loss /= len(loader)
 
-    
+    print("\nTraining")
     accuracy, balanced_accuracy, f1, auc = compute_metrics(all_probs, all_preds, all_labels, n_classes)
     print('Epoch: {}, train_loss: {:.4f}, acc: {:.4f}, bal_acc: {:.4f}, f1: {:.4f}, auc: {:.4f}'.format(epoch,loss, accuracy, balanced_accuracy, f1, auc))
-    for i in range(n_classes):
-        acc, correct, count = acc_logger.get_summary(i)
-        print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-        if writer:
-            writer.add_scalar('train/class_{}_acc'.format(i), acc, epoch)
 
     if writer:
         writer.add_scalar('train/loss', train_loss, epoch)
@@ -475,12 +461,20 @@ def compute_metrics(probs,preds,labels,n_classes):
             auc = -1.
         f1 = f1_score(labels,preds,average='macro')
     
+    labels = labels.tolist()
+    preds = preds.tolist()
+    for label_class in range(n_classes):
+        count_label = labels.count(label_class)
+        count_correct = sum(x == label_class and y == label_class for x, y in zip(preds,labels))
+        if count_label > 0:
+            acc = float(count_correct) / count_label
+            print('class {}: acc {}, correct {}/{}'.format(label_class, acc, count_correct, count_label))
+
     return accuracy, balanced_accuracy, f1, auc
 
 def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping = None, writer = None, loss_fn = None, results_dir=None, feature_extractor = None, clam=False):
-    assert mode in ["validation","testing"]
+    assert mode in ["validate","final"]
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    acc_logger = Accuracy_Logger(n_classes=n_classes)
     model.eval()
     loss = 0.
     if loss_fn is None:
@@ -517,10 +511,9 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
                 else:
                     logits, Y_prob, Y_hat, _, _ = model(data)
         
-        acc_logger.log(Y_hat, label)
         new_loss = loss_fn(logits, label)
         loss += new_loss.item()
-        if mode=="validation":
+        if mode=="validate":
             if clam:
                 instance_loss = instance_dict['instance_loss']
                 inst_count += 1
@@ -536,13 +529,12 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
         
     loss /= len(loader)
     
+    if mode == "validate":
+        print("\nValidation")
+    else:
+        print("\nFinal Evaluation")
     accuracy, balanced_accuracy, f1, auc = compute_metrics(all_probs,all_preds,all_labels,n_classes)
     
-    print("\nEvaluation")
-    for i in range(n_classes):
-         acc, correct, count = acc_logger.get_summary(i)
-         print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-
     if clam:
         if inst_count > 0:
             inst_loss /= inst_count
@@ -550,7 +542,8 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
                 acc, correct, count = inst_logger.get_summary(i)
                 print('class {} clustering acc {}: correct {}/{}'.format(i, acc, correct, count))
     
-    if mode == "validation":
+    if mode == "validate":
+        print('Val Set, val_loss: {:.4f}, acc: {:.4f}, bal_acc: {:.4f}, f1: {:.4f}, auc: {:.4f}'.format(loss, accuracy, balanced_accuracy, f1, auc))
         if writer:
             writer.add_scalar('val/loss', loss, epoch)
             writer.add_scalar('val/accuracy', accuracy, epoch)
@@ -560,7 +553,6 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
             if clam:
                  writer.add_scalar('val/inst_loss', val_inst_loss, epoch)
 
-        print('Val Set, val_loss: {:.4f}, acc: {:.4f}, bal_acc: {:.4f}, f1: {:.4f}, auc: {:.4f}'.format(loss, accuracy, balanced_accuracy, f1, auc))
         if early_stopping:
             assert results_dir
             early_stopping(epoch, loss, model, ckpt_name = os.path.join(results_dir, "s_{}_checkpoint.pt".format(cur)))
@@ -574,4 +566,4 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
     for c in range(n_classes):
         results_dict.update({'p_{}'.format(c): all_probs[:,c]})
     df = pd.DataFrame(results_dict)
-    return False, accuracy, balanced_accuracy, f1, auc, loss, acc_logger, df
+    return False, accuracy, balanced_accuracy, f1, auc, loss, _, df
