@@ -156,7 +156,7 @@ def train(datasets, cur, class_counts, args):
         ce_weights=[(1/class_counts[i])*(sum(class_counts)/len(class_counts)) for i in range(len(class_counts))]
         print("weighting cross entropy with weights {}".format(ce_weights))
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-        loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(ce_weights).to(device))
+        loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(ce_weights).to(device,non_blocking=True))
     else:
         loss_fn = nn.CrossEntropyLoss()
     print('Done!')
@@ -201,7 +201,7 @@ def train(datasets, cur, class_counts, args):
     
     print("\nModel parameters:",f'{sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.to(device)
+    model.to(device, non_blocking=True)
     if args.continue_training:
         model.load_state_dict(torch.load(os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur))))
     print('Done!')
@@ -314,8 +314,11 @@ def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writ
         acc_logger.log(Y_hat, label)
         loss = loss_fn(logits, label)
         loss_value = loss.item()
-        if math.isnan(loss_value):
-            assert 1==2,[logits,label,data.shape,adj.shape]
+        
+        ## this is helpful for error checking if nans start to appear:
+        #if math.isnan(loss_value):
+        #    assert 1==2,[logits,label,data.shape,adj.shape]
+
         instance_loss = instance_dict['instance_loss']
         inst_count+=1
         instance_loss_value = instance_loss.item()
@@ -386,7 +389,7 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
             data,label = inputs
         else:
             data,adj,label = inputs
-            adj = adj.to(device)
+            adj = adj.to(device,non_blocking=True)
 
         if debug_loader:
             continue
@@ -398,7 +401,7 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
                 plot_tensor = patch
                 plot_image=pil_image_transform(plot_tensor)
                 plot_image.save("../mount_outputs/patch_plots_hipt/{}.jpg".format(random.randint(0,100000)))
-        data, label = data.to(device), label.to(device)
+        data, label = data.to(device, non_blocking=True), label.to(device, non_blocking=True)
         
         if feature_extractor is not None:
             with torch.no_grad():
@@ -410,11 +413,14 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
             logits, Y_prob, Y_hat, _, _ = model(data)
         
         loss = loss_fn(logits, label)
-        loss_value = loss.item()
-        if math.isnan(loss_value):
-            assert 1==2,[logits,label,data.shape,adj.shape]
-        train_loss += loss_value
         
+        # backward pass
+        loss.backward()
+        # step
+        optimizer.step()
+        optimizer.zero_grad()
+
+        train_loss += loss.item()
         probs = Y_prob.detach().cpu().numpy()
         all_probs[batch_idx] = probs
         all_preds[batch_idx] = Y_hat.item()
@@ -423,12 +429,6 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         #if (batch_idx + 1) % 1000 == 0:
         #    print('batch {}, loss: {:.4f}, label: {}, bag_size: {}'.format(batch_idx, loss_value, label.item(), data.size(0)))
            
-        # backward pass
-        loss.backward()
-        # step
-        optimizer.step()
-        optimizer.zero_grad()
-
     # calculate loss
     train_loss /= len(loader)
 
@@ -493,9 +493,9 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
             data,label = inputs
         else:
             data,adj,label = inputs
-            adj = adj.to(device)
+            adj = adj.to(device,non_blocking=True)
 
-        data, label = data.to(device), label.to(device)
+        data, label = data.to(device,non_blocking=True), label.to(device,non_blocking=True)
         with torch.no_grad():
             if len(inputs)==3:
                 logits, Y_prob, Y_hat, _, _ = model(data, adj, training=False)
@@ -506,7 +506,7 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
                     logits, Y_prob, Y_hat, _, _ = model(data)
         
         new_loss = loss_fn(logits, label)
-        loss += new_loss.item()
+        loss += new_loss
         if mode=="validate":
             if clam:
                 instance_loss = instance_dict['instance_loss']
