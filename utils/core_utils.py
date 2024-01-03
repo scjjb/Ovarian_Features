@@ -13,6 +13,7 @@ from models.resnet_custom import resnet18_baseline,resnet50_baseline
 import timm
 import pandas as pd
 
+
 class Accuracy_Logger(object):
     """Accuracy logger"""
     def __init__(self, n_classes):
@@ -423,8 +424,8 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
         train_loss += loss.item()
         probs = Y_prob.detach().cpu().numpy()
         all_probs[batch_idx] = probs
-        all_preds[batch_idx] = Y_hat.item()
-        all_labels[batch_idx] = label.item()
+        all_preds[batch_idx] = Y_hat
+        all_labels[batch_idx] = label
 
         #if (batch_idx + 1) % 1000 == 0:
         #    print('batch {}, loss: {:.4f}, label: {}, bag_size: {}'.format(batch_idx, loss_value, label.item(), data.size(0)))
@@ -505,8 +506,13 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
                 else:
                     logits, Y_prob, Y_hat, _, _ = model(data)
         
-        new_loss = loss_fn(logits, label)
-        loss += new_loss
+        loss_value = loss_fn(logits, label)
+        loss += loss_value.item()
+        probs = Y_prob.cpu().numpy()
+        all_probs[batch_idx] = probs
+        all_preds[batch_idx] = Y_hat
+        all_labels[batch_idx] = label
+
         if mode=="validate":
             if clam:
                 instance_loss = instance_dict['instance_loss']
@@ -516,11 +522,6 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
                 inst_labels = instance_dict['inst_labels']
                 inst_logger.log_batch(inst_preds, inst_labels)
 
-        probs = Y_prob.cpu().numpy()
-        all_probs[batch_idx] = probs
-        all_preds[batch_idx] = Y_hat.item()
-        all_labels[batch_idx] = label.item()
-        
     loss /= len(loader)
     
     if mode == "validate":
