@@ -6,10 +6,7 @@ from datasets.dataset_generic import save_splits
 from models.model_mil import MIL_fc, MIL_fc_mc
 from models.model_clam import CLAM_MB, CLAM_SB
 from models.model_graph import Graph_Model
-from sklearn.preprocessing import label_binarize
-from sklearn.metrics import roc_auc_score, roc_curve, accuracy_score, balanced_accuracy_score, f1_score
-from sklearn.metrics import auc as calc_auc
-import PIL
+from sklearn.metrics import roc_auc_score, accuracy_score, balanced_accuracy_score, f1_score
 import random
 
 from models.resnet_custom import resnet18_baseline,resnet50_baseline
@@ -241,7 +238,7 @@ def train(datasets, cur, class_counts, args):
     val_split.set_transforms()
     test_split.set_transforms()
         
-    workers = 4
+    workers = 6
     if args.debug_loader:
         workers = 1
     train_loader = get_split_loader(train_split, training=True, weighted = args.weighted_sample, workers=workers)
@@ -483,9 +480,7 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
     if clam:
         inst_logger = Accuracy_Logger(n_classes=n_classes)
         inst_loss = 0.
-        inst_acc = 0.
         inst_count=0
-        sample_size = model.k_sample
 
     all_probs = np.zeros((len(loader), n_classes))
     all_preds = np.zeros(len(loader))
@@ -501,7 +496,6 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
             adj = adj.to(device)
 
         data, label = data.to(device), label.to(device)
-        slide_id = slide_ids.iloc[batch_idx]
         with torch.no_grad():
             if len(inputs)==3:
                 logits, Y_prob, Y_hat, _, _ = model(data, adj, training=False)
