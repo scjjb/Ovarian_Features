@@ -435,7 +435,7 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
     # calculate loss
     train_loss /= len(loader)
 
-    print("\nTraining")
+    print("Training")
     accuracy, balanced_accuracy, f1, auc = compute_metrics(all_probs, all_preds, all_labels, n_classes)
     print('Epoch: {}, train_loss: {:.4f}, acc: {:.4f}, bal_acc: {:.4f}, f1: {:.4f}, auc: {:.4f}'.format(epoch,loss, accuracy, balanced_accuracy, f1, auc))
 

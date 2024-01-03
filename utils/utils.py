@@ -102,12 +102,11 @@ def get_split_loader(split_dataset, training = False, weighted = False, workers 
         if training:
             if weighted:
                     weights = make_weights_for_balanced_classes_split(split_dataset)
-                    loader = DataLoader(split_dataset, batch_size=1, sampler = WeightedRandomSampler(weights, len(weights)), collate_fn = collate, **kwargs)    
+                    loader = DataLoader(split_dataset, batch_size=1, sampler = WeightedRandomSampler(weights, len(weights)), collate_fn = collate, pin_memory=True, **kwargs)    
             else:
-                    loader = DataLoader(split_dataset, batch_size=1, sampler = RandomSampler(split_dataset), collate_fn = collate, **kwargs)
+                    loader = DataLoader(split_dataset, batch_size=1, sampler = RandomSampler(split_dataset), collate_fn = collate, pin_memory=True, **kwargs)
         else:
-            loader = DataLoader(split_dataset, batch_size=1, sampler = SequentialSampler(split_dataset), collate_fn = collate, **kwargs)
-        
+            loader = DataLoader(split_dataset, batch_size=1, sampler = SequentialSampler(split_dataset), collate_fn = collate, pin_memory=True, **kwargs)
 
         return loader
 
