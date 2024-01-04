@@ -16,7 +16,6 @@ import cProfile, pstats
 # internal imports
 from utils.core_utils import train
 from utils.core_utils_tuning import train_tuning
-from utils.core_utils_sampling import train_sampling
 from datasets.dataset_generic import Generic_MIL_Dataset
 from utils.tuning_utils import TrialPlateauStopper
 import warnings
@@ -115,10 +114,8 @@ def main():
         if args.tuning:
             seed_torch(args.seed)
             stopper=TrialPlateauStopper(metric="loss",mode="min",num_results=10,grace_period=10)
-            if args.sampling:
-                tuner = tune.Tuner(tune.with_resources(partial(train_sampling,datasets=datasets,cur=i,class_counts=class_counts,args=args),hardware),param_space=search_space, run_config=RunConfig(name="test_run",stop=stopper, progress_reporter=reporter),tune_config=tune.TuneConfig(scheduler=scheduler,num_samples=args.num_tuning_experiments))
-            else:
-                tuner = tune.Tuner(tune.with_resources(partial(train_tuning,datasets=datasets,cur=i,class_counts=class_counts,args=args),hardware),param_space=search_space, run_config=RunConfig(name="test_run",stop=stopper, progress_reporter=reporter),tune_config=tune.TuneConfig(scheduler=scheduler,num_samples=args.num_tuning_experiments))
+            
+            tuner = tune.Tuner(tune.with_resources(partial(train_tuning,datasets=datasets,cur=i,class_counts=class_counts,args=args),hardware),param_space=search_space, run_config=RunConfig(name="test_run",stop=stopper, progress_reporter=reporter),tune_config=tune.TuneConfig(scheduler=scheduler,num_samples=args.num_tuning_experiments))
             results = tuner.fit()
             results_df=results.get_dataframe(filter_metric="loss", filter_mode="min")
             results_df.to_csv(args.tuning_output_file,index=False)
@@ -138,10 +135,8 @@ def main():
             
 
         else:
-            if args.sampling:
-                test_auc, val_auc, test_acc, val_acc  = train_sampling(None,datasets, i, class_counts, args)
-            else:
-                test_auc, val_auc, test_acc, val_acc  = train(datasets, i, class_counts, args)
+            
+            test_auc, val_auc, test_acc, val_acc  = train(datasets, i, class_counts, args)
         
             all_test_auc.append(test_auc)
             all_val_auc.append(val_auc)
@@ -195,7 +190,7 @@ parser.add_argument('--eps', type=float, default=1e-8,
                     help='eps in Adam optimizer')
 parser.add_argument('--reg', type=float, default=1e-5,
                     help='weight decay (L2 regularisation) in Adam optimizer')
-parser.add_argument('--max_patches_per_slide', type=int, default=float('inf'), help='number of patches to sample per slide during training')
+parser.add_argument('--max_patches_per_slide', type=int, default=float('inf'), help='Number of patches to sample per slide during training. This is purely random patch sampling, though more complex options can be seen at https://github.com/scjjb/DRAS-MIL.')
 parser.add_argument('--perturb', action='store_true', default=False, help='perturb features during training')
 parser.add_argument('--perturb_variance', type=float, default=0.1, help='variance of feature perturbations')
 parser.add_argument('--drop_out', type=float, default=0.25, help='proportion of weights dropped out before fully connected layers')
@@ -246,22 +241,6 @@ parser.add_argument('--data_slide_dir', type=str, default=None)
 parser.add_argument('--slide_ext', type=str, default= '.svs')
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
-
-## Old sampling options - developed for https://github.com/scjjb/DRAS-MIL but not used for a while, now just using max_patches_per_slide instead
-parser.add_argument('--sampling', action='store_true', default=False, help='sampling for faster training')
-parser.add_argument('--sampling_type', type=str, choices=['spatial','textural','newest'],default='spatial',help='type of sampling to use')
-parser.add_argument('--samples_per_iteration', type=int, default=100, help='number of patches to sample per sampling iteration')
-parser.add_argument('--resampling_iterations', type=int, default=10, help='number of resampling iterations (not including the initial sample)')
-parser.add_argument('--sampling_random', type=float, default=0.2, help='proportion of samples which are completely random per iteration')
-parser.add_argument('--sampling_random_delta',type=float, default=0.02, help='reduction in sampling_random per iteration')
-parser.add_argument('--sampling_neighbors', type=int, default=20, help='number of nearest neighbors to consider when resampling')
-parser.add_argument('--final_sample_size',type=int,default=100,help='number of patches for final sample')
-parser.add_argument('--texture_model',type=str, choices=['resnet50','levit_128s'], default='resnet50',help='model to use for feature extraction in textural sampling')
-parser.add_argument('--sampling_average',action='store_true',default=False,help='Take the sampling weights as averages rather than maxima to leverage more learned information')
-parser.add_argument('--weight_smoothing',type=float,default=0.15,help='Power applied to attention scores to generate sampling weights')
-parser.add_argument('--use_all_samples',action='store_true', default=False, help='Use all previous samples in the final sample step')
-parser.add_argument('--no_sampling_epochs',type=int,default=20,help='number of epochs to complete full slide processing before beginning sampling')
-parser.add_argument('--fully_random',action='store_true', default=False, help='Take entirely random samples (no active sampling)')
 
 ## Tuning options
 parser.add_argument('--tuning', action='store_true', default=False, help='run hyperparameter tuning')
@@ -327,7 +306,6 @@ settings = {'num_splits': args.k,
             'model_size': args.model_size,
             "drop_out": args.drop_out,
             "use_early_stopping": args.early_stopping,
-            "use_sampling": args.sampling,
             'weighted_sample': args.weighted_sample,
             'opt': args.opt,
             'graph_edge_distance': args.graph_edge_distance}
@@ -336,9 +314,6 @@ if args.model_type in ['clam_sb', 'clam_mb']:
    settings.update({'bag_weight': args.bag_weight,
                     'inst_loss': args.inst_loss,
                     'B': args.B})
-
-if args.sampling:
-    settings.update({'sampling_type': args.sampling_type})
 
 print('\nLoad Dataset')
     
