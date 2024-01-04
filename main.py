@@ -15,7 +15,6 @@ import cProfile, pstats
 
 # internal imports
 from utils.core_utils import train
-from utils.core_utils_tuning import train_tuning
 from datasets.dataset_generic import Generic_MIL_Dataset
 from utils.tuning_utils import TrialPlateauStopper
 import warnings
@@ -115,7 +114,7 @@ def main():
             seed_torch(args.seed)
             stopper=TrialPlateauStopper(metric="loss",mode="min",num_results=10,grace_period=10)
             
-            tuner = tune.Tuner(tune.with_resources(partial(train_tuning,datasets=datasets,cur=i,class_counts=class_counts,args=args),hardware),param_space=search_space, run_config=RunConfig(name="test_run",stop=stopper, progress_reporter=reporter),tune_config=tune.TuneConfig(scheduler=scheduler,num_samples=args.num_tuning_experiments))
+            tuner = tune.Tuner(tune.with_resources(partial(train,datasets=datasets,cur=i,class_counts=class_counts,args=args),hardware),param_space=search_space, run_config=RunConfig(name="test_run",stop=stopper, progress_reporter=reporter),tune_config=tune.TuneConfig(scheduler=scheduler,num_samples=args.num_tuning_experiments))
             results = tuner.fit()
             results_df=results.get_dataframe(filter_metric="loss", filter_mode="min")
             results_df.to_csv(args.tuning_output_file,index=False)
@@ -136,7 +135,7 @@ def main():
 
         else:
             
-            test_auc, val_auc, test_acc, val_acc  = train(datasets, i, class_counts, args)
+            test_auc, val_auc, test_acc, val_acc  = train(None,datasets, i, class_counts, args)
         
             all_test_auc.append(test_auc)
             all_val_auc.append(val_auc)

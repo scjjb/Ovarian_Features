@@ -12,7 +12,10 @@ import random
 from models.resnet_custom import resnet18_baseline,resnet50_baseline
 import timm
 import pandas as pd
-
+from ray import tune
+import warnings
+## We can't use the latest version of torch-scatter on this version of pytorch, which it keeps warning us to do to increase speed
+warnings.simplefilter(action='ignore', category=UserWarning)
 
 class Accuracy_Logger(object):
     """Accuracy logger"""
@@ -99,13 +102,38 @@ class EarlyStopping:
         torch.save(model.state_dict(), ckpt_name)
         self.val_loss_min = val_loss
 
-def train(datasets, cur, class_counts, args):
+def train(config, datasets, cur, class_counts, args):
     """   
         train for a single fold
     """
+    ## If tuning, update args from config 
+    if args.tuning:
+        if args.model_type in ["graph","graph_ms"]:
+            args.graph_edge_distance=config["edge_distance"]
+            args.pooling_layers=config["poolings"]
+            args.message_passings=config["passings"]
+        else:
+            if not args.no_inst_cluster:
+                args.B=config["B"]
+            try:
+                args.model_size=config["A_model_size"]
+            except:
+                args.model_size=config["model_size"]
+        
+        args.lr=config["lr"]
+        args.beta1=config["beta1"]
+        args.beta2=config["beta2"]
+        args.eps=config["eps"]
+        args.reg=config["reg"]
+        args.drop_out=config["drop_out"]
+        try:
+            args.max_patches_per_slide=config["patches"]
+        except:
+            args.max_patches_per_slide=config["A_patches"]
+
+
     if args.extract_features:
         device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-        
         print('loading {} pretrained model {}'.format(args.pretraining_dataset, args.model_architecture))
         feature_extractor_model=None
         if args.model_architecture=='resnet18':
@@ -147,19 +175,19 @@ def train(datasets, cur, class_counts, args):
     print("Validating on {} samples".format(len(val_split)))
     print("Testing on {} samples".format(len(test_split)))
 
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     print('\nInit loss function...', end=' ')
     if args.bag_loss == 'svm':
         from topk.svm import SmoothTop1SVM
         loss_fn = SmoothTop1SVM(n_classes = args.n_classes)
         if device.type == 'cuda':
-            loss_fn = loss_fn.cuda()
+            loss_fn = loss_fn.to(device,non_blocking=True)
     elif args.bag_loss == 'balanced_ce':
         ce_weights=[(1/class_counts[i])*(sum(class_counts)/len(class_counts)) for i in range(len(class_counts))]
         print("weighting cross entropy with weights {}".format(ce_weights))
-        device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-        loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(ce_weights).to(device,non_blocking=True))
+        loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(ce_weights).to(device,non_blocking=True)).to(device,non_blocking=True)
     else:
-        loss_fn = nn.CrossEntropyLoss()
+        loss_fn = nn.CrossEntropyLoss().to(device,non_blocking=True)
     print('Done!')
     
     print('\nInit Model...', end=' ')
@@ -248,7 +276,7 @@ def train(datasets, cur, class_counts, args):
     print('Done!')
 
     print('\nSetup EarlyStopping...', end=' ')
-    if args.early_stopping:
+    if args.early_stopping and not args.tuning:
         early_stopping = EarlyStopping(min_epochs = args.min_epochs, patience = 20, stop_epoch=20, verbose = True)
 
     else:
@@ -259,11 +287,17 @@ def train(datasets, cur, class_counts, args):
         ## train a loop and evaluate validation set
         if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:     
             train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn, feature_extractor=feature_extractor_model)
-            stop, _, _, _, _, _, _, _ = evaluate(model, val_loader, args.n_classes, "validate", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model,clam=True)
+            stop, val_acc, _, _, val_auc, val_loss, _, _ = evaluate(model, val_loader, args.n_classes, "validate", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model,clam=True)
         else:
             train_loop(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn, feature_extractor=feature_extractor_model, debug_loader=args.debug_loader)
-            stop, _, _, _, _, _, _, _ = evaluate(model, val_loader, args.n_classes, "validate", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model)
+            stop, val_acc, _, _, val_auc, val_loss, _, _ = evaluate(model, val_loader, args.n_classes, "validate", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model)
         
+        if args.tuning:
+            with tune.checkpoint_dir(epoch) as checkpoint_dir:
+                path = os.path.join(checkpoint_dir, "checkpoint")
+                torch.save((model.state_dict(), optimizer.state_dict()), path)
+            tune.report(loss=val_loss, accuracy=val_acc, auc=val_auc)
+
         if stop: 
             break
 
@@ -277,6 +311,13 @@ def train(datasets, cur, class_counts, args):
 
     _, test_acc, test_bal_acc, test_f1, test_auc, _, _, _ = evaluate(model, test_loader, args.n_classes, "final")
     print('Final test acc: {:.4f}, bal acc: {:.4f}, f1: {:.4f}, ROC AUC: {:.4f}'.format(test_acc, test_bal_acc, test_f1, test_auc))
+
+
+    if args.tuning:
+        output_row=[args.reg,args.lr,args.drop_out,val_loss,val_auc,val_acc]
+        output_dataframe=pd.read_csv("/CLAM/"+args.tuning_output_file)
+        output_dataframe.loc[len(output_dataframe)] = output_row
+        output_dataframe.to_csv("/CLAM/"+args.tuning_output_file,index=False)
 
     if writer:
         writer.add_scalar('final/val_accuracy', val_acc, 0)
