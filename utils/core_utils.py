@@ -283,14 +283,15 @@ def train(config, datasets, cur, class_counts, args):
         early_stopping = None
     print('Done!')
 
+    use_clam = False
+    if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:
+        use_clam = True
+
+
     for epoch in range(args.max_epochs):
         ## train a loop and evaluate validation set
-        if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:     
-            train_loop_clam(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn, feature_extractor=feature_extractor_model)
-            stop, val_acc, _, _, val_auc, val_loss, _, _ = evaluate(model, val_loader, args.n_classes, "validate", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model,clam=True)
-        else:
-            train_loop(epoch, model, train_loader, optimizer, args.n_classes, writer, loss_fn, feature_extractor=feature_extractor_model, debug_loader=args.debug_loader)
-            stop, val_acc, _, _, val_auc, val_loss, _, _ = evaluate(model, val_loader, args.n_classes, "validate", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model)
+        train_loop(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn, feature_extractor=feature_extractor_model, debug_loader=args.debug_loader, clam=use_clam)
+        stop, val_acc, _, _, val_auc, val_loss, _, _ = evaluate(model, val_loader, args.n_classes, "validate", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model,clam=use_clam)
         
         if args.tuning:
             with tune.checkpoint_dir(epoch) as checkpoint_dir:
@@ -328,99 +329,18 @@ def train(config, datasets, cur, class_counts, args):
     return test_auc, val_auc, test_acc, val_acc 
 
 
-def train_loop_clam(epoch, model, loader, optimizer, n_classes, bag_weight, writer = None, loss_fn = None, feature_extractor = None):
-    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model.train()
-    acc_logger = Accuracy_Logger(n_classes=n_classes)
-    inst_logger = Accuracy_Logger(n_classes=n_classes)
-    
-    train_loss = 0.
-    train_inst_loss = 0.
-    inst_count = 0
-
-    all_probs = np.zeros((len(loader), n_classes))
-    all_preds = np.zeros(len(loader))
-    all_labels = np.zeros(len(loader))
-
-
-    print('\n')
-    for batch_idx, (data, label) in enumerate(loader):
-        data, label = data.to(device), label.to(device)
-
-        if feature_extractor:
-            print("len data", len(data))
-            with torch.no_grad():
-                data = feature_extractor(data)
-        model.train()
-        logits, Y_prob, Y_hat, _, instance_dict = model(data, label=label, instance_eval=True)
-        acc_logger.log(Y_hat, label)
-        loss = loss_fn(logits, label)
-        loss_value = loss.item()
-        
-        ## this is helpful for error checking if nans start to appear:
-        #if math.isnan(loss_value):
-        #    assert 1==2,[logits,label,data.shape,adj.shape]
-
-        instance_loss = instance_dict['instance_loss']
-        inst_count+=1
-        instance_loss_value = instance_loss.item()
-        train_inst_loss += instance_loss_value
-        
-        total_loss = bag_weight * loss + (1-bag_weight) * instance_loss 
-
-        inst_preds = instance_dict['inst_preds']
-        inst_labels = instance_dict['inst_labels']
-        inst_logger.log_batch(inst_preds, inst_labels)
-
-        probs = Y_prob.detach().cpu().numpy()
-        all_probs[batch_idx] = probs
-        all_preds[batch_idx] = Y_hat.item()
-        all_labels[batch_idx] = label.item()
-        train_loss += loss_value
-        if (batch_idx + 1) % 1000 == 0:
-            print('batch {}, loss: {:.4f}, instance_loss: {:.4f}, weighted_loss: {:.4f}, '.format(batch_idx, loss_value, instance_loss_value, total_loss.item()) + 
-                'label: {}, bag_size: {}'.format(label.item(), data.size(0)))
-
-        # backward pass
-        total_loss.backward()
-        # step
-        optimizer.step()
-        optimizer.zero_grad()
-
-    # calculate loss for epoch
-    train_loss /= len(loader)
-    
-    if inst_count > 0:
-        train_inst_loss /= inst_count
-        print('\n')
-        for i in range(2):
-            acc, correct, count = inst_logger.get_summary(i)
-            print('class {} clustering acc {}: correct {}/{}'.format(i, acc, correct, count))
-    
-    accuracy, balanced_accuracy, f1, auc = compute_metrics(all_probs, all_preds, all_labels, n_classes)
-    print('Epoch: {}, train_loss: {:.4f}, acc: {:.4f}, bal_acc: {:.4f}, f1: {:.4f}, auc: {:.4f}'.format(epoch,loss, accuracy, balanced_accuracy, f1, auc))
-    
-    for i in range(n_classes):
-        acc, correct, count = acc_logger.get_summary(i)
-        print('class {}: acc {}, correct {}/{}'.format(i, acc, correct, count))
-        if writer and acc is not None:
-            writer.add_scalar('train/class_{}_acc'.format(i), acc, epoch)
-
-    if writer:
-        writer.add_scalar('train/loss', train_loss, epoch)
-        writer.add_scalar('train/accuracy', accuracy, epoch)
-        writer.add_scalar('train/bal_accuracy', balanced_accuracy, epoch)
-        writer.add_scalar('train/f1', f1, epoch)
-        writer.add_scalar('train/auc', auc, epoch)
-        writer.add_scalar('train/clustering_loss', train_inst_loss, epoch)
-
-def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_fn = None, feature_extractor = None, debug_loader=False):   
+def train_loop(epoch, model, loader, optimizer, n_classes, bag_weight=0.5, writer = None, loss_fn = None, feature_extractor = None, debug_loader = False, clam = False):   
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu") 
     model.train()
     if feature_extractor is not None:
         feature_extractor.eval()
     train_loss = 0.
 
+    if clam:
+        inst_logger = Accuracy_Logger(n_classes=n_classes)
+        train_inst_loss = 0.
+        inst_count = 0
+    
     all_probs = np.zeros((len(loader), n_classes))
     all_preds = np.zeros(len(loader))
     all_labels = np.zeros(len(loader))
@@ -449,13 +369,28 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
             with torch.no_grad():
                 data = feature_extractor(data)
         
+        model.train()
         if len(inputs)==3:
-            logits, Y_prob, Y_hat, _, _ = model(data, adj, training=True)
+            logits, Y_prob, Y_hat, _, _ = model(data, adj, training=True) ##dont need clam options here as they don't work for graph models
         else:
-            logits, Y_prob, Y_hat, _, _ = model(data)
+            logits, Y_prob, Y_hat, _, instance_dict = model(data, label=label, instance_eval=clam)
         
-        loss = loss_fn(logits, label)
-        
+        bag_loss = loss_fn(logits, label)
+
+        if clam:
+            instance_loss = instance_dict['instance_loss']
+            inst_count+=1
+            instance_loss_value = instance_loss.item()
+            train_inst_loss += instance_loss_value
+            loss = bag_weight * bag_loss + (1-bag_weight) * instance_loss
+            
+            inst_preds = instance_dict['inst_preds']
+            inst_labels = instance_dict['inst_labels']
+            inst_logger.log_batch(inst_preds, inst_labels)
+
+        else:
+            loss = bag_loss
+
         # backward pass
         loss.backward()
         # step
@@ -478,13 +413,21 @@ def train_loop(epoch, model, loader, optimizer, n_classes, writer = None, loss_f
     accuracy, balanced_accuracy, f1, auc = compute_metrics(all_probs, all_preds, all_labels, n_classes)
     print('Epoch: {}, train_loss: {:.4f}, acc: {:.4f}, bal_acc: {:.4f}, f1: {:.4f}, auc: {:.4f}'.format(epoch,loss, accuracy, balanced_accuracy, f1, auc))
 
+    if clam:
+        if inst_count > 0:
+            train_inst_loss /= inst_count
+            for i in range(2):
+                acc, correct, count = inst_logger.get_summary(i)
+                print('class {} clustering acc {}: correct {}/{}'.format(i, acc, correct, count))
+
     if writer:
         writer.add_scalar('train/loss', train_loss, epoch)
         writer.add_scalar('train/accuracy', accuracy, epoch)
         writer.add_scalar('train/bal_accuracy', balanced_accuracy, epoch)
         writer.add_scalar('train/f1', f1, epoch)
         writer.add_scalar('train/auc', auc, epoch)
-
+        if clam:
+            writer.add_scalar('train/clustering_loss', train_inst_loss, epoch)
 
 def compute_metrics(probs,preds,labels,n_classes):
     accuracy = accuracy_score(labels,preds)
