@@ -16,7 +16,7 @@ args:
 model adapted from https://github.com/pyg-team/pytorch_geometric/blob/master/examples/proteins_topk_pool.py
 """
 class Graph_Model(torch.nn.Module):
-    def __init__(self, pooling_factor = 0.8, pooling_layers = 3, message_passings = 1, embedding_size = 128, num_features=196, num_classes=2, max_nodes=250, drop_out=0.5, message_passing = 'standard', pooling = 'topk'):
+    def __init__(self, pooling_factor = 0.8, pooling_layers = 3, message_passings = 1, gat_heads = 1, embedding_size = 128, num_features=196, num_classes=2, max_nodes=250, drop_out=0.5, message_passing = 'standard', pooling = 'topk'):
         super().__init__()
         
         self.drop_out = drop_out
@@ -28,7 +28,7 @@ class Graph_Model(torch.nn.Module):
             for _ in range(message_passings-1):
                  graph_layers.append(GraphConv(embedding_size, embedding_size))
         elif message_passing == 'gatv2':
-            graph_layers.append(GATv2Conv(num_features, embedding_size))
+            graph_layers.append(GATv2Conv(num_features, embedding_size, heads = gat_heads))
             for _ in range(message_passings-1):
                 graph_layers.append(GATv2Conv(embedding_size, embedding_size))
         else:

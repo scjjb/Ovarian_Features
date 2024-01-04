@@ -112,6 +112,9 @@ def train(config, datasets, cur, class_counts, args):
             args.graph_edge_distance=config["edge_distance"]
             args.pooling_layers=config["poolings"]
             args.message_passings=config["passings"]
+            args.gat_heads=config["gat_heads"]
+            args.pooling_factor=config["pooling_factor"]
+            args.embedding_size=config["embedding_size"]
         else:
             if not args.no_inst_cluster:
                 args.B=config["B"]
@@ -220,7 +223,7 @@ def train(config, datasets, cur, class_counts, args):
             raise NotImplementedError
     
     elif args.model_type in ['graph','graph_ms']:
-        model = Graph_Model(pooling_factor=args.pooling_factor, pooling_layers=args.pooling_layers, message_passings=args.message_passings, embedding_size=args.embedding_size ,num_features=train_split[0][0].shape[1], num_classes=args.n_classes,drop_out=args.drop_out, message_passing=args.message_passing, pooling=args.pooling)
+        model = Graph_Model(pooling_factor=args.pooling_factor, pooling_layers=args.pooling_layers, message_passings=args.message_passings, gat_heads=args.gat_heads, embedding_size=args.embedding_size ,num_features=train_split[0][0].shape[1], num_classes=args.n_classes,drop_out=args.drop_out, message_passing=args.message_passing, pooling=args.pooling)
 
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
