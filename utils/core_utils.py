@@ -250,6 +250,12 @@ def train(config, datasets, cur, class_counts, args):
         val_split.set_debug_loader(True)
         test_split.set_debug_loader(True)
     
+    ## update graph edge distance 
+    if args.tuning:
+        train_split.graph_edge_distance = args.graph_edge_distance
+        val_split.graph_edge_distance = args.graph_edge_distance
+        test_split.graph_edge_distance = args.graph_edge_distance
+
     if args.extract_features:
         train_split.set_extract_features(True)
     if args.augment_features:
