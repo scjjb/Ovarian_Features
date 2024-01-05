@@ -414,7 +414,10 @@ def train_loop(epoch, model, loader, optimizer, n_classes, bag_weight=0.5, write
 
         #if (batch_idx + 1) % 1000 == 0:
         #    print('batch {}, loss: {:.4f}, label: {}, bag_size: {}'.format(batch_idx, loss_value, label.item(), data.size(0)))
-           
+
+    if math.isnan(train_loss):
+        assert 1==2,"nan training loss"
+
     # calculate loss
     train_loss /= len(loader)
 
@@ -514,6 +517,10 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
                 inst_preds = instance_dict['inst_preds']
                 inst_labels = instance_dict['inst_labels']
                 inst_logger.log_batch(inst_preds, inst_labels)
+
+    
+    if math.isnan(loss):
+        assert 1==2,"nan evaluation loss"
 
     loss /= len(loader)
     
