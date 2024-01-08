@@ -73,7 +73,7 @@ def main():
                 metric="loss",
                 mode="min",
                 grace_period=args.max_epochs,
-                reduction_factor=1,
+                reduction_factor=2,
                 max_t=args.max_epochs)
 
         else:
