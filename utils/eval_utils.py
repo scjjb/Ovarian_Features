@@ -9,7 +9,7 @@ import os
 import pandas as pd
 from utils.utils import *
 from utils.core_utils import Accuracy_Logger, evaluate
-from utils.sampling_utils import generate_sample_idxs, generate_features_array, update_sampling_weights, plot_sampling, plot_sampling_gif, plot_weighting, plot_weighting_gif
+#from utils.sampling_utils import generate_sample_idxs, generate_features_array, update_sampling_weights, plot_sampling, plot_sampling_gif, plot_weighting, plot_weighting_gif
 from sklearn.metrics import roc_auc_score, roc_curve, auc
 from sklearn.preprocessing import label_binarize
 import random
@@ -106,7 +106,7 @@ def eval(config, dataset, args, ckpt_path):
         test_error, auc, df, _ = summary_sampling(model,dataset, args)
     else:
         loader = get_simple_loader(dataset)
-        _, acc, bal_acc, f1, auc, loss, _, df = evaluate(model, loader, args.n_classes, "testing")
+        _, acc, bal_acc, f1, auc, loss, _, df = evaluate(model, loader, args.n_classes, "final")
         test_error = 1-acc
 
     if args.tuning:
