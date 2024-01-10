@@ -555,7 +555,7 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
                 with open(os.path.join(results_dir,'early_stopping{}.txt'.format(cur)), 'w') as f:
                     f.write('Finished at epoch {}'.format(epoch))
                 print("Early stopping")
-                return True, accuracy, balanced_accuracy, f1, auc, loss, acc_logger, None
+                return True, accuracy, balanced_accuracy, f1, auc, loss, _, None
     
     results_dict = {'slide_id': slide_ids, 'Y': all_labels, 'Y_hat': all_preds}
     for c in range(n_classes):

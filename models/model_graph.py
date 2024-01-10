@@ -71,7 +71,6 @@ class Graph_Model(torch.nn.Module):
                     xhidden = xhidden + torch.cat([gmp(x,batch), gap(x,batch)], dim=1)
 
         x = xhidden 
-        x = F.dropout(x, p=self.drop_out, training=training)
         x = F.relu(self.lin1(x))
         x = F.dropout(x, p=self.drop_out, training=training)
         x = F.relu(self.lin2(x))
