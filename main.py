@@ -213,7 +213,7 @@ parser.add_argument('--pooling_factor',type=float,default=0.8,help="proportion o
 parser.add_argument('--pooling_layers',type=int,default=3,help="number of graph message passing and pooling layers")
 parser.add_argument('--embedding_size',type=int,default=128,help="size of graph node embeddings")
 parser.add_argument('--plot_graph',choices=["none","together","seperate"],default="none",help="whether to plot a graph in graph_ms, only seperate actually works at the minute")
-
+parser.add_argument('--ms_features',choices=["naive","seperate"],default="naive",help="whether to assume all patch features are the same (naive) or keep them separate across magnifications")
 
 ## Data settings
 parser.add_argument('--label_frac', type=float, default=1.0,
@@ -361,6 +361,7 @@ dataset = Generic_MIL_Dataset(csv_path = args.csv_path,
                             graph_edge_distance = args.graph_edge_distance,
                             offset = args.offset,
                             plot_graph = args.plot_graph,
+                            ms_features = args.ms_features,
                             ignore=[])
 
 if not os.path.isdir(args.results_dir):
