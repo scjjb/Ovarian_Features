@@ -114,16 +114,16 @@ def main():
             seed_torch(args.seed)
             stopper=TrialPlateauStopper(metric="loss",mode="min",num_results=10,grace_period=10)
             
-            tuner = tune.Tuner(tune.with_resources(partial(train,datasets=datasets,cur=i,class_counts=class_counts,args=args),hardware),param_space=search_space, run_config=RunConfig(name="test_run",stop=stopper, progress_reporter=reporter),tune_config=tune.TuneConfig(scheduler=scheduler,num_samples=args.num_tuning_experiments))
+            if args.continue_tuning:
+                tuner = tune.Tuner.restore(
+                        path="~/ray_results/test_run"
+                        )
+            else:
+                tuner = tune.Tuner(tune.with_resources(partial(train,datasets=datasets,cur=i,class_counts=class_counts,args=args),hardware),param_space=search_space, run_config=RunConfig(name="test_run",stop=stopper, progress_reporter=reporter),tune_config=tune.TuneConfig(scheduler=scheduler,num_samples=args.num_tuning_experiments))
+            
             results = tuner.fit()
             results_df=results.get_dataframe(filter_metric="loss", filter_mode="min")
             results_df.to_csv(args.tuning_output_file,index=False)
-
-            ##if the tuning has already run and saved, can look at the best trial using the following code:
-            #tuner = tune.Tuner.restore(
-            #        path="~/ray_results/test_run"
-            #          )
-            #results = tuner.fit()
 
             best_trial = results.get_best_result("loss", "min","last-10-avg")
             print("best trial:", best_trial)
@@ -249,6 +249,7 @@ parser.add_argument('--tuning_config_file', type=str, default=None, help='full p
 parser.add_argument('--tuning_output_file',type=str,default="tuning_results/tuning_output.csv",help="where to save tuning outputs")
 parser.add_argument('--num_tuning_experiments',type=int,default=100,help="Number of tuning experiments. If using grid tuning this is how many times each config will repeat, if sampling in ranges then this will be the number of overall experiments.")
 parser.add_argument('--hardware',type=str, choices=['DGX','PC'], default='DGX',help='sets amount of CPU and GPU to use per experiment')
+parser.add_argument('--continue_tuning', action='store_true', default=False, help='Continue partially-complete tuning experiment or re-evaluate finished experiments')
 
 ## CLAM options
 parser.add_argument('--no_inst_cluster', action='store_true', default=False,
