@@ -565,11 +565,19 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     if self.ms_features == 'naive':
                                         x_big = features.clone().detach()
                                         x_small = small_features.clone().detach()
-                                    elif self.ms_features == 'seperate':
+                                    elif self.ms_features == 'seperate_zero':
                                         
                                         features = torch.nn.functional.pad(features, (0, 1024), mode='constant', value=0)
                                         x_big = features.clone().detach()
                                         small_features = torch.nn.functional.pad(small_features,(1024,0),mode='constant', value=0)
+                                        x_small = small_features.clone().detach()
+
+                                    elif self.ms_features == 'seperate_avg':
+                                        big_avg = torch.mean(features,dim=0)
+                                        small_avg = torch.mean(small_features,dim=0)
+                                        features = torch.cat((features,small_avg.repeat(features.shape[0],1)),1)
+                                        x_big = features.clone().detach()
+                                        small_features = torch.cat((big_avg.repeat(small_features.shape[0],1),small_features),1)
                                         x_small = small_features.clone().detach()
 
                                     else:
