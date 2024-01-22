@@ -686,7 +686,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                         big_pos = {node: tuple(coord+self.offset) for node, coord in zip(big_nodes, coordinates)}
                                         plot_data = torch_geometric.data.Data(x=x_big, edge_index=adj_big)
                                         g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
-                                        options = {"node_size": 2.5, "node_color": "black", "edge_color": "red", "width": 0.8, "style":"--"}
+                                        options = {"node_size": 2, "node_color": "black", "edge_color": "red", "width": 0.8, "style":"-."}
                                         nx.draw(g,pos=big_pos, ax=ax,**options)
 
                                         small_nodes = list(range(len(small_coordinates)))
@@ -695,21 +695,25 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                         adj_small = torch.add(adj_small,-coordinates.shape[0])
                                         plot_data = torch_geometric.data.Data(x=x_small, edge_index=adj_small)
                                         g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
-                                        options = {"node_size": 2.5, "node_color": "blue", "edge_color": "blue", "width": 0.8}
+                                        options = {"node_size": 2, "node_color": "black", "edge_color": "black", "width": 0.8, "style": "-"}
                                         nx.draw(g,pos=small_pos, ax=ax,**options)
                                         
                                         all_nodes = list(range(len(all_coordinates)))
                                         all_pos = {node: tuple(coord) for node, coord in zip(all_nodes, all_coordinates)}
                                         plot_data = torch_geometric.data.Data(x=x, edge_index=adj_between)
                                         g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
-                                        options = {"node_size": 1, "node_color": "black", "edge_color":"black", "width": 1}
+                                        options = {"node_size": 0.1, "node_color": "black", "edge_color":"tab:blue", "width": 0.8, "style": "-"}
                                         nx.draw(g,pos=all_pos, ax=ax,**options)
 
                                         matplotlib.use("Agg")
                                         plt.gca().invert_yaxis()
-                                        fig.savefig("/mnt/results/graphplots/graphsubset{}.png".format(slide_id))
+                                        try:
+                                            fig.savefig("/mnt/results/graphplots/graph_{}_{}{}_{}dist_{}patches.png".format(slide_id,self.data_dir.split("_")[-3],self.small_data_dir.split("_")[-3],self.graph_edge_distance,self.max_patches_per_slide),bbox_inches="tight")
+                                        except:
+                                            fig.savefig("/mnt/results/graphplots/graph_{}.png".format(slide_id), bbox_inches="tight")
                                         plt.close(fig)
-                                        print("plotting graph {}".format(slide_id))
+                                        assert 1==2, "testing"
+                                        print("plotted graph {}".format(slide_id))
                                     return x, adj, label
                                 
                                 return features, label
