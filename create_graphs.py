@@ -132,7 +132,6 @@ def extract_graphs():
             ## save the features and adj as a single .np file. Need to make sure theres a folder made with mkdir before this part 
             torch.save(x, os.path.join(args.save_graph_path, 'features', str(slide_id)+'_features.pt'))
             torch.save(adj, os.path.join(args.save_graph_path, 'adj', str(slide_id)+'_adj.pt'))
-            print("Saved graph {} with features shape {} and adj shape {}. Progress {}/{}".format(slide_id,x.shape,adj.shape,i+1,total))
         
         time_elapsed = time.time() - time_start
         total_time_elapsed += time_elapsed
