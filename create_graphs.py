@@ -1,5 +1,6 @@
 import argparse
 import os 
+import time
 import numpy as np
 import pandas as pd
 import torch
@@ -33,34 +34,6 @@ def extract_graphs():
     ## Generate the graphs and adjacency matrices for WSIs and save to files to avoid repeating this process during training/testing
     ## These will be saved in .pt files containing the features and adjacencies 
     
-    #dataset = Generic_MIL_Dataset(csv_path = args.csv_path,
-    #                        data_dir = os.path.join(args.data_root_dir, args.features_folder),
-    #                        small_data_dir = os.path.join(args.data_root_dir, args.small_features_folder),
-    #                        max_patches_per_slide=np.inf,
-    #                        perturb_variance=0,
-    #                        number_of_augs=0,
-    #                        coords_path = args.coords_path,
-    #                        small_coords_path = args.small_coords_path,
-    #                        shuffle = False,
-    #                        seed = 1,
-    #                        print_info = True,
-    #                        label_dict = {'high_grade':0,'low_grade':1,'clear_cell':2,'endometrioid':3,'mucinous':4},
-    #                        patient_strat=False,
-    #                        data_h5_dir=None,
-    #                        data_slide_dir=None,
-    #                        slide_ext=None,
-    #                        pretrained=True,
-    #                        custom_downsample=None,
-    #                        target_patch_size=None,
-    #                        model_architecture = None,
-    #                        model_type = args.model_type,
-    #                        batch_size = None,
-    #                        graph_edge_distance = args.graph_edge_distance,
-    #                        offset = args.offset,
-    #                        plot_graph = False,
-    #                        ms_features = args.ms_features,
-    #                        ignore=[])
-
     slide_data = pd.read_csv(args.csv_path)
     slide_ids = slide_data['slide_id']
 
@@ -69,16 +42,23 @@ def extract_graphs():
         os.mkdir(args.save_graph_path+"/features")
         os.mkdir(args.save_graph_path+"/adj")
 
+    dest_files = os.listdir(args.save_graph_path+"/features")
+
     data_dir = os.path.join(args.data_root_dir, args.features_folder)
     small_data_dir = os.path.join(args.data_root_dir, args.small_features_folder)
+
+    total_time_elapsed = 0.0
 
     total = len(slide_ids)
     for i in range(total):
         slide_id = str(slide_ids[i])
-
-        ## below from previously relying on Generic_MIL_Dataset
-        #features, adj, label = dataset[i]
         
+        if slide_id+'_features.pt' in dest_files:
+            print('skipped {}'.format(slide_id))
+            continue
+            
+        time_start = time.time()
+
         full_path = os.path.join(data_dir, 'pt_files', '{}.pt'.format(slide_id))
         features = torch.load(full_path)
         
@@ -153,7 +133,11 @@ def extract_graphs():
             torch.save(x, os.path.join(args.save_graph_path, 'features', str(slide_id)+'_features.pt'))
             torch.save(adj, os.path.join(args.save_graph_path, 'adj', str(slide_id)+'_adj.pt'))
             print("Saved graph {} with features shape {} and adj shape {}. Progress {}/{}".format(slide_id,x.shape,adj.shape,i+1,total))
-
+        
+        time_elapsed = time.time() - time_start
+        total_time_elapsed += time_elapsed
+        print("Saved graph {} with features shape {} and adj shape {}, taking {} s. Progress {}/{}".format(slide_id,x.shape,adj.shape, round(time_elapsed,4),i+1,total))
+    print("total time: {}".format(total_time_elapsed))
 
 if __name__ == "__main__":
     extract_graphs()
