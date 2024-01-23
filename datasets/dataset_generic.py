@@ -559,7 +559,23 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     ## load from files created in create_graphs.py
                                     x = torch.load(os.path.join(self.graph_path, 'features', str(slide_id)+'_features.pt'))
                                     adj = torch.load(os.path.join(self.graph_path, 'adj', str(slide_id)+'_adj.pt'))
-
+                                    
+                                    ## sample patches and only keep edges between remaining patches
+                                    if self.max_patches_per_slide < len(x):
+                                        sampled_idxs=np.random.choice(len(x),self.max_patches_per_slide,replace=False)
+                                        x = x[sampled_idxs]
+                                    
+                                        mapping_function = {value.item(): index for index, value in enumerate(sampled_idxs)}
+                                        sampled_idxs = torch.tensor(sampled_idxs)
+                                        adj_indices1 = torch.nonzero(torch.isin(adj[0], sampled_idxs))
+                                        adj_indices2 = torch.nonzero(torch.isin(adj[1], sampled_idxs))
+                                        adj_indices = np.intersect1d(adj_indices1, adj_indices2)
+                                        
+                                        ## adjust the adjacencies to use the new indices
+                                        row0 = [mapping_function.get(value.item()) for value in adj[0][adj_indices]]
+                                        row1 = [mapping_function.get(value.item()) for value in adj[1][adj_indices]]
+                                        adj = torch.stack([torch.tensor(row0),torch.tensor(row1)])
+                                    
                                     return x, adj, label
 
                                 return features, label
