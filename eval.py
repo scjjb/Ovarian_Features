@@ -24,6 +24,7 @@ parser.add_argument('--features_folder', type=str, default=None,help='folder wit
 parser.add_argument('--small_features_folder', type=str, default="/",help='folder within data_root_dir containing the small features if needed (only used in graph_ms) - must contain pt_files/h5_files subfolder')
 parser.add_argument('--coords_path', type=str, default=None,help='path to coords pt files if needed')
 parser.add_argument('--small_coords_path', type=str, default=None,help='path to small coords pt files if needed (only used in graph_ms)')
+parser.add_argument('--graph_path', type=str, default=None,help='path to folder containing pre-created graph features and adjacencies from create_graphs.py')
 parser.add_argument('--csv_path', type=str, default=None, help='path to dataset_csv file')
 parser.add_argument('--models_exp_code', type=str, default=None,help='experiment code to load trained models (directory under results_dir containing model checkpoints')
 parser.add_argument('--save_exp_code', type=str, default=None,help='experiment code to save eval results')
@@ -43,6 +44,7 @@ parser.add_argument('--pooling', type=str, choices=['topk','sag'], default='topk
 parser.add_argument('--pooling_factor',type=float,default=0.8,help="proportion of nodes remaining after each graph pooling layer")
 parser.add_argument('--pooling_layers',type=int,default=3,help="number of graph message passing and pooling layers")
 parser.add_argument('--embedding_size',type=int,default=128,help="size of graph node embeddings")
+parser.add_argument('--ms_features',choices=["naive","seperate_zero","seperate_avg"],default="naive",help="whether to assume all patch features are the same (naive) or keep them separate across magnifications")
 
 
 ## Data settings
@@ -172,6 +174,8 @@ dataset = Generic_MIL_Dataset(csv_path = args.csv_path,
                             batch_size = args.batch_size,
                             graph_edge_distance = args.graph_edge_distance,
                             offset = args.offset,
+                            ms_features = args.ms_features,
+                            graph_path = args.graph_path,
                             ignore=[])
 
 if args.k_start == -1:
