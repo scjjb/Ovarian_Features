@@ -45,7 +45,7 @@ def main():
             if args.model_size in ["hipt_big","hipt_medium","hipt_small","hipt_smaller","hipt_smallest",]:
                 hardware={"cpu":32,"gpu":0.2}
             else:
-                hardware={"cpu":16,"gpu":0.333}
+                hardware={"cpu":8,"gpu":0.25}
 
         else:
             if args.task =='treatment':
