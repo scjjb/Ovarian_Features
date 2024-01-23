@@ -66,7 +66,7 @@ def plot_graphs():
             # Reflect the plot along the y-axis
             matplotlib.pyplot.gca().invert_yaxis()
             fig.savefig(os.path.join(args.plot_path,slide_id+".png"),bbox_inches="tight")
-            plt.close(fig)
+            plt.close('all')
 
         elif args.plot_graph=="seperate":
             raise NotImplementedError("Need to make code to go through adj and assign each edge to groups based on big->big, small->small, and big->small")

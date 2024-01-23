@@ -240,7 +240,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 if len(split) > 0:
                         mask = self.slide_data['slide_id'].isin(split.tolist())
                         df_slice = self.slide_data[mask].reset_index(drop=True)
-                        split = Generic_Split(df_slice, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features)
+                        split = Generic_Split(df_slice, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
                 else:
                         split = None
                 
@@ -256,7 +256,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 if len(split) > 0:
                         mask = self.slide_data['slide_id'].isin(merged_split)
                         df_slice = self.slide_data[mask].reset_index(drop=True)
-                        split = Generic_Split(df_slice, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features)
+                        split = Generic_Split(df_slice, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
                 else:
                         split = None
                 
@@ -269,21 +269,21 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 if from_id:
                         if len(self.train_ids) > 0:
                                 train_data = self.slide_data.loc[self.train_ids].reset_index(drop=True)
-                                train_split = Generic_Split(train_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features)
+                                train_split = Generic_Split(train_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
 
                         else:
                                 train_split = None
                         
                         if len(self.val_ids) > 0:
                                 val_data = self.slide_data.loc[self.val_ids].reset_index(drop=True)
-                                val_split = Generic_Split(val_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features)
+                                val_split = Generic_Split(val_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
 
                         else:
                                 val_split = None
                         
                         if len(self.test_ids) > 0:
                                 test_data = self.slide_data.loc[self.test_ids].reset_index(drop=True)
-                                test_split = Generic_Split(test_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features)
+                                test_split = Generic_Split(test_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
                         
                         else:
                                 test_split = None
@@ -400,6 +400,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                 offset=None,
                 plot_graph=None,
                 ms_features=None,
+                graph_path=None,
                 **kwargs):
         
                 super(Generic_MIL_Dataset, self).__init__(**kwargs)
@@ -431,6 +432,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                 self.offset = offset
                 self.plot_graph = plot_graph
                 self.ms_features = ms_features
+                self.graph_path = graph_path
 
         def load_from_h5(self, toggle):
                 self.use_h5 = toggle
@@ -518,12 +520,15 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                 full_path = os.path.join(data_dir, 'pt_files', '{}.pt'.format(slide_id))
                                 if self.debug_loader:
                                     print(slide_id)
-                                try:
-                                    features = torch.load(full_path)
-                                except:
-                                    assert 1==2, "Error caused by slide {}".format(slide_id)
+                                if self.model_type not in ['graph_ms']:
+                                    try:
+                                        features = torch.load(full_path)
+                                    except:
+                                        assert 1==2, "Error caused by slide {}".format(slide_id)
+                                else:
+                                    features = []
                                 
-                                if self.model_type in ['graph','graph_ms']:
+                                if self.model_type in ['graph']:
                                     with h5py.File(os.path.join(self.coords_path, str(slide_id)+".h5"),'r') as hdf5_file:
                                         coordinates = hdf5_file['coords'][:]
 
@@ -551,171 +556,12 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     return x, adj, label
                                 
                                 if self.model_type == 'graph_ms':
-                                    ## load the small (higher resolution) patch coords and features
-                                    small_data_dir = self.small_data_dir
-                                    small_full_path = os.path.join(small_data_dir, 'pt_files', '{}.pt'.format(slide_id))
-                                    try:
-                                        small_features = torch.load(small_full_path)
-                                    except:
-                                        assert 1==2, "Error caused by small patches of slide {}".format(slide_id)
-                                    with h5py.File(os.path.join(self.small_coords_path, str(slide_id)+".h5"),'r') as hdf5_file:
-                                        small_coordinates = hdf5_file['coords'][:]
+                                    ## load from files created in create_graphs.py
+                                    x = torch.load(os.path.join(self.graph_path, 'features', str(slide_id)+'_features.pt'))
+                                    adj = torch.load(os.path.join(self.graph_path, 'adj', str(slide_id)+'_adj.pt'))
 
-
-                                    if self.ms_features == 'naive':
-                                        x_big = features.clone().detach()
-                                        x_small = small_features.clone().detach()
-                                    elif self.ms_features == 'seperate_zero':
-                                        
-                                        features = torch.nn.functional.pad(features, (0, 1024), mode='constant', value=0)
-                                        x_big = features.clone().detach()
-                                        small_features = torch.nn.functional.pad(small_features,(1024,0),mode='constant', value=0)
-                                        x_small = small_features.clone().detach()
-
-                                    elif self.ms_features == 'seperate_avg':
-                                        big_avg = torch.mean(features,dim=0)
-                                        small_avg = torch.mean(small_features,dim=0)
-                                        features = torch.cat((features,small_avg.repeat(features.shape[0],1)),1)
-                                        x_big = features.clone().detach()
-                                        small_features = torch.cat((big_avg.repeat(small_features.shape[0],1),small_features),1)
-                                        x_small = small_features.clone().detach()
-
-                                    else:
-                                        raise NotImplementedError("didn't get an input for ms_features")
-                                    total_coords = len(coordinates)+len(small_coordinates)
-                                    if self.max_patches_per_slide < total_coords:
-                                        sampled_idxs = np.random.choice(total_coords,self.max_patches_per_slide,replace=False)
-                                        coords_idxs = [idx for idx in sampled_idxs if idx < len(coordinates)]
-                                        small_coords_idxs = [idx-len(coordinates) for idx in sampled_idxs if idx >= len(coordinates)]
-                                        #print("len coords and x_small",len(small_coordinates),len(x_small))
-                                        #print("len coords and x_big",len(coordinates),len(x_big))
-                                        if self.debug_loader:
-                                            assert len(small_coordinates)==len(x_small),"error in small features for slide {}".format(slide_id)
-                                            assert len(coordinates)==len(x_big),"error in big features for slide {}".format(slide_id)
-
-                                        coordinates = coordinates[coords_idxs]
-                                        x_big = x_big[coords_idxs]
-                                        small_coordinates = small_coordinates[small_coords_idxs]
-                                        x_small = x_small[small_coords_idxs]
-                                    ## first get the features and edges for the big (lower magnification) patches
-
-                                    distances = pdist(coordinates, 'euclidean')
-                                    dist_matrix = squareform(distances)
-                                    adj = (dist_matrix <= self.graph_edge_distance).astype(np.float32)
-                                    adj = (adj - np.identity(adj.shape[0])).astype(np.float32)
-                                    edge_indices = np.transpose(np.triu(adj,k=1).nonzero())
-                                    adj_big = torch.from_numpy(edge_indices).t().contiguous()
-                                    
-                                    ## then get the features and edges for the small (higher magnification) patches
-                                    ## maximum distance for neighbours is halved for this
-                                    distances = pdist(small_coordinates, 'euclidean')
-                                    dist_matrix = squareform(distances)
-                                    adj = (dist_matrix <= (self.graph_edge_distance/2)).astype(np.float32)
-                                    adj = (adj - np.identity(adj.shape[0])).astype(np.float32)
-                                    edge_indices = np.transpose(np.triu(adj,k=1).nonzero())
-                                    adj_small = torch.from_numpy(edge_indices).t().contiguous()
-                                    #x_small = small_features.clone().detach()
-                                    ## renumber the small patches 
-                                    adj_small = torch.add(adj_small,coordinates.shape[0])
-                                    
-                                    ## finally get the edges between magnifications, currently hardcoded the distances, but in general the offset in cdist should be half of the small patch size, and the distance threshold should equal the small patch size, though have it set to half of this seems to be working now  
-                                    #print("need to properly implement distance between magnifications")
-                                    #offset = 2048
-                                    distances = cdist(coordinates+self.offset,small_coordinates, 'euclidean')
-                                    adj = (distances <= 2*self.offset).astype(np.float32)
-                                    edge_indices = np.transpose(adj.nonzero())
-                                    adj_between = torch.from_numpy(edge_indices).t().contiguous()
-                                    ## renumber the small patches
-                                    #print(len(coordinates))
-                                    #print(coordinates.shape)
-                                    adj_between[1] += coordinates.shape[0]
-                                    
-                                    ## combine the adjacencies and features
-                                    adj = torch.cat((adj_big, adj_small, adj_between),dim=1)
-                                    x = torch.cat((x_big,x_small),dim=0)
-                                    
-                                    #print("x and xsmall and adj",x.shape,x_small.shape,adj.shape)
-
-                                    adj_checker = [str(digit.item()) for digit in adj[0]]
-                                    adj_checker += [str(digit.item()) for digit in adj[1]]
-                                    x_checker = [str(digit) for digit in range(len(x))]
-                                    #print("x checker",x_checker)
-                                    solo_nodes = [node for node in x_checker if node not in adj_checker]
-                                    #print("x",x_checker)
-                                    #print("adj",adj_checker)
-                                    #print("solo nodes",len(solo_nodes))
-                                    #print("solo nodes",solo_nodes)
-                                    #print("x and xsmall and adj",x.shape,x_small.shape,adj.shape)
-                                    #print("x and adj squeezed",x.squeeze().shape, adj.squeeze().shape)
-                                    #print("max adj",adj.max())
-                                    #print("slide",slide_id)
-                                    #print("nodes:",x.shape[0],".   total edges:",adj.shape[1],".  between edges:",adj_between.shape[1],".  big edges:",adj_big.shape[1],".  small edges:",adj_small.shape[1])
-                                    
-                                    #plot="separate"
-                                    #plot="together"
-                                    #plot = None
-                                    if self.plot_graph=="together":   
-                                        fig, ax = plt.subplots()
-                                        all_coordinates = np.append(coordinates+self.offset,small_coordinates,axis=0)
-                                        print("edges between magnifications",adj_between.shape)
-                                        print("coordinates",all_coordinates.shape)
-                                        ## convert coordinates to dictionary for nx
-                                        nodes = list(range(len(all_coordinates)))
-                                        pos = {node: tuple(coord) for node, coord in zip(nodes, all_coordinates)}
-                                        data = x
-                                        plot_data = torch_geometric.data.Data(x=data, edge_index=adj)
-                                        g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
-                                        print("slide id",slide_id)
-                                        print("data shape",data.shape)
-                                        print("adj shape",adj.shape)
-                                        options = {"node_size": 80, "node_color": "red", "width": 2, "style":"--"}
-                                        #nx.draw(g,pos=nx.kamada_kawai_layout(g), ax=fig.add_subplot(),**options)
-                                        nx.draw(g,pos=pos, ax=ax,**options)
-                                        
-                                        matplotlib.use("Agg")
-                                        # Reflect the plot along the y-axis
-                                        matplotlib.pyplot.gca().invert_yaxis()
-                                        fig.savefig("/mnt/results/graph.png")
-                                        assert 1==2,"plotting in datasets/dataset_generic.py"
-
-                                    elif self.plot_graph=="seperate":
-                                        fig, ax = plt.subplots()
-                                        all_coordinates = np.append(coordinates+self.offset,small_coordinates,axis=0)
-                                        big_nodes = list(range(len(coordinates)))
-                                        ## add the offset
-                                        big_pos = {node: tuple(coord+self.offset) for node, coord in zip(big_nodes, coordinates)}
-                                        plot_data = torch_geometric.data.Data(x=x_big, edge_index=adj_big)
-                                        g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
-                                        options = {"node_size": 2, "node_color": "black", "edge_color": "red", "width": 0.8, "style":"-."}
-                                        nx.draw(g,pos=big_pos, ax=ax,**options)
-
-                                        small_nodes = list(range(len(small_coordinates)))
-                                        small_pos = {node: tuple(coord) for node, coord in zip(small_nodes, small_coordinates)}
-                                        #print("shape",x_small.shape)
-                                        adj_small = torch.add(adj_small,-coordinates.shape[0])
-                                        plot_data = torch_geometric.data.Data(x=x_small, edge_index=adj_small)
-                                        g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
-                                        options = {"node_size": 2, "node_color": "black", "edge_color": "black", "width": 0.8, "style": "-"}
-                                        nx.draw(g,pos=small_pos, ax=ax,**options)
-                                        
-                                        all_nodes = list(range(len(all_coordinates)))
-                                        all_pos = {node: tuple(coord) for node, coord in zip(all_nodes, all_coordinates)}
-                                        plot_data = torch_geometric.data.Data(x=x, edge_index=adj_between)
-                                        g = torch_geometric.utils.to_networkx(plot_data, to_undirected=True)
-                                        options = {"node_size": 0.1, "node_color": "black", "edge_color":"tab:blue", "width": 0.8, "style": "-"}
-                                        nx.draw(g,pos=all_pos, ax=ax,**options)
-
-                                        matplotlib.use("Agg")
-                                        plt.gca().invert_yaxis()
-                                        try:
-                                            fig.savefig("/mnt/results/graphplots/graph_{}_{}{}_{}dist_{}patches.png".format(slide_id,self.data_dir.split("_")[-3],self.small_data_dir.split("_")[-3],self.graph_edge_distance,self.max_patches_per_slide),bbox_inches="tight")
-                                        except:
-                                            fig.savefig("/mnt/results/graphplots/graph_{}.png".format(slide_id), bbox_inches="tight")
-                                        plt.close(fig)
-                                        assert 1==2, "testing"
-                                        print("plotted graph {}".format(slide_id))
                                     return x, adj, label
-                                
+
                                 return features, label
                         else:
                             if self.model_type == 'graph':
@@ -747,7 +593,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 
 
 class Generic_Split(Generic_MIL_Dataset):
-        def __init__(self, slide_data, data_dir=None, small_data_dir=None, coords_path=None, small_coords_path=None, num_classes=2, perturb_variance=0.1, number_of_augs = 1, max_patches_per_slide=None,data_h5_dir=None,data_slide_dir=None,slide_ext=None, pretrained=None, custom_downsample=None, target_patch_size=None, model_architecture=None, model_type = None, batch_size = None, extract_features = False, graph_edge_distance = None, offset = None, plot_graph = None, ms_features = None):
+        def __init__(self, slide_data, data_dir=None, small_data_dir=None, coords_path=None, small_coords_path=None, num_classes=2, perturb_variance=0.1, number_of_augs = 1, max_patches_per_slide=None,data_h5_dir=None,data_slide_dir=None,slide_ext=None, pretrained=None, custom_downsample=None, target_patch_size=None, model_architecture=None, model_type = None, batch_size = None, extract_features = False, graph_edge_distance = None, offset = None, plot_graph = None, ms_features = None, graph_path = None):
                 self.augment_features = False
                 self.debug_loader = False
                 self.use_h5 = False
@@ -777,6 +623,7 @@ class Generic_Split(Generic_MIL_Dataset):
                 self.offset = offset
                 self.plot_graph = plot_graph
                 self.ms_features = ms_features
+                self.graph_path = graph_path
                 for i in range(self.num_classes):
                         self.slide_cls_ids[i] = np.where(self.slide_data['label'] == i)[0]
 

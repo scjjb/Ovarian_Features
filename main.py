@@ -167,6 +167,7 @@ parser.add_argument('--coords_path', type=str, default=None,
                     help='path to coords pt files if needed')
 parser.add_argument('--small_coords_path', type=str, default=None,
                     help='path to small coords pt files if needed (only used in graph_ms)')
+parser.add_argument('--graph_path', type=str, default=None,help='path to folder containing pre-created graph features and adjacencies from create_graphs.py')
 parser.add_argument('--csv_path',type=str,default=None,help='path to dataset_csv file')
 parser.add_argument('--exp_code', type=str, help='experiment code for saving results')
 parser.add_argument('--log_data', action='store_true', default=False, help='log data using tensorboard')
@@ -363,6 +364,7 @@ dataset = Generic_MIL_Dataset(csv_path = args.csv_path,
                             offset = args.offset,
                             plot_graph = args.plot_graph,
                             ms_features = args.ms_features,
+                            graph_path = args.graph_path,
                             ignore=[])
 
 if not os.path.isdir(args.results_dir):
