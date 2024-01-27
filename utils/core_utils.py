@@ -116,7 +116,7 @@ def train(config, datasets, cur, class_counts, args):
             args.pooling_factor=config["pooling_factor"]
             try:
                 args.embedding_size=config["A_embedding_size"]
-            else:
+            except:
                 args.embedding_size=config["embedding_size"]
         
         else:
