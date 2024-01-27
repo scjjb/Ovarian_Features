@@ -10,4 +10,4 @@
 "passings": "tune.grid_search([1])",
 "gat_heads": "tune.grid_search([1])",
 "pooling_factor": "tune.grid_search([0.75])",
-"embedding_size": "tune.grid_search([256,512,1024])"}
+"A_embedding_size": "tune.grid_search([256,512,1024])"}

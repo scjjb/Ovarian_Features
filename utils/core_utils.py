@@ -114,7 +114,11 @@ def train(config, datasets, cur, class_counts, args):
             args.message_passings=config["passings"]
             args.gat_heads=config["gat_heads"]
             args.pooling_factor=config["pooling_factor"]
-            args.embedding_size=config["embedding_size"]
+            try:
+                args.embedding_size=config["A_embedding_size"]
+            else:
+                args.embedding_size=config["embedding_size"]
+        
         else:
             if not args.no_inst_cluster:
                 args.B=config["B"]
@@ -123,6 +127,7 @@ def train(config, datasets, cur, class_counts, args):
             except:
                 args.model_size=config["model_size"]
         
+
         args.lr=config["lr"]
         args.beta1=config["beta1"]
         args.beta2=config["beta2"]
