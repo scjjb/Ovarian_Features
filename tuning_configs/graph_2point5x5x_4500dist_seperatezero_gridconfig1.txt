@@ -1,0 +1,13 @@
+{"reg": "tune.grid_search([1e-6])",
+"drop_out": "tune.grid_search([0.15,0.3,0.45])",
+"lr": "tune.grid_search([5e-4])",
+"patches": "tune.grid_search([1500,2000,2500])",
+"beta1":  "tune.grid_search([0.9])",
+"beta2": "tune.grid_search([0.999])",
+"eps": "tune.grid_search([5e-4])",
+"edge_distance": "tune.grid_search([4500])",
+"poolings": "tune.grid_search([3])",
+"passings": "tune.grid_search([1])",
+"gat_heads": "tune.grid_search([1])",
+"pooling_factor": "tune.grid_search([0.75])",
+"embedding_size": "tune.grid_search([128,256,512])"}
