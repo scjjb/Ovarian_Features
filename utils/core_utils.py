@@ -102,7 +102,7 @@ class EarlyStopping:
         torch.save(model.state_dict(), ckpt_name)
         self.val_loss_min = val_loss
 
-def train(config, datasets, cur, class_counts, args):
+def train(config, datasets, cur, class_counts_train, class_counts_val, args):
     """   
         train for a single fold
     """
@@ -190,14 +190,20 @@ def train(config, datasets, cur, class_counts, args):
         loss_fn = SmoothTop1SVM(n_classes = args.n_classes)
         if device.type == 'cuda':
             loss_fn = loss_fn.to(device,non_blocking=True)
+        loss_fn_val = loss_fn
     elif args.bag_loss == 'balanced_ce':
-        ce_weights=[(1/class_counts[i])*(sum(class_counts)/len(class_counts)) for i in range(len(class_counts))]
-        print("weighting cross entropy with weights {}".format(ce_weights))
+        ce_weights=[(1/class_counts_train[i])*(sum(class_counts_train)/len(class_counts_train)) for i in range(len(class_counts_train))]
+        print("weighting training cross entropy with weights {}".format(ce_weights))
         loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(ce_weights).to(device,non_blocking=True)).to(device,non_blocking=True)
+        
+        ce_weights_val=[(1/class_counts_val[i])*(sum(class_counts_val)/len(class_counts_val)) for i in range(len(class_counts_val))]
+        print("weighting training cross entropy with weights {}".format(ce_weights_val))
+        loss_fn_val = nn.CrossEntropyLoss(weight=torch.tensor(ce_weights_val).to(device,non_blocking=True)).to(device,non_blocking=True)
     else:
         loss_fn = nn.CrossEntropyLoss().to(device,non_blocking=True)
-    print('Done!')
-    
+        loss_fn_val = nn.CrossEntropyLoss().to(device,non_blocking=True)
+
+
     print('\nInit Model...', end=' ')
     model_dict = {"dropout": args.drop_out, 'n_classes': args.n_classes}
     
@@ -305,7 +311,7 @@ def train(config, datasets, cur, class_counts, args):
     for epoch in range(args.max_epochs):
         ## train a loop and evaluate validation set
         train_loop(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn, feature_extractor=feature_extractor_model, debug_loader=args.debug_loader, clam=use_clam)
-        stop, val_acc, _, _, val_auc, val_loss, _, _ = evaluate(model, val_loader, args.n_classes, "validate", cur, epoch, early_stopping, writer, loss_fn, args.results_dir,feature_extractor=feature_extractor_model,clam=use_clam)
+        stop, val_acc, _, _, val_auc, val_loss, _, _ = evaluate(model, val_loader, args.n_classes, "validate", cur, epoch, early_stopping, writer, loss_fn_val, args.results_dir,feature_extractor=feature_extractor_model,clam=use_clam)
         
         if args.tuning:
             with tune.checkpoint_dir(epoch) as checkpoint_dir:

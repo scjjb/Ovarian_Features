@@ -108,7 +108,7 @@ def main():
         if args.bag_loss == 'balanced_ce':
             class_counts_train=dataset.count_by_class(csv_path='{}/splits_{}.csv'.format(args.split_dir, i))
             class_counts_val=dataset.count_by_class(csv_path='{}/splits_{}.csv'.format(args.split_dir, i),split='val')
-            class_counts=[class_counts_train[i]+class_counts_val[i] for i in range(len(class_counts_train))]
+            #class_counts=[class_counts_train[i]+class_counts_val[i] for i in range(len(class_counts_train))]
 
         if args.tuning:
             seed_torch(args.seed)
@@ -135,7 +135,7 @@ def main():
 
         else:
             
-            test_auc, val_auc, test_acc, val_acc  = train(None,datasets, i, class_counts, args)
+            test_auc, val_auc, test_acc, val_acc  = train(None,datasets, i, class_counts_train, class_counts_val, args)
         
             all_test_auc.append(test_auc)
             all_val_auc.append(val_auc)
