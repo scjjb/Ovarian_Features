@@ -308,7 +308,7 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
     if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:
         use_clam = True
 
-    scheduler = ReduceLROnPlateau(optimizer, 'min',factor=0.1, patience=10)
+    scheduler = ReduceLROnPlateau(optimizer, 'min',factor=0.25, patience=15, verbose = True)
     
     for epoch in range(args.max_epochs):
         ## train a loop and evaluate validation set
