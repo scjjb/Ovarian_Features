@@ -13,7 +13,7 @@ parser.add_argument('--seed', type=int, default=1,
 parser.add_argument('--unique_tests', default=False, action='store_true',help='ensure all test sets are unique')
 parser.add_argument('--k', type=int, default=10,
                     help='number of splits (default: 10)')
-parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal', 'task_2_tumor_subtyping','custom','custom_998','custom_556','custom_714','custom_912_aug','custom_20','esgo_staging','esgo_train_all','esgo_all','nsclc','canadian','treatment'])
+parser.add_argument('--task', type=str, choices=['task_1_tumor_vs_normal', 'task_2_tumor_subtyping','custom','custom_998','custom_556','custom_714','custom_912_aug','custom_20','esgo_staging','esgo_train_all','esgo_train_fewerHGSC','esgo_all','nsclc','canadian','treatment'])
 parser.add_argument('--val_frac', type=float, default= 0.1,
                     help='fraction of labels for validation (default: 0.1)')
 parser.add_argument('--test_frac', type=float, default= 0.1,
@@ -51,6 +51,17 @@ elif args.task == 'esgo_staging':
                             label_dict = {'high_grade':0,'low_grade':1,'clear_cell':2,'endometrioid':3,'mucinous':4},
                             patient_strat= True,
                             ignore=[])
+
+elif args.task == 'esgo_train_fewerHGSC':
+    args.n_classes=5
+    dataset =  Generic_WSI_Classification_Dataset(csv_path = 'dataset_csv/ESGO_train_all_fewerHGSC.csv',
+                            shuffle = False,
+                            seed = args.seed,
+                            print_info = True,
+                            label_dict = {'high_grade':0,'low_grade':1,'clear_cell':2,'endometrioid':3,'mucinous':4},
+                            patient_strat= True,
+                            ignore=[])
+
 
 elif args.task == 'esgo_train_all':
     args.n_classes=5

@@ -69,7 +69,12 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 data_h5_dir=None,
                 data_slide_dir=None,
                 max_patches_per_slide=None,
-                model_type=None
+                model_type=None,
+                graph_edge_distance=None,
+                offset=None,
+                plot_graph=None,
+                ms_features=None,
+                graph_path=None,
                 ):
                 """
                 Args:
@@ -100,6 +105,12 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 self.data_slide_dir = data_slide_dir
                 self.max_patches_per_slide = max_patches_per_slide
                 self.model_type = model_type
+                self.graph_edge_distance = graph_edge_distance,
+                self.offset = offset,
+                self.plot_graph = plot_graph,
+                self.ms_features = ms_features,
+                self.graph_path = graph_path,
+
                 if not label_col:
                         label_col = 'label'
                 self.label_col = label_col
