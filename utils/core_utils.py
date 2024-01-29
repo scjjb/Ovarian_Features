@@ -297,7 +297,7 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
 
     print('\nSetup EarlyStopping...', end=' ')
     if args.early_stopping and not args.tuning:
-        early_stopping = EarlyStopping(min_epochs = args.min_epochs, patience = 20, stop_epoch=20, verbose = True)
+        early_stopping = EarlyStopping(min_epochs = args.min_epochs, patience = 40, stop_epoch=40, verbose = True)
 
     else:
         early_stopping = None
@@ -307,12 +307,14 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
     if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:
         use_clam = True
 
-
+    scheduler = ReduceLROnPlateau(optimizer, 'min')
+    
     for epoch in range(args.max_epochs):
         ## train a loop and evaluate validation set
         train_loop(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn, feature_extractor=feature_extractor_model, debug_loader=args.debug_loader, clam=use_clam)
         stop, val_acc, _, _, val_auc, val_loss, _, _ = evaluate(model, val_loader, args.n_classes, "validate", cur, epoch, early_stopping, writer, loss_fn_val, args.results_dir,feature_extractor=feature_extractor_model,clam=use_clam)
         
+        scheduler.step(val_loss,factor=0.1, patience=10)   
         if args.tuning:
             with tune.checkpoint_dir(epoch) as checkpoint_dir:
                 path = os.path.join(checkpoint_dir, "checkpoint")
@@ -321,7 +323,7 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
 
         if stop: 
             break
-
+     
     if args.early_stopping:
         model.load_state_dict(torch.load(os.path.join(args.results_dir, "s_{}_checkpoint.pt".format(cur))))
     else:
