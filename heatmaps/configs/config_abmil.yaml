@@ -9,7 +9,7 @@ exp_arguments:
   raw_save_dir: /mnt/results/heatmaps/ABMIL
   # where to save final heatmaps
   production_save_dir: /mnt/results/heatmaps/ABMIL
-  batch_size: 1
+  batch_size: 4
 data_arguments: 
   # where is data stored; can be a single str path or a dictionary of key, data_dir mapping
   data_dir: /mnt/data/Katie_WSI/edrive
@@ -18,7 +18,7 @@ data_arguments:
   # csv list containing slide_ids (can additionally have seg/patch paramters, class labels, etc.)
   process_list: heatmap_edrive.csv
   # preset file for segmentation/patching
-  preset: presets/betterseg.csv
+  preset: presets/bwh_biopsy.csv
   # file extention for slides
   slide_ext: .svs
   # label dictionary for str: interger mapping (optional)
@@ -31,7 +31,7 @@ data_arguments:
 patching_arguments:
   # arguments for patching
   patch_size: 512
-  overlap: 0.5
+  overlap: 0.0
   patch_level: 0
   custom_downsample: 2
 model_arguments: 

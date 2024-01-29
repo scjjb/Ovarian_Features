@@ -8,6 +8,7 @@ from models.model_clam import CLAM_MB, CLAM_SB
 from models.model_graph import Graph_Model
 from sklearn.metrics import roc_auc_score, accuracy_score, balanced_accuracy_score, f1_score
 import random
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 from models.resnet_custom import resnet18_baseline,resnet50_baseline
 import timm
@@ -307,14 +308,14 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
     if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:
         use_clam = True
 
-    scheduler = ReduceLROnPlateau(optimizer, 'min')
+    scheduler = ReduceLROnPlateau(optimizer, 'min',factor=0.1, patience=10)
     
     for epoch in range(args.max_epochs):
         ## train a loop and evaluate validation set
         train_loop(epoch, model, train_loader, optimizer, args.n_classes, args.bag_weight, writer, loss_fn, feature_extractor=feature_extractor_model, debug_loader=args.debug_loader, clam=use_clam)
         stop, val_acc, _, _, val_auc, val_loss, _, _ = evaluate(model, val_loader, args.n_classes, "validate", cur, epoch, early_stopping, writer, loss_fn_val, args.results_dir,feature_extractor=feature_extractor_model,clam=use_clam)
         
-        scheduler.step(val_loss,factor=0.1, patience=10)   
+        scheduler.step(val_loss)   
         if args.tuning:
             with tune.checkpoint_dir(epoch) as checkpoint_dir:
                 path = os.path.join(checkpoint_dir, "checkpoint")
