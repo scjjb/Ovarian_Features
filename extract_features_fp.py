@@ -45,13 +45,15 @@ def compute_w_loader(file_path, output_path, wsi, model,
                     self.failures=0
 
                 def __call__(self,image):
-                    try:
-                        norm, _, _ = self.normalizer.normalize(I=image, stains=False)
-                        norm = norm.permute(2, 0, 1)/255
-                    except:
-                        norm=image/255
-                        self.failures=self.failures+1
-                        print("failed patches: ",self.failures)
+                    #try:
+                    norm, _, _ = self.normalizer.normalize(I=image, stains=False)
+                    norm = norm.permute(2, 0, 1)/255
+                    #except:
+                    #    norm=image/255
+                    #    self.failures=self.failures+1
+                    #    print("failed patches: ",self.failures)
+                    return(norm)
+
             t = transforms.Compose(
                 [transforms.ToTensor(),
                 transforms.Lambda(lambda x: x*255),
