@@ -53,10 +53,11 @@ class Graph_Model(torch.nn.Module):
                 graph_layers.append(SAGPooling(embedding_size, ratio=pooling_factor))
         
         self.graph_layers=nn.ModuleList(graph_layers)
-        self.lin1 = torch.nn.Linear(2*embedding_size,embedding_size)
-        self.lin2 = torch.nn.Linear(embedding_size,int(embedding_size/2))
-        self.lin3 = torch.nn.Linear(int(embedding_size/2), num_classes)
-    
+        #self.lin1 = torch.nn.Linear(2*embedding_size,embedding_size)
+        #self.lin2 = torch.nn.Linear(embedding_size,int(embedding_size/2))
+        #self.lin3 = torch.nn.Linear(int(embedding_size/2), num_classes)
+        self.lin = torch.nn.Linear(2*embedding_size, num_classes)
+
     def forward(self, x, adj, training=False):
         x, edge_index = x.squeeze(), adj.squeeze()
         xhidden = None
@@ -72,9 +73,10 @@ class Graph_Model(torch.nn.Module):
 
         x = xhidden 
         x = F.dropout(x, p=self.drop_out, training=training)
-        x = F.relu(self.lin1(x))
-        x = F.relu(self.lin2(x))
-        x = self.lin3(x)
+        #x = F.relu(self.lin1(x))
+        #x = F.relu(self.lin2(x))
+        #x = self.lin3(x)
+        x = self.lin(x)
 
         logits = x
         Y_hat = torch.topk(logits, 1, dim = 1)[1]
