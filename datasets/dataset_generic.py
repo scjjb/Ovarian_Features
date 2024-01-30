@@ -553,6 +553,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     #    raise NotImplementedError("can't yet subsample multi-scale graphs")
 
                                 if self.use_perturbs:
+                                    features = torch.FloatTensor(features)
                                     noise = torch.randn_like(features)*self.perturb_variance
                                     features = features + noise
                                 
