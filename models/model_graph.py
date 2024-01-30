@@ -56,8 +56,7 @@ class Graph_Model(torch.nn.Module):
         #self.lin1 = torch.nn.Linear(2*embedding_size,embedding_size)
         #self.lin2 = torch.nn.Linear(embedding_size,int(embedding_size/2))
         #self.lin3 = torch.nn.Linear(int(embedding_size/2), num_classes)
-        #self.lin = torch.nn.Linear(2*embedding_size, num_classes)
-        self.lin = torch.nn.Linear(embedding_size, num_classes)
+        self.lin = torch.nn.Linear(2*embedding_size, num_classes)
 
     def forward(self, x, adj, training=False):
         x, edge_index = x.squeeze(), adj.squeeze()
@@ -68,11 +67,9 @@ class Graph_Model(torch.nn.Module):
             else:
                 x, edge_index, _, batch, _, _ = self.graph_layers[i](x, edge_index)
                 if xhidden is None:
-                    xhidden = gap(x,batch)
-                    #xhidden = torch.cat([gmp(x,batch), gap(x,batch)], dim=1)
+                    xhidden = torch.cat([gmp(x,batch), gap(x,batch)], dim=1)
                 else:
-                    xhidden = xhidden + gap(x,batch)
-                    #xhidden = xhidden + torch.cat([gmp(x,batch), gap(x,batch)], dim=1)
+                    xhidden = xhidden + torch.cat([gmp(x,batch), gap(x,batch)], dim=1)
 
         x = xhidden 
         x = F.dropout(x, p=self.drop_out, training=training)
