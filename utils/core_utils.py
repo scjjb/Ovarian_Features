@@ -298,7 +298,7 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
 
     print('\nSetup EarlyStopping...', end=' ')
     if args.early_stopping and not args.tuning:
-        early_stopping = EarlyStopping(min_epochs = args.min_epochs, patience = 40, stop_epoch=40, verbose = True)
+        early_stopping = EarlyStopping(min_epochs = args.min_epochs, patience = 50, stop_epoch=50, verbose = True)
 
     else:
         early_stopping = None
@@ -308,7 +308,7 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
     if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:
         use_clam = True
 
-    scheduler = ReduceLROnPlateau(optimizer, 'min',factor=0.5, patience=10, verbose = True)
+    scheduler = ReduceLROnPlateau(optimizer, 'min',factor=0.5, patience=15, verbose = True)
     
     for epoch in range(args.max_epochs):
         ## train a loop and evaluate validation set
