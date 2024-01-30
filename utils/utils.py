@@ -115,6 +115,8 @@ def get_split_loader(split_dataset, training = False, weighted = False, workers 
 def get_optim(model, args):
         if args.opt == "adam":
                 optimizer = optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=float(args.lr), weight_decay=float(args.reg),betas=(float(args.beta1),float(args.beta2)),eps=float(args.eps))
+        elif args.opt == "adamw":
+            optimizer = optim.AdamW(filter(lambda p: p.requires_grad, model.parameters()), lr=float(args.lr), weight_decay=float(args.reg),betas=(float(args.beta1),float(args.beta2)),eps=float(args.eps))
         elif args.opt == 'sgd':
                 optimizer = optim.SGD(filter(lambda p: p.requires_grad, model.parameters()), lr=float(args.lr), momentum=0.9, weight_decay=float(args.reg))
         else:

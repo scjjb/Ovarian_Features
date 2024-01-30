@@ -179,7 +179,7 @@ parser.add_argument('--min_epochs', type=int, default=20,
                     help='minimum number of epochs to train (default: 20)')
 parser.add_argument('--early_stopping', action='store_true', default=False, help='enable early stopping')
 parser.add_argument('--continue_training', action='store_true', default=False, help='Continue model training from latest checkpoint')
-parser.add_argument('--opt', type=str, choices = ['adam', 'sgd'], default='adam', help='optimizer for model training')
+parser.add_argument('--opt', type=str, choices = ['adam','adamw', 'sgd'], default='adam', help='optimizer for model training')
 parser.add_argument('--lr', type=float, default=1e-4,
                     help='learning rate (default: 0.0001)')
 parser.add_argument('--beta1', type=float, default=0.9,
