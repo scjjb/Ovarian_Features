@@ -18,7 +18,7 @@ from HIPT_4K.hipt_model_utils import eval_transforms
 import torch
 from torchvision import transforms
 import torchstain
-
+from torch_staintools.normalizer import NormalizerBuilder
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print("torch device:", device, "\n")
@@ -82,6 +82,24 @@ def compute_w_loader(file_path, output_path, wsi, model,
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,
                 custom_downsample=custom_downsample, target_patch_size=target_patch_size)
         
+        elif args.use_transforms=='vahadane':
+            class VahadaneNormalisation:
+                def __init__(self):
+                    self.normalizer = NormalizerBuilder.build('vahadane', concentration_method='ls').to(device) 
+                    ## targets calculated from the first patch in 530725.svs
+                    self.normalizer.stain_matrix_target = torch.tensor([[[0.5440, 0.7058, 0.4538],[0.4231, 0.7917, 0.4406]]]) 
+                    self.normalizer.maxC_target = torch.tensor([[2.2052, 1.0442]])
+                    
+                def __call__(self,image):
+                    norm = self.normalizer.transform(image.unsqueeze(0)).squeeze(0)
+                    return(norm)
+
+            t = transforms.Compose(
+                [transforms.ToTensor(),
+                VahadaneNormalisation()])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,
+                custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+
 
         elif args.use_transforms=='all':
             t = transforms.Compose(
@@ -211,7 +229,7 @@ parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
 parser.add_argument('--model_type',type=str,choices=['resnet18','resnet50','levit_128s','HIPT_4K'],default='resnet50')
-parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_blur','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','macenko','reinhard','none'],default='none')
+parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_blur','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','macenko','reinhard','vahadane','none'],default='none')
 parser.add_argument('--hardware',type=str,default="PC")
 parser.add_argument('--graph_patches',type=str,choices=['none','small','big'],default='none')
 args = parser.parse_args()
