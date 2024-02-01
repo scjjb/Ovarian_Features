@@ -66,22 +66,13 @@ def compute_w_loader(file_path, output_path, wsi, model,
             class ReinhardNormalisation:
                 def __init__(self):
                     self.normalizer = torchstain.normalizers.ReinhardNormalizer(backend='torch')
-                    self.failures=0
-                    self.fit=0
+                    ## targets calculated from a specific patch in 494821.svs
+                    self.normalizer.target_means = torch.tensor([79.2929, 11.2809, -5.9533])
+                    self.normalizer.target_stds = torch.tensor([17.3957,  8.6891, 10.5019])
 
                 def __call__(self,image):
-                    #try:
-                    if self.fit==0:
-                        self.normalizer.fit(image)
-                        self.fit=1
-                        print(self.normalizer.target_means)
-                        print(self.normalizer.target_stds)
                     norm = self.normalizer.normalize(I=image)
                     norm = norm.permute(2, 0, 1)/255
-                    #except:
-                    #    norm=image/255
-                    #    self.failures=self.failures+1
-                    #    print("failed patches: ",self.failures)
                     return(norm)
             
             t = transforms.Compose(
