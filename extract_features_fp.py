@@ -314,9 +314,9 @@ if __name__ == '__main__':
                 torch.save(features, os.path.join(args.feat_dir, 'pt_files', bag_base+'.pt'))
             except KeyboardInterrupt:
                 assert 1==2, "keyboard interrupt"
-            #except:
-            #    print("patch file unavailable")
-            #    unavailable_patch_files = unavailable_patch_files+1 
-            #    continue
+            except:
+                print("patch file unavailable")
+                unavailable_patch_files = unavailable_patch_files+1 
+                continue
         print("finished running with {} unavailable slide patch files".format(unavailable_patch_files))
         print("total time: {}".format(total_time_elapsed))
