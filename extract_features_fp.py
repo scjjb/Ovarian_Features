@@ -62,6 +62,36 @@ def compute_w_loader(file_path, output_path, wsi, model,
                 custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
 
+        elif args.use_transforms=='reinhard':
+            class ReinhardNormalisation:
+                def __init__(self):
+                    self.normalizer = torchstain.normalizers.ReinhardNormalizer(backend='torch')
+                    self.failures=0
+                    self.fit=0
+
+                def __call__(self,image):
+                    #try:
+                    if self.fit==0:
+                        self.normalizer.fit(image)
+                        self.fit=1
+                        print(self.normalizer.target_means)
+                        print(self.normalizer.target_stds)
+                    norm = self.normalizer.normalize(I=image)
+                    norm = norm.permute(2, 0, 1)/255
+                    #except:
+                    #    norm=image/255
+                    #    self.failures=self.failures+1
+                    #    print("failed patches: ",self.failures)
+                    return(norm)
+            
+            t = transforms.Compose(
+                [transforms.ToTensor(),
+                transforms.Lambda(lambda x: x*255),
+                ReinhardNormalisation()])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,
+                custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+        
+
         elif args.use_transforms=='all':
             t = transforms.Compose(
                 [transforms.ToTensor(),
@@ -190,7 +220,7 @@ parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
 parser.add_argument('--model_type',type=str,choices=['resnet18','resnet50','levit_128s','HIPT_4K'],default='resnet50')
-parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_blur','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','macenko','none'],default='none')
+parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_blur','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','macenko','reinhard','none'],default='none')
 parser.add_argument('--hardware',type=str,default="PC")
 parser.add_argument('--graph_patches',type=str,choices=['none','small','big'],default='none')
 args = parser.parse_args()
@@ -275,9 +305,9 @@ if __name__ == '__main__':
                 torch.save(features, os.path.join(args.feat_dir, 'pt_files', bag_base+'.pt'))
             except KeyboardInterrupt:
                 assert 1==2, "keyboard interrupt"
-            except:
-                print("patch file unavailable")
-                unavailable_patch_files = unavailable_patch_files+1 
-                continue
+            #except:
+            #    print("patch file unavailable")
+            #    unavailable_patch_files = unavailable_patch_files+1 
+            #    continue
         print("finished running with {} unavailable slide patch files".format(unavailable_patch_files))
         print("total time: {}".format(total_time_elapsed))
