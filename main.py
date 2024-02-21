@@ -119,7 +119,7 @@ def main():
                         path="~/ray_results/test_run"
                         )
             else:
-                tuner = tune.Tuner(tune.with_resources(partial(train,datasets=datasets,cur=i,class_counts=class_counts,args=args),hardware),param_space=search_space, run_config=RunConfig(name="test_run",stop=stopper, progress_reporter=reporter),tune_config=tune.TuneConfig(scheduler=scheduler,num_samples=args.num_tuning_experiments))
+                tuner = tune.Tuner(tune.with_resources(partial(train,datasets=datasets,cur=i,class_counts_train=class_counts_train,class_counts_val=class_counts_val,args=args),hardware),param_space=search_space, run_config=RunConfig(name="test_run",stop=stopper, progress_reporter=reporter),tune_config=tune.TuneConfig(scheduler=scheduler,num_samples=args.num_tuning_experiments))
             
             results = tuner.fit()
             results_df=results.get_dataframe(filter_metric="loss", filter_mode="min")
