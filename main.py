@@ -182,6 +182,10 @@ parser.add_argument('--continue_training', action='store_true', default=False, h
 parser.add_argument('--opt', type=str, choices = ['adam','adamw', 'sgd'], default='adam', help='optimizer for model training')
 parser.add_argument('--lr', type=float, default=1e-4,
                     help='learning rate (default: 0.0001)')
+parser.add_argument('--lr_factor', type=float, default=0.5,
+                    help='factor to reduce lr by after plateau')
+parser.add_argument('--lr_patience', type=int, default=15,
+                    help='number of epochs considered a lr plateau')
 parser.add_argument('--beta1', type=float, default=0.9,
                     help='beta1 in Adam optimizer')
 parser.add_argument('--beta2', type=float, default=0.999,
@@ -296,6 +300,8 @@ settings = {'num_splits': args.k,
             'max_epochs': args.max_epochs, 
             'results_dir': args.results_dir, 
             'lr': args.lr,
+            'lr_factor': args.lr_factor,
+            'lr_patience': args.lr_patience,
             'beta1': args.beta1,
             'beta2': args.beta2,
             'eps': args.eps,

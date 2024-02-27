@@ -135,6 +135,8 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
         args.eps=config["eps"]
         args.reg=config["reg"]
         args.drop_out=config["drop_out"]
+        args.lr_factor=config["lr_factor"]
+        args.lr_patience=config["lr_patience"]
         try:
             args.max_patches_per_slide=config["patches"]
         except:
@@ -308,7 +310,7 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
     if args.model_type in ['clam_sb', 'clam_mb'] and not args.no_inst_cluster:
         use_clam = True
 
-    scheduler = ReduceLROnPlateau(optimizer, 'min',factor=0.5, patience=15, verbose = True)
+    scheduler = ReduceLROnPlateau(optimizer, 'min',factor=args.lr_factor, patience=args.lr_patience, verbose = True)
     
     for epoch in range(args.max_epochs):
         ## train a loop and evaluate validation set
