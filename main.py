@@ -112,7 +112,7 @@ def main():
 
         if args.tuning:
             seed_torch(args.seed)
-            stopper=TrialPlateauStopper(metric="loss",mode="min",num_results=50,grace_period=50)
+            stopper=TrialPlateauStopper(metric="loss",mode="min",num_results=30,grace_period=30)
             
             if args.continue_tuning:
                 tuner = tune.Tuner.restore(
