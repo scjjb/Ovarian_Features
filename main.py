@@ -104,7 +104,8 @@ def main():
         datasets = (train_dataset, val_dataset, test_dataset)
 
         ##class_counts to be used in balanced cross entropy if enabled
-        class_counts=0
+        class_counts_train=0
+        class_counts_val=0
         if args.bag_loss == 'balanced_ce':
             class_counts_train=dataset.count_by_class(csv_path='{}/splits_{}.csv'.format(args.split_dir, i))
             class_counts_val=dataset.count_by_class(csv_path='{}/splits_{}.csv'.format(args.split_dir, i),split='val')
