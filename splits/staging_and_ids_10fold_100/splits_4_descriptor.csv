@@ -1,0 +1,6 @@
+,train,val,test
+high_grade,1014,138,114
+low_grade,62,24,6
+clear_cell,163,18,17
+endometrioid,164,23,22
+mucinous,68,13,18
