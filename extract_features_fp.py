@@ -100,6 +100,12 @@ def compute_w_loader(file_path, output_path, wsi, model,
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,
                 custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
+        elif args.use_transforms=='colourjitter':
+            ## the colour augmentations used by AIMlab - https://github.com/AIMLab-UBC/MIDL2020/blob/5b1874b1d1b6d69785ca7ad259dc50b6180f9fb6/config.py#L106
+            t = transforms.Compose(
+                [transforms.ColorJitter(64.0 / 255, 0.75, 0.25, 0.04),
+                transforms.ToTensor(),])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
         elif args.use_transforms=='all':
             t = transforms.Compose(
@@ -229,7 +235,7 @@ parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
 parser.add_argument('--model_type',type=str,choices=['resnet18','resnet50','levit_128s','HIPT_4K'],default='resnet50')
-parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_blur','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','macenko','reinhard','vahadane','none'],default='none')
+parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_blur','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','colourjitter','macenko','reinhard','vahadane','none'],default='none')
 parser.add_argument('--hardware',type=str,default="PC")
 parser.add_argument('--graph_patches',type=str,choices=['none','small','big'],default='none')
 args = parser.parse_args()
