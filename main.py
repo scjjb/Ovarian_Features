@@ -162,6 +162,8 @@ parser.add_argument('--data_root_dir', type=str, default="/",
                     help='directory containing features folders')
 parser.add_argument('--features_folder', type=str, default="/",
                     help='folder within data_root_dir containing the features - must contain pt_files/h5_files subfolder')
+parser.add_argument('--features_folder_aug', type=str, default="/",
+                    help='folder within data_root_dir containing augmented features if these are being used during training - must contain pt_files/h5_files subfolder')
 parser.add_argument('--small_features_folder', type=str, default="/",
                     help='folder within data_root_dir containing the small features if needed (only used in graph_ms)- must contain pt_files/h5_files subfolder')
 parser.add_argument('--coords_path', type=str, default=None,
@@ -347,6 +349,7 @@ else:
 
 dataset = Generic_MIL_Dataset(csv_path = args.csv_path,
                             data_dir = os.path.join(args.data_root_dir, args.features_folder),
+                            data_dir_aug = os.path.join(args.data_root_dir, args.features_folder_aug),
                             small_data_dir = os.path.join(args.data_root_dir, args.small_features_folder),
                             max_patches_per_slide=args.max_patches_per_slide,
                             perturb_variance=args.perturb_variance,
