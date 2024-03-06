@@ -6,6 +6,7 @@ from datasets.dataset_generic import save_splits
 from models.model_mil import MIL_fc, MIL_fc_mc
 from models.model_clam import CLAM_MB, CLAM_SB
 from models.model_graph import Graph_Model
+from models.model_graph_mil import PatchGCN
 from sklearn.metrics import roc_auc_score, accuracy_score, balanced_accuracy_score, f1_score
 import random
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -239,6 +240,9 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
     elif args.model_type in ['graph','graph_ms']:
         model = Graph_Model(pooling_factor=args.pooling_factor, pooling_layers=args.pooling_layers, message_passings=args.message_passings, gat_heads=args.gat_heads, embedding_size=args.embedding_size ,num_features=train_split[0][0].shape[1], num_classes=args.n_classes,drop_out=args.drop_out, message_passing=args.message_passing, pooling=args.pooling)
 
+    elif args.model_type == "patchgcn":
+        model = PatchGCN(n_classes = args.n_classes)
+
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
             model = MIL_fc_mc(**model_dict)
@@ -291,11 +295,15 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
     test_split.set_transforms()
         
     workers = 6
+
+    patchgcn = False
+    if args.model_type == "patchgcn":
+        patchgcn = True
     if args.debug_loader:
         workers = 1
-    train_loader = get_split_loader(train_split, training=True, weighted = args.weighted_sample, workers=workers)
-    val_loader = get_split_loader(val_split,  workers=workers)
-    test_loader = get_split_loader(test_split, workers=workers)
+    train_loader = get_split_loader(train_split, training=True, weighted = args.weighted_sample, workers=workers, patchgcn=patchgcn)
+    val_loader = get_split_loader(val_split,  workers=workers, patchgcn=patchgcn)
+    test_loader = get_split_loader(test_split, workers=workers, patchgcn=patchgcn)
     print('Done!')
 
     print('\nSetup EarlyStopping...', end=' ')
@@ -374,12 +382,13 @@ def train_loop(epoch, model, loader, optimizer, n_classes, bag_weight=0.5, write
     for batch_idx, inputs in enumerate(loader):
         if len(inputs)==2:
             data,label = inputs
-        else:
+        elif len(inputs)==3:
             data,adj,label = inputs
             adj = adj.to(device,non_blocking=True)
-
-        if debug_loader:
-            continue
+        else:
+            ## this part is for patchgcn model, where only the first two inputs matter (the others are for survival models so have been disabled)
+            data = inputs[0][0]
+            label = torch.LongTensor([inputs[1]])
         
         plot_data=False ##plot_data is not yet callable
         if plot_data:
@@ -396,8 +405,10 @@ def train_loop(epoch, model, loader, optimizer, n_classes, bag_weight=0.5, write
         
         model.train()
         if len(inputs)==3:
-            logits, Y_prob, Y_hat, _, _ = model(data, adj, training=True) ##dont need clam options here as they don't work for graph models
+            ##our graph models
+            logits, Y_prob, Y_hat, _, _ = model(data, adj, training=True)
         else:
+            ## patchgcn, clam, abmil models
             logits, Y_prob, Y_hat, _, instance_dict = model(data, label=label, instance_eval=clam)
         
         bag_loss = loss_fn(logits, label)
@@ -504,19 +515,20 @@ def evaluate(model, loader, n_classes, mode,cur=None,epoch=None,early_stopping =
     for batch_idx, inputs in enumerate(loader):
         if len(inputs)==2:
             data,label = inputs
-        else:
+        elif len(inputs)==3:
             data,adj,label = inputs
             adj = adj.to(device,non_blocking=True)
+        else:
+            ## this part is for patchgcn model, where only the first two inputs matter (the others are for survival models so have been disabled)
+            data = inputs[0][0]
+            label = torch.LongTensor([inputs[1]])
 
         data, label = data.to(device,non_blocking=True), label.to(device,non_blocking=True)
         with torch.no_grad():
             if len(inputs)==3:
                 logits, Y_prob, Y_hat, _, _ = model(data, adj, training=False)
             else:
-                if clam:
-                    logits, Y_prob, Y_hat, _, instance_dict = model(data, label=label, instance_eval=True)
-                else:
-                    logits, Y_prob, Y_hat, _, _ = model(data)
+                logits, Y_prob, Y_hat, _, instance_dict = model(data, label=label, instance_eval=True)
         
         loss_value = loss_fn(logits, label)
         loss += loss_value.item()

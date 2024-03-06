@@ -532,6 +532,14 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                 full_path = os.path.join(data_dir, 'pt_files', '{}.pt'.format(slide_id))
                                 if self.debug_loader:
                                     print(slide_id)
+                                if self.model_type == 'patchgcn':
+                                    path_features = []
+                                    wsi_path = os.path.join(data_dir, 'graph_files', '{}.pt'.format(slide_id))
+                                    wsi_bag = torch.load(wsi_path)
+                                    path_features.append(wsi_bag)
+                                    #path_features = BatchWSI.from_data_list(path_features, update_cat_dims={'edge_latent': 1})
+                                    return (path_features, label, 1, 1)
+
                                 if self.model_type not in ['graph_ms']:
                                     try:
                                         features = torch.load(full_path)

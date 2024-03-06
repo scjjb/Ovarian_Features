@@ -6,6 +6,8 @@ import pdb
 
 import torch
 from torch_geometric.data import Batch,Data
+import torch_geometric
+from torch.utils.data.dataloader import default_collate
 import numpy as np
 import torch.nn as nn
 from torchvision import transforms
@@ -67,6 +69,14 @@ def collate_features(batch):
         coords = np.vstack([item[1] for item in batch])
         return [img, coords]
 
+def collate_patchgcn_graph(batch):
+    elem = batch[0]
+    elem_type = type(elem)
+    transposed = zip(*batch)
+    #assert 1==2,[elem,transposed]
+    #return elem
+    return [samples[0] for samples in transposed]
+
 
 def get_simple_loader(dataset, batch_size=1, num_workers=4):
         kwargs = {'num_workers': num_workers, 'pin_memory': False} if device.type == "cuda" else {}
@@ -79,14 +89,16 @@ def get_simple_loader(dataset, batch_size=1, num_workers=4):
         loader = DataLoader(dataset, batch_size=batch_size, sampler = sampler.SequentialSampler(dataset), collate_fn = collate, **kwargs)
         return loader 
 
-def get_split_loader(split_dataset, training = False, weighted = False, workers = 4, collate = None):
+def get_split_loader(split_dataset, training = False, weighted = False, workers = 4, collate = None, patchgcn = False):
         """
                 return either the validation loader or training loader 
         """
         kwargs = {'num_workers': workers} if device.type == "cuda" else {}
         
         if collate is None:
-            if len(split_dataset[0])==3:
+            if patchgcn:
+                collate=collate_patchgcn_graph
+            elif len(split_dataset[0])==3:
                 collate=collate_Graph
             else:
                 collate=collate_MIL

@@ -206,7 +206,7 @@ parser.add_argument('--bag_loss', type=str, choices=['svm', 'ce', 'balanced_ce']
                      help='slide-level classification loss function (default: ce)')
 
 ## Model settings
-parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'graph', 'graph_ms'], default='clam_sb', help='type of model (default: clam_sb, clam w/ single attention branch)')
+parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'graph', 'graph_ms','patchgcn'], default='clam_sb', help='type of model (default: clam_sb, clam w/ single attention branch)')
 parser.add_argument('--model_size', type=str, choices=['256','tinier3','tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier', 'tiny128','tiny','smaller','small', 'big','hipt_mega_tiny','hipt_mega_small','hipt_mega_big','hipt_mega_mega','hipt_mega_mega2','hipt_const','hipt_big','hipt_medium','hipt_small','hipt_smaller','hipt_smallest'], default='small', help='size of model, does not affect mil')
 parser.add_argument('--task', type=str, choices=['ovarian_5class','ovarian_1vsall','nsclc','treatment','treatment_switched'])
 
