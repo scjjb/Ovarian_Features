@@ -251,7 +251,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 if len(split) > 0:
                         mask = self.slide_data['slide_id'].isin(split.tolist())
                         df_slice = self.slide_data[mask].reset_index(drop=True)
-                        split = Generic_Split(df_slice, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
+                        split = Generic_Split(df_slice, data_dir=self.data_dir, data_dir_aug=self.data_dir_aug, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
                 else:
                         split = None
                 
@@ -267,7 +267,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 if len(split) > 0:
                         mask = self.slide_data['slide_id'].isin(merged_split)
                         df_slice = self.slide_data[mask].reset_index(drop=True)
-                        split = Generic_Split(df_slice, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
+                        split = Generic_Split(df_slice, data_dir=self.data_dir, data_dir_aug=self.data_dir_aug, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
                 else:
                         split = None
                 
@@ -280,21 +280,21 @@ class Generic_WSI_Classification_Dataset(Dataset):
                 if from_id:
                         if len(self.train_ids) > 0:
                                 train_data = self.slide_data.loc[self.train_ids].reset_index(drop=True)
-                                train_split = Generic_Split(train_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
+                                train_split = Generic_Split(train_data, data_dir=self.data_dir, data_dir_aug=self.data_dir_aug, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,perturb_variance=self.perturb_variance,number_of_augs=self.number_of_augs,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=self.max_patches_per_slide,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
 
                         else:
                                 train_split = None
                         
                         if len(self.val_ids) > 0:
                                 val_data = self.slide_data.loc[self.val_ids].reset_index(drop=True)
-                                val_split = Generic_Split(val_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
+                                val_split = Generic_Split(val_data, data_dir=self.data_dir, data_dir_aug=self.data_dir_aug, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
 
                         else:
                                 val_split = None
                         
                         if len(self.test_ids) > 0:
                                 test_data = self.slide_data.loc[self.test_ids].reset_index(drop=True)
-                                test_split = Generic_Split(test_data, data_dir=self.data_dir, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
+                                test_split = Generic_Split(test_data, data_dir=self.data_dir, data_dir_aug=self.data_dir_aug, small_data_dir=self.small_data_dir, coords_path=self.coords_path, small_coords_path=self.small_coords_path, num_classes=self.num_classes,slide_ext=self.slide_ext,data_h5_dir=self.data_h5_dir, data_slide_dir=self.data_slide_dir,pretrained=self.pretrained, custom_downsample=self.custom_downsample, target_patch_size=self.target_patch_size,model_architecture = self.model_architecture, model_type=self.model_type, batch_size = self.batch_size,max_patches_per_slide=np.inf,graph_edge_distance=self.graph_edge_distance,offset=self.offset,plot_graph=self.plot_graph,ms_features=self.ms_features,graph_path=self.graph_path)
                         
                         else:
                                 test_split = None
@@ -391,6 +391,7 @@ class Generic_WSI_Classification_Dataset(Dataset):
 class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
         def __init__(self,
                 data_dir,
+                data_dir_aug=None,
                 small_data_dir=None,
                 coords_path=None,
                 small_coords_path=None,
@@ -416,6 +417,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
         
                 super(Generic_MIL_Dataset, self).__init__(**kwargs)
                 self.data_dir = data_dir
+                self.data_dir_aug = data_dir_aug
                 self.small_data_dir = small_data_dir
                 self.coords_path = coords_path
                 self.small_coords_path = small_coords_path
@@ -521,10 +523,9 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                 
                 if self.use_augs:
                     assert not self.use_h5, "augmentations not currently setup with h5 files, only pt files"
-                    ## aug numbers start at 0, -1 is the original with no augmentation 
-                    aug_number = random.randint(0,self.number_of_augs)
-                    if aug_number>0:
-                        slide_id=slide_id+"aug{}".format(aug_number)
+                    ## aug features held in folders using identical names but ending in _1 _2 etc for repeats
+                    aug_number = random.randint(1,self.number_of_augs)
+                    data_dir = self.data_dir_aug + "_" + str(aug_number)
                 
                 if not self.use_h5:
                         if self.data_dir:
@@ -629,7 +630,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
 
 
 class Generic_Split(Generic_MIL_Dataset):
-        def __init__(self, slide_data, data_dir=None, small_data_dir=None, coords_path=None, small_coords_path=None, num_classes=2, perturb_variance=0.1, number_of_augs = 1, max_patches_per_slide=None,data_h5_dir=None,data_slide_dir=None,slide_ext=None, pretrained=None, custom_downsample=None, target_patch_size=None, model_architecture=None, model_type = None, batch_size = None, extract_features = False, graph_edge_distance = None, offset = None, plot_graph = None, ms_features = None, graph_path = None):
+        def __init__(self, slide_data, data_dir=None, data_dir_aug=None, small_data_dir=None, coords_path=None, small_coords_path=None, num_classes=2, perturb_variance=0.1, number_of_augs = 1, max_patches_per_slide=None,data_h5_dir=None,data_slide_dir=None,slide_ext=None, pretrained=None, custom_downsample=None, target_patch_size=None, model_architecture=None, model_type = None, batch_size = None, extract_features = False, graph_edge_distance = None, offset = None, plot_graph = None, ms_features = None, graph_path = None):
                 self.augment_features = False
                 self.debug_loader = False
                 self.use_h5 = False
@@ -639,6 +640,7 @@ class Generic_Split(Generic_MIL_Dataset):
                 self.number_of_augs = number_of_augs
                 self.slide_data = slide_data
                 self.data_dir = data_dir
+                self.data_dir_aug = data_dir_aug
                 self.small_data_dir = small_data_dir
                 self.coords_path = coords_path
                 self.small_coords_path = small_coords_path
