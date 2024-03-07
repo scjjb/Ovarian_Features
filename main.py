@@ -14,7 +14,7 @@ import ray
 import cProfile, pstats
 
 # internal imports
-from utils.core_utils import train
+from utils.core_utils import train, seed_torch
 from datasets.dataset_generic import Generic_MIL_Dataset
 from utils.tuning_utils import TrialPlateauStopper
 import warnings
@@ -280,18 +280,6 @@ parser.add_argument('--profile_rows', type=int, default=10, help='number of rows
 
 args = parser.parse_args()
 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-def seed_torch(seed=7):
-    import random
-    random.seed(seed)
-    os.environ['PYTHONHASHSEED'] = str(seed)
-    np.random.seed(seed)
-    torch.manual_seed(seed)
-    if device.type == 'cuda':
-        torch.cuda.manual_seed(seed)
-        torch.cuda.manual_seed_all(seed) # if you are using multi-GPU.
-    torch.backends.cudnn.benchmark = False
-    torch.backends.cudnn.deterministic = True
 
 seed_torch(args.seed)
 

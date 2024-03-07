@@ -19,6 +19,19 @@ import warnings
 ## We can't use the latest version of torch-scatter on this version of pytorch, which it keeps warning us to do to increase speed
 warnings.simplefilter(action='ignore', category=UserWarning)
 
+def seed_torch(seed=7):
+    import random
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if device.type == 'cuda':
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed) # if you are using multi-GPU.
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+
+
 class Accuracy_Logger(object):
     """Accuracy logger"""
     def __init__(self, n_classes):
@@ -109,6 +122,7 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
         train for a single fold
     """
     ## If tuning, update args from config 
+    seed_torch(args.seed)
     if args.tuning:
         if args.model_type in ["graph","graph_ms"]:
             args.graph_edge_distance=config["edge_distance"]
