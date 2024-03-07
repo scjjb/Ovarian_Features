@@ -148,6 +148,19 @@ class PatchGCN(torch.nn.Module):
 
         self.classifier = torch.nn.Linear(hidden_dim*4, n_classes)
 
+
+    def relocate(self):
+        from torch_geometric.nn import DataParallel
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.fc = self.fc.to(device)
+        self.layers = self.layers.to(device)
+        self.path_phi = self.path_phi.to(device)
+        self.path_attention_head = self.path_attention_head.to(device)
+        
+        self.path_rho = self.path_rho.to(device)
+        self.classifier = self.classifier.to(device)
+
+
     def forward(self,  data, label, instance_eval):
         #data = kwargs['x_path']
 

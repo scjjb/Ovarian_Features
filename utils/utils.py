@@ -86,6 +86,8 @@ def get_simple_loader(dataset, batch_size=1, num_workers=4):
                         collate=collate_MIL_coords    
         if len(dataset[0])==3:
             collate=collate_Graph
+        elif len(dataset[0])==4:
+            collate=collate_patchgcn_graph 
         loader = DataLoader(dataset, batch_size=batch_size, sampler = sampler.SequentialSampler(dataset), collate_fn = collate, **kwargs)
         return loader 
 

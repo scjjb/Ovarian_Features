@@ -241,7 +241,10 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
         model = Graph_Model(pooling_factor=args.pooling_factor, pooling_layers=args.pooling_layers, message_passings=args.message_passings, gat_heads=args.gat_heads, embedding_size=args.embedding_size ,num_features=train_split[0][0].shape[1], num_classes=args.n_classes,drop_out=args.drop_out, message_passing=args.message_passing, pooling=args.pooling)
 
     elif args.model_type == "patchgcn":
-        model = PatchGCN(n_classes = args.n_classes)
+        model_dict = {'num_layers': 4, 'edge_agg': 'spatial', 'resample': 0.00, 'n_classes': args.n_classes, 'dropout': args.drop_out, 'hidden_dim': args.embedding_size }
+        #model = PatchGCN({'num_layers': 4, 'edge_agg': 'spatial', 'resample': 0.00, 'n_classes': args.n_classes})
+        #model = PatchGCN(n_classes = args.n_classes)
+        model = PatchGCN(**model_dict)
 
     else: # args.model_type == 'mil'
         if args.n_classes > 2:
