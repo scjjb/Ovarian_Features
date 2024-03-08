@@ -87,7 +87,7 @@ def extract_features(args,loader,feature_extraction_model,use_cpu):
     return all_features
 
 
-def eval(config, dataset, args, ckpt_path):
+def eval(config, dataset, args, ckpt_path, class_counts = None):
     num_features = 0
     if len(dataset[0])==3:
         num_features = dataset[0][0].shape[1]
@@ -103,6 +103,12 @@ def eval(config, dataset, args, ckpt_path):
         args.sampling_random=config["sampling_random"]
         args.sampling_random_delta=config["sampling_random_delta"]
     
+    if args.bag_loss == 'balanced_ce':
+        ce_weights=[(1/class_counts[i])*(sum(class_counts)/len(class_counts)) for i in range(len(class_counts))]
+        print("weighting cross entropy with weights {}".format(ce_weights))
+        loss_fn = nn.CrossEntropyLoss(weight=torch.tensor(ce_weights).to(device,non_blocking=True)).to(device,non_blocking=True)
+    else:
+        loss_fn = nn.CrossEntropyLoss()
     
     if args.eval_features:
         test_error, auc, df, _ = summary_sampling(model,dataset,args)

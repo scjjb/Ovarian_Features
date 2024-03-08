@@ -86,7 +86,7 @@ for model_name in model_names:
             print("class {} precision: {:.5f} recall: {:.5f} f1: {:.5f}".format(i,precision_score(all_Ys,all_Yhats,labels=[i],average='macro'),recall_score(all_Ys,all_Yhats,labels=[i],average='macro'),f1_score(all_Ys,all_Yhats,labels=[i],average='macro')))
             #print("class {} recall: {}".format(i,recall_score(all_Ys,all_Yhats,labels=[i],average='macro')))        
             #print("class {} F1: {}".format(i,f1_score(all_Ys,all_Yhats,labels=[i],average='macro')))
-        print("\naverage ce loss: ",np.mean(all_losses), "(not bootstrapped)")
+        print("\naverage loss: ",np.mean(all_losses), "(not bootstrapped)")
 
         if args.plot_roc_curves:
             fpr, tpr, threshold = roc_curve(all_Ys, all_p1s)
