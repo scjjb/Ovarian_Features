@@ -34,6 +34,8 @@ parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mi
 parser.add_argument('--model_size', type=str, choices=['tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier','tiny128','tiny','small', 'big','hipt_mega_tiny','hipt_mega_small','hipt_mega_big','hipt_mega_mega','hipt_const','hipt_smallest','hipt_small','hipt_medium','hipt_big','hipt_smaller'], default='small', help='size of model (default: small)')
 parser.add_argument('--task', type=str, choices=['ovarian_5class','ovarian_1vsall','nsclc','treatment'])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout p=0.25')
+parser.add_argument('--bag_loss', type=str, choices=['ce', 'balanced_ce'], default='ce',
+                     help='slide-level classification loss function (default: ce)')
 
 ## Graph model settings
 parser.add_argument('--graph_edge_distance',type=int,default=750,help="Maximum distance between nodes in graph to add edges.")
@@ -258,7 +260,8 @@ def main():
             print("Best trial final acuracy: {}".format(best_trial.metrics["accuracy"]))
 
         else:
-            test_error, auc, df, loss = eval(None,split_dataset, args, ckpt_paths[ckpt_idx])
+            class_counts = class_counts_train=dataset.count_by_class(csv_path = '{}/splits_{}.csv'.format(args.split_dir, folds[ckpt_idx]))
+            test_error, auc, df, loss = eval(None,split_dataset, args, ckpt_paths[ckpt_idx], class_counts=class_counts)
             all_auc.append(auc)
             print("all auc", all_auc)
             all_acc.append(1-test_error)
