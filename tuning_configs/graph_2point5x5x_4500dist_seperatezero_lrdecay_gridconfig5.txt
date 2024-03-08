@@ -1,4 +1,3 @@
-## tuning5 - beta1 vs eps
 {"reg": "tune.grid_search([1e-8])",
 "drop_out": "tune.grid_search([0.0])",
 "lr": "tune.grid_search([5e-4])",
