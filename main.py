@@ -255,7 +255,7 @@ parser.add_argument('--tuning', action='store_true', default=False, help='run hy
 parser.add_argument('--tuning_type',type=str, choices=['grid','asha'], default='grid',help='Grid is for rigorous comparison of a few options, Asha is for exploration of wider search spaces with weaker options stopped much earlier')
 parser.add_argument('--tuning_config_file', type=str, default=None, help='full path to txt file containing search space dictionary') 
 parser.add_argument('--tuning_output_file',type=str,default="tuning_results/tuning_output.csv",help="where to save tuning outputs")
-parser.add_argument('--tuning_patience', typ=int, default=30, help="How many epochs used in loss plateau stopper during tuning")
+parser.add_argument('--tuning_patience', type=int, default=30, help="How many epochs used in loss plateau stopper during tuning")
 parser.add_argument('--num_tuning_experiments',type=int,default=100,help="Number of tuning experiments. If using grid tuning this is how many times each config will repeat, if sampling in ranges then this will be the number of overall experiments.")
 parser.add_argument('--hardware',type=str, choices=['DGX','PC'], default='DGX',help='sets amount of CPU and GPU to use per experiment')
 parser.add_argument('--continue_tuning', action='store_true', default=False, help='Continue partially-complete tuning experiment or re-evaluate finished experiments')
