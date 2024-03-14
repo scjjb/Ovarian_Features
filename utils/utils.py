@@ -78,15 +78,15 @@ def collate_patchgcn_graph(batch):
     return [samples[0] for samples in transposed]
 
 
-def get_simple_loader(dataset, batch_size=1, num_workers=4):
+def get_simple_loader(dataset, batch_size=1, num_workers=4, model_type="clam_sb"):
         kwargs = {'num_workers': num_workers, 'pin_memory': False} if device.type == "cuda" else {}
         collate=collate_MIL
         if hasattr(dataset,'use_h5'):
                 if dataset.use_h5:
                         collate=collate_MIL_coords    
-        if len(dataset[0])==3:
+        if model_type in ["graph","graph_ms"]:
             collate=collate_Graph
-        elif len(dataset[0])==4:
+        elif model_type in ["patchgcn"]:
             collate=collate_patchgcn_graph 
         loader = DataLoader(dataset, batch_size=batch_size, sampler = sampler.SequentialSampler(dataset), collate_fn = collate, **kwargs)
         return loader 
