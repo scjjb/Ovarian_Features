@@ -119,7 +119,7 @@ def eval(config, dataset, args, ckpt_path, class_counts = None):
         #loader = get_simple_loader(dataset)
         test_error, auc, df, _ = summary_sampling(model,dataset, args)
     else:
-        loader = get_simple_loader(dataset)
+        loader = get_simple_loader(dataset, model_type=args.model_type)
         _, acc, bal_acc, f1, auc, loss, _, df = evaluate(model, loader, args.n_classes, "final")
         test_error = 1-acc
 
@@ -172,7 +172,7 @@ def summary_sampling(model, dataset, args):
         iterator=range(len(dataset))
     
     else:
-        loader = get_simple_loader(dataset)
+        loader = get_simple_loader(dataset, model_type=args.model_type)
         all_labels = np.zeros(num_slides)
         slide_ids = loader.dataset.slide_data['slide_id']
         slide_id_list=[]
