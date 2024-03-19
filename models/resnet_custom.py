@@ -118,7 +118,7 @@ def resnet18_baseline(pretrained=False,dataset='ImageNet'):
     else:
         model = torchvision.models.__dict__['resnet18'](pretrained=False)
     if pretrained and dataset=="Histo":
-        MODEL_PATH="../../mount_outputs/tenpercent_resnet18.ckpt"
+        MODEL_PATH="/mnt/data/tenpercent_resnet18.ckpt"
         state = torch.load(MODEL_PATH, map_location='cuda')
         state_dict = state['state_dict']
         for key in list(state_dict.keys()):
