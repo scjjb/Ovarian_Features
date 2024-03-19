@@ -271,6 +271,23 @@ parser.add_argument('--bag_weight', type=float, default=0.7,
                     help='clam: weight coefficient for bag-level loss (default: 0.7)')
 parser.add_argument('--B', type=int, default=8, help='number of positive/negative patches to sample for clam')
 
+## Sampling setting (disregard if not the focus)
+parser.add_argument('--sampling', action='store_true', default=False, help='sampling for faster training')
+parser.add_argument('--sampling_type', type=str, choices=['spatial','textural','newest'],default='spatial',help='type of sampling to use')
+parser.add_argument('--samples_per_iteration', type=int, default=100, help='number of patches to sample per sampling iteration')
+parser.add_argument('--resampling_iterations', type=int, default=10, help='number of resampling iterations (not including the initial sample)')
+parser.add_argument('--sampling_random', type=float, default=0.2, help='proportion of samples which are completely random per iteration')
+parser.add_argument('--sampling_random_delta',type=float, default=0.02, help='reduction in sampling_random per iteration')
+parser.add_argument('--sampling_neighbors', type=int, default=20, help='number of nearest neighbors to consider when resampling')
+parser.add_argument('--final_sample_size',type=int,default=100,help='number of patches for final sample')
+parser.add_argument('--texture_model',type=str, choices=['resnet50','levit_128s'], default='resnet50',help='model to use for feature extraction in textural sampling')
+parser.add_argument('--sampling_average',action='store_true',default=False,help='Take the sampling weights as averages rather than maxima to leverage more learned information')
+parser.add_argument('--weight_smoothing',type=float,default=0.15,help='Power applied to attention scores to generate sampling weights')
+parser.add_argument('--use_all_samples',action='store_true', default=False, help='Use all previous samples in the final sample step')
+parser.add_argument('--no_sampling_epochs',type=int,default=20,help='number of epochs to complete full slide processing before beginning sampling')
+parser.add_argument('--fully_random',action='store_true', default=False, help='Take entirely random samples (no active sampling)')
+
+
 ## Developer settings
 parser.add_argument('--debug_loader', action='store_true', default=False,
                         help='debugger arg which runs through the loader without training the model')
