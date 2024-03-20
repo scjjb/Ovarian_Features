@@ -472,9 +472,11 @@ def summary_sampling(model, dataset, args):
       #  #for i in range(args.resampling_iterations):
             #all_errors.append(round(calculate_error(torch.Tensor(Y_hats[i::args.resampling_iterations]),torch.Tensor(all_labels)),3))
     if not args.eval_features:
-        for i in range(args.resampling_iterations):
-            all_errors.append(round(calculate_error(torch.Tensor(Y_hats[i::args.resampling_iterations]),torch.Tensor(labels[i::args.resampling_iterations])),3))
-
+        try:
+            for i in range(args.resampling_iterations):
+                 all_errors.append(round(calculate_error(torch.Tensor(Y_hats[i::args.resampling_iterations]),torch.Tensor(labels[i::args.resampling_iterations])),3))
+        except:
+            print("all errors didn't run, likely caused by a slide being too small for sampling")
     
         all_aucs=[]
         if len(np.unique(all_labels)) == 2:
