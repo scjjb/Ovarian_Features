@@ -10,7 +10,7 @@ import os
 import pandas as pd
 from utils.utils import *
 from utils.core_utils import Accuracy_Logger, evaluate
-#from utils.sampling_utils import generate_sample_idxs, generate_features_array, update_sampling_weights, plot_sampling, plot_sampling_gif, plot_weighting, plot_weighting_gif
+from utils.sampling_utils import generate_sample_idxs, generate_features_array, update_sampling_weights, plot_sampling, plot_sampling_gif, plot_weighting, plot_weighting_gif
 from sklearn.metrics import roc_auc_score, roc_curve, auc
 from sklearn.preprocessing import label_binarize
 import random
@@ -111,13 +111,13 @@ def eval(config, dataset, args, ckpt_path, class_counts = None):
         loss_fn = nn.CrossEntropyLoss()
     
     if args.eval_features:
-        test_error, auc, df, _ = summary_sampling(model,dataset,args)
+        test_error, auc, df, _, loss = summary_sampling(model,dataset,args)
 
     elif args.sampling:
         assert 0<=args.sampling_random<=1,"sampling_random needs to be between 0 and 1"
         dataset.load_from_h5(True)
         #loader = get_simple_loader(dataset)
-        test_error, auc, df, _ = summary_sampling(model,dataset, args)
+        test_error, auc, df, _, loss = summary_sampling(model,dataset, args)
     else:
         loader = get_simple_loader(dataset, model_type=args.model_type)
         _, acc, bal_acc, f1, auc, loss, _, df = evaluate(model, loader, args.n_classes, "final")
@@ -133,6 +133,8 @@ def eval(config, dataset, args, ckpt_path, class_counts = None):
 def summary_sampling(model, dataset, args):
     model.eval()
     
+    loss_fn = nn.CrossEntropyLoss()
+
     if args.tuning:
         same_slide_repeats=args.same_slide_repeats
     else:
@@ -206,6 +208,9 @@ def summary_sampling(model, dataset, args):
     if args.sampling:
         print("Total patches sampled per slide: ",total_samples_per_slide)
     
+    final_logits=[]
+    
+    loss = 0.
     for batch_idx, contents in enumerate(iterator):
         if not args.tuning and not args.fully_random:
             print('\nprogress: {}/{}'.format(batch_idx, num_slides))
@@ -440,7 +445,8 @@ def summary_sampling(model, dataset, args):
             all_probs.append(probs[0])
             all_labels_byrep.append(label[0].item())
             all_preds[(batch_idx*same_slide_repeats)+repeat_no] = Y_hat.item()
-            
+            loss_value = loss_fn(logits, label)
+            loss += loss_value.item()
             if args.plot_sampling:
                 plot_sampling(slide_id,coords[sample_idxs],args,Y_hat==label)
             if args.plot_sampling_gif:
@@ -466,9 +472,11 @@ def summary_sampling(model, dataset, args):
       #  #for i in range(args.resampling_iterations):
             #all_errors.append(round(calculate_error(torch.Tensor(Y_hats[i::args.resampling_iterations]),torch.Tensor(all_labels)),3))
     if not args.eval_features:
-        for i in range(args.resampling_iterations):
-            all_errors.append(round(calculate_error(torch.Tensor(Y_hats[i::args.resampling_iterations]),torch.Tensor(labels[i::args.resampling_iterations])),3))
-
+        try:
+            for i in range(args.resampling_iterations):
+                 all_errors.append(round(calculate_error(torch.Tensor(Y_hats[i::args.resampling_iterations]),torch.Tensor(labels[i::args.resampling_iterations])),3))
+        except:
+            print("all errors didn't run, likely caused by a slide being too small for sampling")
     
         all_aucs=[]
         if len(np.unique(all_labels)) == 2:
@@ -513,5 +521,6 @@ def summary_sampling(model, dataset, args):
     df = pd.DataFrame(results_dict)
     #print("all errors: ",all_errors)
     #print("all aucs: ",all_aucs)
-    return test_error, auc_score, df, acc_logger
+    loss /= len(loader)
+    return test_error, auc_score, df, acc_logger, loss
 
