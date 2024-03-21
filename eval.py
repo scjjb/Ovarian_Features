@@ -114,7 +114,8 @@ if args.cpu_only:
     torch.cuda.is_available = lambda : False
     device=torch.device("cpu")
 
-args.save_dir = os.path.join('./eval_results', 'EVAL_' + str(args.save_exp_code))
+
+args.save_dir = os.path.join(args.results_dir,'eval_results', 'EVAL_' + str(args.save_exp_code))
 args.models_dir = os.path.join(args.results_dir, str(args.models_exp_code))
 
 os.makedirs(args.save_dir, exist_ok=True)
@@ -264,11 +265,11 @@ def main():
             class_counts = class_counts_train=dataset.count_by_class(csv_path = '{}/splits_{}.csv'.format(args.split_dir, folds[ckpt_idx]))
             test_error, auc, df, loss = eval(None,split_dataset, args, ckpt_paths[ckpt_idx], class_counts=class_counts)
             all_auc.append(auc)
-            print("all auc", all_auc)
+            print("auc per fold", all_auc)
             all_acc.append(1-test_error)
-            print("all acc", all_acc)
+            print("acc per fold", all_acc)
             all_loss.append(loss)
-            print("all loss", all_loss)
+            print("loss per fold", all_loss)
             if not args.eval_features:
                 df.to_csv(os.path.join(args.save_dir, 'fold_{}.csv'.format(folds[ckpt_idx])), index=False)	
     if not args.tuning:
