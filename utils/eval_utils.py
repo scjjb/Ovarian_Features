@@ -128,6 +128,7 @@ def eval(config, dataset, args, ckpt_path, class_counts = None):
 
 
 def evaluate_sampling(model, dataset, args, loss_fn = None):
+    assert args.sampling
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
 
@@ -207,8 +208,8 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
         for repeat_no in range(same_slide_repeats):
             samples_per_iteration=args.samples_per_iteration
             ## Generate initial sample_idsx
-            if not args.sampling or args.fully_random or total_samples_per_slide>=len(coords):
-                if not args.sampling or total_samples_per_slide>=len(coords): 
+            if args.fully_random or total_samples_per_slide>=len(coords):
+                if total_samples_per_slide>=len(coords): 
                     print("full slide used for slide {} with {} patches".format(slide_id,len(coords)))
                     data_sample=data
                 else:
@@ -218,27 +219,17 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
                 with torch.no_grad():
                     logits, Y_prob, Y_hat, raw_attention, _ = model(data_sample)
                 probs = Y_prob.cpu().numpy()[0]
-                #Y_hats_per_sample.append(Y_hat)
-                #probs_per_sample.append(probs[0])
-                #labels_per_sample.append(label[0].item())
-                #preds_per_sample[(batch_idx*same_slide_repeats)+repeat_no] = Y_hat.item()
+                ## no outputs per sample as this is the only sample
                 
-                ## no scores per sample as this is the only sample
+                ## Store final outputs
                 final_probs.append(probs)
-                #labels.append(label[0].item())
-                final_preds[(batch_idx*same_slide_repeats)+repeat_no] = Y_hat.item()
+                final_preds[batch_idx] = Y_hat.item()
+                final_logits.append(logits)
                 labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
 
-                #if args.plot_weighting:
-                #    attention_scores=raw_attention[0]
-                #    new_attentions = np.repeat(min(attention_scores.cpu()),len(coords))
-                #    for i in range(len(sample_idxs)):
-                #        new_attentions[sample_idxs[i]]=attention_scores[i]
-                #    plot_weighting(slide_id,coords,new_attentions,args,Y_hat==label)
-                
-                #labels_per_sample.append(label[0].item())
-                #all_preds[(batch_idx*same_slide_repeats)+repeat_no] = Y_hat.item()
-                #labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
+                #calculate loss and error
+                loss_value = loss_fn(logits, label)
+                loss += loss_value.item()
                 error = calculate_error(Y_hat, label)
                 test_error += error
                 continue
@@ -271,7 +262,7 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
             if args.plot_weighting_gif:
                 slide,x_coords,y_coords=plot_weighting_gif(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,0,slide=None,final_iteration=False)
 
-            ## Store results per iteration
+            ## Store outputs per iteration
             Y_hats_per_sample.append(Y_hat)
             probs_per_sample.append(probs)
             logits_per_sample.append(logits)
@@ -333,7 +324,7 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
                         best_attn_scores=[attn_scores_combined[attn_idx] for attn_idx in attn_idxs][:args.retain_best_samples]
                 
                                               
-                ## Store results per iteration
+                ## Store outputs per iteration
                 Y_hats_per_sample.append(Y_hat)
                 probs_per_sample.append(probs)
                 logits_per_sample.append(logits)
@@ -362,20 +353,23 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
 
             acc_logger.log(Y_hat, label)
             
-            ## Store results per iteration
+            ## Store outputs per iteration
             Y_hats_per_sample.append(Y_hat)
             probs_per_sample.append(probs)
             logits_per_sample.append(logits)
             labels_per_sample.append(label)
 
-            ## Store final results to calculate metrics
+            ## Store final outputs
             final_probs.append(probs)
             final_preds[batch_idx] = Y_hat.item()
             final_logits.append(logits)
+            labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
 
-            ## Calculate loss using final sample
+            ## Calculate loss and error using final sample
             loss_value = loss_fn(logits, label)
             loss += loss_value.item()
+            error = calculate_error(Y_hat, label)
+            test_error += error
 
             ## Plot anything wanting plotting
             if args.plot_sampling:
@@ -387,10 +381,6 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
             if args.plot_weighting_gif:
                 plot_weighting_gif(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,iteration_count+1,Y_hat==label,slide,x_coords,y_coords,final_iteration=True)
 
-
-            labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
-            error = calculate_error(Y_hat, label)
-            test_error += error
     
     all_errors=[]
     probs_per_sample = np.array(probs_per_sample)
