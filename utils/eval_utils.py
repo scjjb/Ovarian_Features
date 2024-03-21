@@ -207,7 +207,9 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
 
         for repeat_no in range(same_slide_repeats):
             samples_per_iteration=args.samples_per_iteration
-            ## Generate initial sample_idsx
+            sampling_weights=np.full(shape=len(coords),fill_value=0.0001)
+
+            ## Using all samples when required
             if args.fully_random or total_samples_per_slide>=len(coords):
                 if total_samples_per_slide>=len(coords): 
                     print("full slide used for slide {} with {} patches".format(slide_id,len(coords)))
@@ -234,19 +236,20 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
                 test_error += error
                 continue
 
-            ## Inital sample
+            ## INITIAL SAMPLING ITERATION
+            ## get new sample
             sample_idxs=generate_sample_idxs(len(coords),[],[],samples_per_iteration,num_random=samples_per_iteration,grid=args.initial_grid_sample,coords=coords)
             all_sample_idxs=sample_idxs
-            sampling_weights=np.full(shape=len(coords),fill_value=0.0001)
             data_sample=data[sample_idxs].to(device)
 
+            ## run classifier on new samples
             with torch.no_grad():
                 logits, Y_prob, Y_hat, raw_attention, results_dict = model(data_sample)
             probs = Y_prob.cpu().numpy()[0]
             attention_scores=torch.nn.functional.softmax(raw_attention,dim=1)[0]#.cpu()
             attn_scores_list=raw_attention[0].cpu().tolist()
             
-
+            ## find best samples to keep if not keeping all previous samples
             if not args.use_all_samples:
                 if args.samples_per_iteration<=args.retain_best_samples:
                     best_sample_idxs=sample_idxs
@@ -256,9 +259,9 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
                     best_sample_idxs=[sample_idxs[attn_idx] for attn_idx in attn_idxs][:args.retain_best_samples]
                     best_attn_scores=[attn_scores_list[attn_idx] for attn_idx in attn_idxs][:args.retain_best_samples]
 
+            ## update gifs
             if args.plot_sampling_gif:
                 slide=plot_sampling_gif(slide_id,coords[sample_idxs],args,0,slide=None,final_iteration=False)
-        
             if args.plot_weighting_gif:
                 slide,x_coords,y_coords=plot_weighting_gif(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,0,slide=None,final_iteration=False)
 
@@ -272,7 +275,7 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
             nbrs = NearestNeighbors(n_neighbors=args.sampling_neighbors, algorithm='ball_tree').fit(X)
             distances, indices = nbrs.kneighbors(X[sample_idxs])
         
-            ##Subsequent iterations
+            ## INTERMEDIATE SAMPLING ITERATIONS
             sampling_random=args.sampling_random
             neighbors=args.sampling_neighbors
             for iteration_count in range(args.resampling_iterations-1):
@@ -333,9 +336,9 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
                 ## update neighbors parameter
                 neighbors=neighbors-args.sampling_neighbors_delta
         
-            ## Final sampling iteration
-            sampling_weights=update_sampling_weights(sampling_weights,attention_scores,all_sample_idxs,indices,neighbors,power=args.weight_smoothing,normalise=False,
-                                sampling_update=sampling_update,repeats_allowed=False)
+            ## FINAL SAMPLING ITERATION
+            ## get new sample
+            sampling_weights=update_sampling_weights(sampling_weights,attention_scores,all_sample_idxs,indices,neighbors,power=args.weight_smoothing,normalise=False,sampling_update=sampling_update,repeats_allowed=False)
             if args.use_all_samples:
                 sample_idxs=generate_sample_idxs(len(coords),all_sample_idxs,sampling_weights/sum(sampling_weights),args.final_sample_size,num_random=0)
                 sample_idxs=sample_idxs+all_sample_idxs
@@ -347,6 +350,7 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
     
             data_sample=data[sample_idxs].to(device)
 
+            ## run classifier on new samples
             with torch.no_grad():
                 logits, Y_prob, Y_hat, raw_attention, results_dict = model(data_sample)
             probs = Y_prob.cpu().numpy()[0]
@@ -384,38 +388,28 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
     
     all_errors=[]
     probs_per_sample = np.array(probs_per_sample)
-    #print(probs_per_sample)
     try:
-        for i in range(args.resampling_iterations):
-            all_errors.append(round(calculate_error(torch.Tensor(Y_hats[i::args.resampling_iterations]),torch.Tensor(labels[i::args.resampling_iterations])),3))
+        for i in range(args.resampling_iterations+1):
+            all_errors.append(round(calculate_error(torch.Tensor(Y_hats_per_sample[i::args.resampling_iterations+1]),torch.Tensor(labels_per_sample[i::args.resampling_iterations+1])),3))
+        print("Error per sampling iteration: ",all_errors)
     except:
-        print("all errors didn't run, likely caused by a slide being too small for sampling")
+        print("error per iteration didn't run, likely caused by a slide being too small for sampling")
     
     all_aucs=[]
     if len(np.unique(labels)) == 2:
-        if len(labels)==len([yprob.tolist()[1] for yprob in probs_per_sample[0::args.resampling_iterations]]):
-            for i in range(args.resampling_iterations):
-                auc_score = roc_auc_score(labels,[yprob.tolist()[1] for yprob in probs_per_sample[i::args.resampling_iterations]])
+        try:
+            for i in range(args.resampling_iterations+1):
+                auc_score = roc_auc_score(labels,[yprob.tolist()[1] for yprob in probs_per_sample[i::args.resampling_iterations+1]])
                 all_aucs.append(round(auc_score,3))
             print("AUC per sampling iteration: ",all_aucs)
-        else:
-            print("scoring by iteration unavailable as not all slides could be sampled")
+        except:
+            print("auc per iteration didn't run, likely caused by a slide being too small for sampling")
     else:
         print("AUC scoring by iteration not implemented for multi-class classification yet")
         
     test_error /= num_slides
     aucs = []
     final_probs = np.array(final_probs)
-    #probs_per_sample = np.array(probs_per_sample)
-    #print(probs_per_sample)
-    #print("Y_hats_per_sample",Y_hats_per_sample,len(Y_hats_per_sample))
-    #print("probs per sample",probs_per_sample,len(probs_per_sample))
-    #print("logits_per_sample",logits_per_sample,len(logits_per_sample))
-    #print("labels_per_sample",labels_per_sample,len(labels_per_sample))
-    #print("final_probs",final_probs)
-    #print("final_preds",final_preds)
-    #print("final_logits",final_logits)
-    #print("labels",labels)
 
     if len(np.unique(labels)) == 2:
         auc_score = roc_auc_score(labels, final_probs[:,1])
