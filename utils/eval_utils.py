@@ -142,8 +142,6 @@ def summary_sampling(model, dataset, args):
 
     num_slides=len(dataset)*same_slide_repeats
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    #if args.cpu_only:
-    #    device=torch.device("cpu")
     test_loss = 0.
     test_error = 0.
 
@@ -196,7 +194,6 @@ def summary_sampling(model, dataset, args):
 
     test_loss = 0.
     test_error = 0.
-    #all_probs = np.zeros((num_slides, args.n_classes))
     all_preds = np.zeros(num_slides)
     
     num_random=int(args.samples_per_iteration*args.sampling_random)
@@ -246,7 +243,6 @@ def summary_sampling(model, dataset, args):
         for repeat_no in range(same_slide_repeats):
             samples_per_iteration=args.samples_per_iteration
             ## Generate initial sample_idsx
-            #print("available patches:", len(coords))
             if not args.sampling or args.fully_random or total_samples_per_slide>=len(coords):
                 if not args.sampling or total_samples_per_slide>=len(coords): 
                     print("full slide used for slide {} with {} patches".format(slide_id,len(coords)))
@@ -278,18 +274,15 @@ def summary_sampling(model, dataset, args):
 
                 if args.plot_weighting:
                     attention_scores=raw_attention[0]
-                    #attention_scores=torch.nn.functional.softmax(raw_attention,dim=1)[0]
                     new_attentions = np.repeat(min(attention_scores.cpu()),len(coords))
                     for i in range(len(sample_idxs)):
                         new_attentions[sample_idxs[i]]=attention_scores[i]
-                        #new_attentions[sample_idxs[i]]=pow(attention_scores[i],args.weight_smoothing)
                     plot_weighting(slide_id,coords,new_attentions,args,Y_hat==label)
                 
                 if args.eval_features:
                     all_labels_byrep.append(label)
                 else:
                     all_labels_byrep.append(label[0].item())
-                #all_probs[(batch_idx*same_slide_repeats)+repeat_no] = probs
                 all_preds[(batch_idx*same_slide_repeats)+repeat_no] = Y_hat.item()
                 if args.eval_features:
                     error = calculate_error(Y_hat, label_tensor)
@@ -355,14 +348,10 @@ def summary_sampling(model, dataset, args):
                 else:
                     sampling_random=0
                 num_random=int(samples_per_iteration*sampling_random)
-                #attention_scores=attention_scores/max(attention_scores)
                                                                         
                 sampling_weights=update_sampling_weights(sampling_weights,attention_scores,all_sample_idxs,indices,neighbors,power=args.weight_smoothing,normalise=False,
                                         sampling_update=sampling_update,repeats_allowed=False)
-                #sampling_weights_over20=[weight for weight in sampling_weights if weight>0.2]
-                #print(sampling_weights)
-                #print(max(sampling_weights))
-                #print(len(sampling_weights_over20))
+                
                 if args.plot_weighting_gif:
                                 plot_weighting_gif(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,iteration_count+1,slide,x_coords,y_coords,final_iteration=False)
                 sample_idxs=generate_sample_idxs(len(coords),all_sample_idxs,sampling_weights/sum(sampling_weights),samples_per_iteration,num_random)
@@ -441,7 +430,6 @@ def summary_sampling(model, dataset, args):
             acc_logger.log(Y_hat, label)
             probs = Y_prob.cpu().numpy()
             
-            #all_probs[(batch_idx*same_slide_repeats)+repeat_no] = probs
             all_probs.append(probs[0])
             all_labels_byrep.append(label[0].item())
             all_preds[(batch_idx*same_slide_repeats)+repeat_no] = Y_hat.item()
@@ -464,13 +452,8 @@ def summary_sampling(model, dataset, args):
                 error = calculate_error(Y_hat, label)
 
             test_error += error
-            #print("len all sample idxs",len(all_sample_idxs))
     
-    #assert 1==2, "probs {} labels {}".format(len(all_probs),len(all_labels))
     all_errors=[]
-    #if args.eval_features:
-      #  #for i in range(args.resampling_iterations):
-            #all_errors.append(round(calculate_error(torch.Tensor(Y_hats[i::args.resampling_iterations]),torch.Tensor(all_labels)),3))
     if not args.eval_features:
         try:
             for i in range(args.resampling_iterations):
@@ -493,13 +476,8 @@ def summary_sampling(model, dataset, args):
     test_error /= num_slides
     aucs = []
     all_probs=np.array(all_probs)
-    #print(all_labels_byrep)
-    #print(all_probs)
-    #print(roc_auc_score(all_labels_byrep,all_probs[:,1]))
-    #print(len(all_labels_byrep))
+    
     if len(np.unique(all_labels)) == 2:
-        #print(all_labels_byrep)
-        #print(all_probs)
         auc_score = roc_auc_score(all_labels_byrep, all_probs[:,1])
     else:
         aucs = []
@@ -519,8 +497,6 @@ def summary_sampling(model, dataset, args):
         results_dict.update({'p_{}'.format(c): all_probs[:,c]})
 
     df = pd.DataFrame(results_dict)
-    #print("all errors: ",all_errors)
-    #print("all aucs: ",all_aucs)
     loss /= len(loader)
     return test_error, auc_score, df, acc_logger, loss
 
