@@ -115,6 +115,7 @@ def resnet18_baseline(pretrained=False,dataset='ImageNet'):
     """
     if dataset=='ImageNet':
         model = torchvision.models.__dict__['resnet18'](pretrained=pretrained)
+        model.fc = torch.nn.Sequential()
     else:
         model = torchvision.models.__dict__['resnet18'](pretrained=False)
     if pretrained and dataset=="Histo":
