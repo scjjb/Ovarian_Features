@@ -349,21 +349,24 @@ def summary_sampling(model, dataset, args):
                     sampling_random=0
                 num_random=int(samples_per_iteration*sampling_random)
                                                                         
-                sampling_weights=update_sampling_weights(sampling_weights,attention_scores,all_sample_idxs,indices,neighbors,power=args.weight_smoothing,normalise=False,
-                                        sampling_update=sampling_update,repeats_allowed=False)
-                
-                if args.plot_weighting_gif:
-                                plot_weighting_gif(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,iteration_count+1,slide,x_coords,y_coords,final_iteration=False)
+                ## get new sample
+                sampling_weights=update_sampling_weights(sampling_weights,attention_scores,all_sample_idxs,indices,neighbors,power=args.weight_smoothing,normalise=False,sampling_update=sampling_update,repeats_allowed=False)
                 sample_idxs=generate_sample_idxs(len(coords),all_sample_idxs,sampling_weights/sum(sampling_weights),samples_per_iteration,num_random)
                 distances, indices = nbrs.kneighbors(X[sample_idxs])
-                all_sample_idxs=all_sample_idxs+sample_idxs
                 
+                ## update gifs - may be possible to simplify this 
+                if args.plot_weighting_gif:
+                    plot_weighting_gif(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,iteration_count+1,slide,x_coords,y_coords,final_iteration=False)
                 if args.plot_sampling_gif:
                     if args.use_all_samples:
-                        plot_sampling_gif(slide_id,coords[all_sample_idxs],args,iteration_count+1,slide,final_iteration=False)
+                        plot_sampling_gif(slide_id,coords[all_sample_idxs+sample_idxs],args,iteration_count+1,slide,final_iteration=False)
                     else:
                         plot_sampling_gif(slide_id,coords[sample_idxs],args,iteration_count+1,slide,final_iteration=False)
 
+                ## store new sample ids
+                all_sample_idxs=all_sample_idxs+sample_idxs
+
+                ## get new sample features
                 if args.eval_features:
                     sampled_data.update_sample(sample_idxs)
                     loader = DataLoader(dataset=sampled_data, batch_size=args.batch_size, **kwargs, collate_fn=collate_features)
@@ -376,13 +379,14 @@ def summary_sampling(model, dataset, args):
                 else:
                     data_sample=data[sample_idxs].to(device)
 
-
+                ## run classifier on new samples
                 with torch.no_grad():
                     logits, Y_prob, Y_hat, raw_attention, results_dict = model(data_sample)
                 attention_scores=torch.nn.functional.softmax(raw_attention,dim=1)[0].cpu()
                 attention_scores=attention_scores[-samples_per_iteration:]
                 attn_scores_list=raw_attention[0].cpu().tolist()
 
+                ## find best samples to keep if not keeping all previous samples
                 if not args.use_all_samples:
                     attn_scores_combined=attn_scores_list+best_attn_scores
                     idxs_combined=sample_idxs+best_sample_idxs
@@ -394,11 +398,14 @@ def summary_sampling(model, dataset, args):
                         attn_idxs=[idx.item() for idx in np.argsort(attn_scores_combined)][::-1]
                         best_sample_idxs=[idxs_combined[attn_idx] for attn_idx in attn_idxs][:args.retain_best_samples]
                         best_attn_scores=[attn_scores_combined[attn_idx] for attn_idx in attn_idxs][:args.retain_best_samples]
+                
+                ## store results per iteration
                 Y_hats.append(Y_hat)
                 labels.append(label)
                 Y_probs.append(Y_prob)
                 all_logits.append(logits)
-                                                             
+                                              
+                ## update neighbors parameter
                 neighbors=neighbors-args.sampling_neighbors_delta
         
             ## Final sampling iteration
