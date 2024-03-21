@@ -50,6 +50,7 @@ parser.add_argument('--ms_features',choices=["naive","seperate_zero","seperate_a
 
 
 ## Data settings
+parser.add_argument('--seed', type=int, default=1,help='random seed for reproducible experiment (default: 1)')
 parser.add_argument('--k', type=int, default=10, help='number of folds (default: 10)')
 parser.add_argument('--k_start', type=int, default=-1, help='start fold (default: -1, last fold)')
 parser.add_argument('--k_end', type=int, default=-1, help='end fold (default: -1, first fold)')
