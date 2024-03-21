@@ -110,10 +110,7 @@ def eval(config, dataset, args, ckpt_path, class_counts = None):
     else:
         loss_fn = nn.CrossEntropyLoss()
     
-    if args.eval_features:
-        test_error, auc, df, _, loss = summary_sampling(model,dataset,args)
-
-    elif args.sampling:
+    if args.sampling:
         assert 0<=args.sampling_random<=1,"sampling_random needs to be between 0 and 1"
         dataset.load_from_h5(True)
         #loader = get_simple_loader(dataset)
@@ -157,38 +154,24 @@ def summary_sampling(model, dataset, args):
     all_logits=[]
     all_probs=[]
     all_labels_byrep=[]
-    if args.eval_features:
-        if args.cpu_only:
-            device=torch.device("cpu")
-
-        kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {} 
-        feature_extraction_model=resnet50_baseline(pretrained=True,dataset=args.pretraining_dataset)
-        feature_extraction_model = feature_extraction_model.to(device)
-        
-        label_dict=args.label_dict
-        all_labels = pd.read_csv(args.csv_path)['label']
-        all_labels=[label_dict[key] for key in all_labels]
-        all_labels_tensor=torch.Tensor(all_labels)
-        iterator=range(len(dataset))
     
-    else:
-        loader = get_simple_loader(dataset, model_type=args.model_type)
-        all_labels = np.zeros(num_slides)
-        slide_ids = loader.dataset.slide_data['slide_id']
-        slide_id_list=[]
-        texture_dataset = []
+    loader = get_simple_loader(dataset, model_type=args.model_type)
+    all_labels = np.zeros(num_slides)
+    slide_ids = loader.dataset.slide_data['slide_id']
+    slide_id_list=[]
+    texture_dataset = []
         
-        if args.sampling_type=='textural':
-            if args.texture_model=='levit_128s':
-                texture_dataset =  Generic_MIL_Dataset(csv_path = args.csv_path,
-                        data_dir= os.path.join(args.data_root_dir, 'levit_128s'),
-                        shuffle = False,
-                        print_info = True,
-                        label_dict = args.label_dict,
-                        patient_strat= False,
-                        ignore=[])
-                slide_id_list = list(pd.read_csv(args.csv_path)['slide_id'])
-        iterator=loader
+    if args.sampling_type=='textural':
+        if args.texture_model=='levit_128s':
+            texture_dataset =  Generic_MIL_Dataset(csv_path = args.csv_path,
+                    data_dir= os.path.join(args.data_root_dir, 'levit_128s'),
+                    shuffle = False,
+                    print_info = True,
+                    label_dict = args.label_dict,
+                    patient_strat= False,
+                    ignore=[])
+            slide_id_list = list(pd.read_csv(args.csv_path)['slide_id'])
+    iterator=loader
 
     acc_logger = Accuracy_Logger(n_classes=args.n_classes)
 
@@ -212,32 +195,13 @@ def summary_sampling(model, dataset, args):
         if not args.tuning and not args.fully_random:
             print('\nprogress: {}/{}'.format(batch_idx, num_slides))
         
-        ## get features, either by calculating now or loading from file
-        if args.eval_features:
-            label=all_labels[batch_idx]
-            label_tensor=all_labels_tensor[batch_idx]
-            if isinstance(dataset[batch_idx],np.int64):
-                slide_id=str(dataset[batch_idx])
-            else:
-                slide_id = dataset[batch_idx].split(args.slide_ext)[0]
-
-            bag_name = slide_id+'.h5'
-            h5_file_path = os.path.join(args.data_h5_dir, 'patches', bag_name)
-            slide_file_path = os.path.join(args.data_slide_dir, slide_id+args.slide_ext)
-
-            wsi = openslide.open_slide(slide_file_path)
-            sampled_data = Whole_Slide_Bag_FP(file_path=h5_file_path, wsi=wsi, pretrained=True,
-                        custom_downsample=args.custom_downsample, target_patch_size=args.target_patch_size)
-            coords=sampled_data.coords(len(sampled_data))
-            X = np.array(coords)
-
-        else:
-            (data, label,coords,slide_id) = contents
-            coords=torch.tensor(coords)
-            X = generate_features_array(args, data, coords, slide_id, slide_id_list, texture_dataset)
-            nbrs = NearestNeighbors(n_neighbors=args.sampling_neighbors, algorithm='ball_tree').fit(X)
-            data, label, coords = data.to(device), label.to(device), coords.to(device)
-            slide_id=slide_id[0][0]
+        ## unpack loader and calculate nearest neighbors
+        (data, label,coords,slide_id) = contents
+        coords=torch.tensor(coords)
+        X = generate_features_array(args, data, coords, slide_id, slide_id_list, texture_dataset)
+        nbrs = NearestNeighbors(n_neighbors=args.sampling_neighbors, algorithm='ball_tree').fit(X)
+        data, label, coords = data.to(device), label.to(device), coords.to(device)
+        slide_id=slide_id[0][0]
 
 
         for repeat_no in range(same_slide_repeats):
@@ -246,22 +210,10 @@ def summary_sampling(model, dataset, args):
             if not args.sampling or args.fully_random or total_samples_per_slide>=len(coords):
                 if not args.sampling or total_samples_per_slide>=len(coords): 
                     print("full slide used for slide {} with {} patches".format(slide_id,len(coords)))
-                    if args.eval_features:
-                        sample_idxs=generate_sample_idxs(len(coords),[],[],len(coords),num_random=len(coords),grid=False,coords=coords)
-                        sampled_data.update_sample(sample_idxs)
-                        loader = DataLoader(dataset=sampled_data, batch_size=args.batch_size, **kwargs, collate_fn=collate_features)
-                        data_sample=extract_features(args,loader,feature_extraction_model,use_cpu=args.cpu_only)
-                        data_sample.to(device)
-                    else:
-                        data_sample=data
+                    data_sample=data
                 else:
                     sample_idxs=generate_sample_idxs(len(coords),[],[],samples_per_iteration,num_random=samples_per_iteration,grid=args.initial_grid_sample,coords=coords)
-                    if args.eval_features:
-                        sampled_data.update_sample(sample_idxs)
-                        loader = DataLoader(dataset=sampled_data, batch_size=args.batch_size, **kwargs, collate_fn=collate_features)
-                        data_sample.to(device)
-                    else:
-                        data_sample=data[sample_idxs].to(device)
+                    data_sample=data[sample_idxs].to(device)
                     
                 with torch.no_grad():
                     logits, Y_prob, Y_hat, raw_attention, _ = model(data_sample)
@@ -279,16 +231,10 @@ def summary_sampling(model, dataset, args):
                         new_attentions[sample_idxs[i]]=attention_scores[i]
                     plot_weighting(slide_id,coords,new_attentions,args,Y_hat==label)
                 
-                if args.eval_features:
-                    all_labels_byrep.append(label)
-                else:
-                    all_labels_byrep.append(label[0].item())
+                all_labels_byrep.append(label[0].item())
                 all_preds[(batch_idx*same_slide_repeats)+repeat_no] = Y_hat.item()
-                if args.eval_features:
-                    error = calculate_error(Y_hat, label_tensor)
-                else:
-                    all_labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
-                    error = calculate_error(Y_hat, label)
+                all_labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
+                error = calculate_error(Y_hat, label)
                 test_error += error
                 continue
 
@@ -296,19 +242,7 @@ def summary_sampling(model, dataset, args):
             sample_idxs=generate_sample_idxs(len(coords),[],[],samples_per_iteration,num_random=samples_per_iteration,grid=args.initial_grid_sample,coords=coords)
             all_sample_idxs=sample_idxs
             sampling_weights=np.full(shape=len(coords),fill_value=0.0001)
-            if args.eval_features:
-                sampled_data.update_sample(sample_idxs)
-                loader = DataLoader(dataset=sampled_data, batch_size=args.batch_size, **kwargs, collate_fn=collate_features)
-                if len(sample_idxs)>20000:
-                    print("very large slide - using cpu. Disable this functionality if using beefy GPU (approx 8GB GPU ram or more)")
-                    data_sample=extract_features(args,loader,feature_extraction_model,use_cpu=True)
-                else:
-                    data_sample=extract_features(args,loader,feature_extraction_model,use_cpu=False)
-                data_sample.to(device)
-                all_previous_features=data_sample
-                all_sample_idxs=sample_idxs
-            else:
-                data_sample=data[sample_idxs].to(device)
+            data_sample=data[sample_idxs].to(device)
 
             with torch.no_grad():
                 logits, Y_prob, Y_hat, raw_attention, results_dict = model(data_sample)
@@ -367,17 +301,7 @@ def summary_sampling(model, dataset, args):
                 all_sample_idxs=all_sample_idxs+sample_idxs
 
                 ## get new sample features
-                if args.eval_features:
-                    sampled_data.update_sample(sample_idxs)
-                    loader = DataLoader(dataset=sampled_data, batch_size=args.batch_size, **kwargs, collate_fn=collate_features)
-                    data_sample=extract_features(args,loader,feature_extraction_model,use_cpu=False)
-                    all_previous_features=torch.cat((all_previous_features,data_sample))
-                    if args.use_all_samples:
-                        if iteration_count==args.resampling_iterations-2: 
-                            data_sample=all_previous_features
-                    data_sample.to(device)
-                else:
-                    data_sample=data[sample_idxs].to(device)
+                data_sample=data[sample_idxs].to(device)
 
                 ## run classifier on new samples
                 with torch.no_grad():
@@ -420,16 +344,7 @@ def summary_sampling(model, dataset, args):
                 all_sample_idxs=all_sample_idxs+sample_idxs
                 sample_idxs=sample_idxs+best_sample_idxs
     
-            if args.eval_features:
-                sampled_data.update_sample(sample_idxs)
-                loader = DataLoader(dataset=sampled_data, batch_size=args.batch_size, **kwargs, collate_fn=collate_features)
-                data_sample=extract_features(args,loader,feature_extraction_model,use_cpu=args.cpu_only)
-                all_previous_features=torch.cat((all_previous_features,data_sample))
-                if args.use_all_samples:
-                    data_sample=all_previous_features
-                data_sample.to(device)
-            else:
-                data_sample=data[sample_idxs].to(device)
+            data_sample=data[sample_idxs].to(device)
 
             with torch.no_grad():
                 logits, Y_prob, Y_hat, raw_attention, results_dict = model(data_sample)
@@ -452,33 +367,29 @@ def summary_sampling(model, dataset, args):
                 plot_weighting_gif(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,iteration_count+1,Y_hat==label,slide,x_coords,y_coords,final_iteration=True)
 
 
-            if args.eval_features:
-                error = calculate_error(Y_hat, label_tensor)
-            else:
-                all_labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
-                error = calculate_error(Y_hat, label)
+            all_labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
+            error = calculate_error(Y_hat, label)
 
             test_error += error
     
     all_errors=[]
-    if not args.eval_features:
-        try:
-            for i in range(args.resampling_iterations):
-                 all_errors.append(round(calculate_error(torch.Tensor(Y_hats[i::args.resampling_iterations]),torch.Tensor(labels[i::args.resampling_iterations])),3))
-        except:
-            print("all errors didn't run, likely caused by a slide being too small for sampling")
+    try:
+        for i in range(args.resampling_iterations):
+            all_errors.append(round(calculate_error(torch.Tensor(Y_hats[i::args.resampling_iterations]),torch.Tensor(labels[i::args.resampling_iterations])),3))
+    except:
+        print("all errors didn't run, likely caused by a slide being too small for sampling")
     
-        all_aucs=[]
-        if len(np.unique(all_labels)) == 2:
-            if len(all_labels)==len([yprob.tolist()[0][1] for yprob in Y_probs[0::args.resampling_iterations]]):
-                for i in range(args.resampling_iterations):
-                    auc_score = roc_auc_score(all_labels,[yprob.tolist()[0][1] for yprob in Y_probs[i::args.resampling_iterations]])
-                    all_aucs.append(round(auc_score,3))
-                print("all aucs: ",all_aucs)
-            else:
-                print("scoring by iteration unavailable as not all slides could be sampled")
+    all_aucs=[]
+    if len(np.unique(all_labels)) == 2:
+        if len(all_labels)==len([yprob.tolist()[0][1] for yprob in Y_probs[0::args.resampling_iterations]]):
+            for i in range(args.resampling_iterations):
+                auc_score = roc_auc_score(all_labels,[yprob.tolist()[0][1] for yprob in Y_probs[i::args.resampling_iterations]])
+                all_aucs.append(round(auc_score,3))
+            print("all aucs: ",all_aucs)
         else:
-            print("AUC scoring by iteration not implemented for multi-class classification yet")
+            print("scoring by iteration unavailable as not all slides could be sampled")
+    else:
+        print("AUC scoring by iteration not implemented for multi-class classification yet")
         
     test_error /= num_slides
     aucs = []
