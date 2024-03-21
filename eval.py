@@ -114,7 +114,8 @@ if args.cpu_only:
     torch.cuda.is_available = lambda : False
     device=torch.device("cpu")
 
-args.save_dir = os.path.join('./eval_results', 'EVAL_' + str(args.save_exp_code))
+
+args.save_dir = os.path.join(args.results_dir,'eval_results', 'EVAL_' + str(args.save_exp_code))
 args.models_dir = os.path.join(args.results_dir, str(args.models_exp_code))
 
 os.makedirs(args.save_dir, exist_ok=True)
