@@ -23,8 +23,9 @@ args = parser.parse_args()
 model_names=args.model_names.split(",")
 bootstraps=args.bootstraps
 
+model_folder = "/mnt/results/eval_results"
 for model_name in model_names:
-    full_model_name='eval_results/EVAL_'+model_name
+    full_model_name=model_folder+'/EVAL_'+model_name
 
     all_auc_means=[]
     all_f1_means=[]
