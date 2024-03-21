@@ -9,7 +9,7 @@ from models.model_graph_mil import PatchGCN
 import os
 import pandas as pd
 from utils.utils import *
-from utils.core_utils import Accuracy_Logger, evaluate
+from utils.core_utils import Accuracy_Logger, evaluate, seed_torch
 from utils.sampling_utils import generate_sample_idxs, generate_features_array, update_sampling_weights, plot_sampling, plot_sampling_gif, plot_weighting, plot_weighting_gif
 from sklearn.metrics import roc_auc_score, roc_curve, auc
 from sklearn.preprocessing import label_binarize
@@ -113,7 +113,7 @@ def eval(config, dataset, args, ckpt_path, class_counts = None):
     if args.sampling:
         assert 0<=args.sampling_random<=1,"sampling_random needs to be between 0 and 1"
         dataset.load_from_h5(True)
-        #loader = get_simple_loader(dataset)
+        seed_torch(args.seed)
         test_error, auc, df, _, loss = summary_sampling(model,dataset, args)
     else:
         loader = get_simple_loader(dataset, model_type=args.model_type)
