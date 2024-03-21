@@ -114,10 +114,10 @@ def eval(config, dataset, args, ckpt_path, class_counts = None):
         assert 0<=args.sampling_random<=1,"sampling_random needs to be between 0 and 1"
         dataset.load_from_h5(True)
         seed_torch(args.seed)
-        test_error, auc, df, _, loss = summary_sampling(model,dataset, args)
+        test_error, auc, df, _, loss = evaluate_sampling(model,dataset, args, loss_fn=loss_fn)
     else:
         loader = get_simple_loader(dataset, model_type=args.model_type)
-        _, acc, bal_acc, f1, auc, loss, _, df = evaluate(model, loader, args.n_classes, "final")
+        _, acc, bal_acc, f1, auc, loss, _, df = evaluate(model, loader, args.n_classes, "final", loss_fn=loss_fn)
         test_error = 1-acc
 
     if args.tuning:
@@ -127,10 +127,12 @@ def eval(config, dataset, args, ckpt_path, class_counts = None):
     return test_error, auc, df, loss
 
 
-def summary_sampling(model, dataset, args):
+def evaluate_sampling(model, dataset, args, loss_fn = None):
+    device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model.eval()
-    
-    loss_fn = nn.CrossEntropyLoss()
+
+    if loss_fn is None:
+        loss_fn = nn.CrossEntropyLoss()
 
     if args.tuning:
         same_slide_repeats=args.same_slide_repeats
@@ -147,16 +149,22 @@ def summary_sampling(model, dataset, args):
     else:
         sampling_update='max'
 
-    ## Collecting Y_hats and labels to view performance across resampling iterations
-    Y_hats=[]
-    labels=[]
-    Y_probs=[]
-    all_logits=[]
-    all_probs=[]
-    all_labels_byrep=[]
+    ## Collecting predictions per sampling iteration to view performance across resampling iterations
+    Y_hats_per_sample = []
+    probs_per_sample = []
+    logits_per_sample = []
+    labels_per_sample = []
+
+    ## Collecting final predictions for overall analysis
+    final_probs = []
+    final_preds = np.zeros(num_slides)
+    final_logits = []
+    labels = np.zeros(num_slides)
+
+    test_loss = 0.
+    test_error = 0.
     
     loader = get_simple_loader(dataset, model_type=args.model_type)
-    all_labels = np.zeros(num_slides)
     slide_ids = loader.dataset.slide_data['slide_id']
     slide_id_list=[]
     texture_dataset = []
@@ -171,29 +179,21 @@ def summary_sampling(model, dataset, args):
                     patient_strat= False,
                     ignore=[])
             slide_id_list = list(pd.read_csv(args.csv_path)['slide_id'])
-    iterator=loader
 
     acc_logger = Accuracy_Logger(n_classes=args.n_classes)
 
-    test_loss = 0.
-    test_error = 0.
-    all_preds = np.zeros(num_slides)
-    
     num_random=int(args.samples_per_iteration*args.sampling_random)
     
+    total_samples_per_slide = (args.samples_per_iteration*args.resampling_iterations)+args.final_sample_size
     if args.fully_random:
-        total_samples_per_slide=args.samples_per_iteration    
-    else:
-        total_samples_per_slide = (args.samples_per_iteration*args.resampling_iterations)+args.final_sample_size
-    if args.sampling:
-        print("Total patches sampled per slide: ",total_samples_per_slide)
+        total_samples_per_slide=args.samples_per_iteration
+    print("Total patches sampled per slide: ",total_samples_per_slide)
     
-    final_logits=[]
     
     loss = 0.
-    for batch_idx, contents in enumerate(iterator):
-        if not args.tuning and not args.fully_random:
-            print('\nprogress: {}/{}'.format(batch_idx, num_slides))
+    for batch_idx, contents in enumerate(loader):
+        if not args.tuning:
+            print('progress: {}/{}'.format(batch_idx, num_slides))
         
         ## unpack loader and calculate nearest neighbors
         (data, label,coords,slide_id) = contents
@@ -217,23 +217,28 @@ def summary_sampling(model, dataset, args):
                     
                 with torch.no_grad():
                     logits, Y_prob, Y_hat, raw_attention, _ = model(data_sample)
-                Y_hats.append(Y_hat)
-                acc_logger.log(Y_hat, label)
-                probs = Y_prob.cpu().numpy()
-                 
-                all_probs.append(probs[0])
+                probs = Y_prob.cpu().numpy()[0]
+                #Y_hats_per_sample.append(Y_hat)
+                #probs_per_sample.append(probs[0])
+                #labels_per_sample.append(label[0].item())
+                #preds_per_sample[(batch_idx*same_slide_repeats)+repeat_no] = Y_hat.item()
                 
+                ## no scores per sample as this is the only sample
+                final_probs.append(probs)
+                #labels.append(label[0].item())
+                final_preds[(batch_idx*same_slide_repeats)+repeat_no] = Y_hat.item()
+                labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
 
-                if args.plot_weighting:
-                    attention_scores=raw_attention[0]
-                    new_attentions = np.repeat(min(attention_scores.cpu()),len(coords))
-                    for i in range(len(sample_idxs)):
-                        new_attentions[sample_idxs[i]]=attention_scores[i]
-                    plot_weighting(slide_id,coords,new_attentions,args,Y_hat==label)
+                #if args.plot_weighting:
+                #    attention_scores=raw_attention[0]
+                #    new_attentions = np.repeat(min(attention_scores.cpu()),len(coords))
+                #    for i in range(len(sample_idxs)):
+                #        new_attentions[sample_idxs[i]]=attention_scores[i]
+                #    plot_weighting(slide_id,coords,new_attentions,args,Y_hat==label)
                 
-                all_labels_byrep.append(label[0].item())
-                all_preds[(batch_idx*same_slide_repeats)+repeat_no] = Y_hat.item()
-                all_labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
+                #labels_per_sample.append(label[0].item())
+                #all_preds[(batch_idx*same_slide_repeats)+repeat_no] = Y_hat.item()
+                #labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
                 error = calculate_error(Y_hat, label)
                 test_error += error
                 continue
@@ -246,9 +251,11 @@ def summary_sampling(model, dataset, args):
 
             with torch.no_grad():
                 logits, Y_prob, Y_hat, raw_attention, results_dict = model(data_sample)
+            probs = Y_prob.cpu().numpy()[0]
             attention_scores=torch.nn.functional.softmax(raw_attention,dim=1)[0]#.cpu()
             attn_scores_list=raw_attention[0].cpu().tolist()
-        
+            
+
             if not args.use_all_samples:
                 if args.samples_per_iteration<=args.retain_best_samples:
                     best_sample_idxs=sample_idxs
@@ -264,10 +271,11 @@ def summary_sampling(model, dataset, args):
             if args.plot_weighting_gif:
                 slide,x_coords,y_coords=plot_weighting_gif(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,0,slide=None,final_iteration=False)
 
-            Y_hats.append(Y_hat)
-            labels.append(label)
-            Y_probs.append(Y_prob)
-            all_logits.append(logits)
+            ## Store results per iteration
+            Y_hats_per_sample.append(Y_hat)
+            probs_per_sample.append(probs)
+            logits_per_sample.append(logits)
+            labels_per_sample.append(label)
 
             ## Find nearest neighbors of each patch to prepare for spatial resampling
             nbrs = NearestNeighbors(n_neighbors=args.sampling_neighbors, algorithm='ball_tree').fit(X)
@@ -306,6 +314,7 @@ def summary_sampling(model, dataset, args):
                 ## run classifier on new samples
                 with torch.no_grad():
                     logits, Y_prob, Y_hat, raw_attention, results_dict = model(data_sample)
+                probs = Y_prob.cpu().numpy()[0]
                 attention_scores=torch.nn.functional.softmax(raw_attention,dim=1)[0].cpu()
                 attention_scores=attention_scores[-samples_per_iteration:]
                 attn_scores_list=raw_attention[0].cpu().tolist()
@@ -323,12 +332,13 @@ def summary_sampling(model, dataset, args):
                         best_sample_idxs=[idxs_combined[attn_idx] for attn_idx in attn_idxs][:args.retain_best_samples]
                         best_attn_scores=[attn_scores_combined[attn_idx] for attn_idx in attn_idxs][:args.retain_best_samples]
                 
-                ## store results per iteration
-                Y_hats.append(Y_hat)
-                labels.append(label)
-                Y_probs.append(Y_prob)
-                all_logits.append(logits)
                                               
+                ## Store results per iteration
+                Y_hats_per_sample.append(Y_hat)
+                probs_per_sample.append(probs)
+                logits_per_sample.append(logits)
+                labels_per_sample.append(label)
+
                 ## update neighbors parameter
                 neighbors=neighbors-args.sampling_neighbors_delta
         
@@ -348,15 +358,26 @@ def summary_sampling(model, dataset, args):
 
             with torch.no_grad():
                 logits, Y_prob, Y_hat, raw_attention, results_dict = model(data_sample)
+            probs = Y_prob.cpu().numpy()[0]
 
             acc_logger.log(Y_hat, label)
-            probs = Y_prob.cpu().numpy()
             
-            all_probs.append(probs[0])
-            all_labels_byrep.append(label[0].item())
-            all_preds[(batch_idx*same_slide_repeats)+repeat_no] = Y_hat.item()
+            ## Store results per iteration
+            Y_hats_per_sample.append(Y_hat)
+            probs_per_sample.append(probs)
+            logits_per_sample.append(logits)
+            labels_per_sample.append(label)
+
+            ## Store final results to calculate metrics
+            final_probs.append(probs)
+            final_preds[batch_idx] = Y_hat.item()
+            final_logits.append(logits)
+
+            ## Calculate loss using final sample
             loss_value = loss_fn(logits, label)
             loss += loss_value.item()
+
+            ## Plot anything wanting plotting
             if args.plot_sampling:
                 plot_sampling(slide_id,coords[sample_idxs],args,Y_hat==label)
             if args.plot_sampling_gif:
@@ -367,12 +388,13 @@ def summary_sampling(model, dataset, args):
                 plot_weighting_gif(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,iteration_count+1,Y_hat==label,slide,x_coords,y_coords,final_iteration=True)
 
 
-            all_labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
+            labels[(batch_idx*same_slide_repeats)+repeat_no] = label.item()
             error = calculate_error(Y_hat, label)
-
             test_error += error
     
     all_errors=[]
+    probs_per_sample = np.array(probs_per_sample)
+    #print(probs_per_sample)
     try:
         for i in range(args.resampling_iterations):
             all_errors.append(round(calculate_error(torch.Tensor(Y_hats[i::args.resampling_iterations]),torch.Tensor(labels[i::args.resampling_iterations])),3))
@@ -380,12 +402,12 @@ def summary_sampling(model, dataset, args):
         print("all errors didn't run, likely caused by a slide being too small for sampling")
     
     all_aucs=[]
-    if len(np.unique(all_labels)) == 2:
-        if len(all_labels)==len([yprob.tolist()[0][1] for yprob in Y_probs[0::args.resampling_iterations]]):
+    if len(np.unique(labels)) == 2:
+        if len(labels)==len([yprob.tolist()[1] for yprob in probs_per_sample[0::args.resampling_iterations]]):
             for i in range(args.resampling_iterations):
-                auc_score = roc_auc_score(all_labels,[yprob.tolist()[0][1] for yprob in Y_probs[i::args.resampling_iterations]])
+                auc_score = roc_auc_score(labels,[yprob.tolist()[1] for yprob in probs_per_sample[i::args.resampling_iterations]])
                 all_aucs.append(round(auc_score,3))
-            print("all aucs: ",all_aucs)
+            print("AUC per sampling iteration: ",all_aucs)
         else:
             print("scoring by iteration unavailable as not all slides could be sampled")
     else:
@@ -393,26 +415,36 @@ def summary_sampling(model, dataset, args):
         
     test_error /= num_slides
     aucs = []
-    all_probs=np.array(all_probs)
-    
-    if len(np.unique(all_labels)) == 2:
-        auc_score = roc_auc_score(all_labels_byrep, all_probs[:,1])
+    final_probs = np.array(final_probs)
+    #probs_per_sample = np.array(probs_per_sample)
+    #print(probs_per_sample)
+    #print("Y_hats_per_sample",Y_hats_per_sample,len(Y_hats_per_sample))
+    #print("probs per sample",probs_per_sample,len(probs_per_sample))
+    #print("logits_per_sample",logits_per_sample,len(logits_per_sample))
+    #print("labels_per_sample",labels_per_sample,len(labels_per_sample))
+    #print("final_probs",final_probs)
+    #print("final_preds",final_preds)
+    #print("final_logits",final_logits)
+    #print("labels",labels)
+
+    if len(np.unique(labels)) == 2:
+        auc_score = roc_auc_score(labels, final_probs[:,1])
     else:
         aucs = []
-        n_classes=len(np.unique(all_labels))
-        binary_labels = label_binarize(all_labels, classes=[i for i in range(n_classes)])
+        n_classes=len(np.unique(labels))
+        binary_labels = label_binarize(labels, classes=[i for i in range(n_classes)])
         for class_idx in range(n_classes):
-            if class_idx in all_labels:
-                fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], all_probs[:, class_idx])
+            if class_idx in labels:
+                fpr, tpr, _ = roc_curve(binary_labels[:, class_idx], final_probs[:,class_idx])
                 aucs.append(auc(fpr, tpr))
             else:
                 aucs.append(float('nan'))
 
             auc_score = np.nanmean(np.array(aucs))
 
-    results_dict = {'Y': all_labels, 'Y_hat': all_preds}
+    results_dict = {'Y': labels, 'Y_hat': final_preds}
     for c in range(args.n_classes):
-        results_dict.update({'p_{}'.format(c): all_probs[:,c]})
+        results_dict.update({'p_{}'.format(c): final_probs[:,c]})
 
     df = pd.DataFrame(results_dict)
     loss /= len(loader)
