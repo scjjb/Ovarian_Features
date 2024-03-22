@@ -175,6 +175,10 @@ def update_sampling_weights(sampling_weights, attention_scores, all_sample_idxs,
         for i in range(len(indices)):
             for index in indices[i][:neighbors]:
                 new_attentions[index]=attention_scores[i]
+        new_attentions=pow(new_attentions,power)
+        for i in range(len(sampling_weights)):
+                if new_attentions[i]>sampling_weights[i]:
+                    sampling_weights[i]=new_attentions[i]
 
     if not repeats_allowed:
         for sample_idx in all_sample_idxs:

@@ -159,11 +159,6 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
     test_loss = 0.
     test_error = 0.
 
-    if args.sampling_average:
-        sampling_update='average'
-    else:
-        sampling_update='max'
-
     ## Collecting predictions per sampling iteration to view performance across resampling iterations
     Y_hats_per_sample = []
     probs_per_sample = []
@@ -293,8 +288,8 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
                 num_random=int(samples_per_iteration*sampling_random)
                                                                         
                 ## get new sample
-                sampling_weights=update_sampling_weights(sampling_weights,attention_scores,all_sample_idxs,indices,neighbors,power=args.weight_smoothing,normalise=False,sampling_update=sampling_update,repeats_allowed=False)
-                sample_idxs=generate_sample_idxs(len(coords),all_sample_idxs,sampling_weights/sum(sampling_weights),samples_per_iteration,num_random)
+                sampling_weights = update_sampling_weights(sampling_weights, attention_scores, all_sample_idxs, indices, neighbors, power=args.weight_smoothing, normalise=False, sampling_update=args.sampling_update, repeats_allowed=False)
+                sample_idxs = generate_sample_idxs(len(coords), all_sample_idxs, sampling_weights/sum(sampling_weights), samples_per_iteration, num_random)
                 distances, indices = nbrs.kneighbors(X[sample_idxs])
                 
                 ## update gifs - may be possible to simplify this 
@@ -335,7 +330,7 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
         
             ## FINAL SAMPLING ITERATION
             ## get new sample
-            sampling_weights=update_sampling_weights(sampling_weights,attention_scores,all_sample_idxs,indices,neighbors,power=args.weight_smoothing,normalise=False,sampling_update=sampling_update,repeats_allowed=False)
+            sampling_weights=update_sampling_weights(sampling_weights,attention_scores,all_sample_idxs,indices,neighbors,power=args.weight_smoothing,normalise=False,sampling_update=args.sampling_update,repeats_allowed=False)
             if args.use_all_samples:
                 sample_idxs=generate_sample_idxs(len(coords),all_sample_idxs,sampling_weights/sum(sampling_weights),args.final_sample_size,num_random=0)
                 sample_idxs=sample_idxs+all_sample_idxs
