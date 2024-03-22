@@ -190,7 +190,6 @@ def update_sampling_weights(sampling_weights, attention_scores, all_sample_idxs,
             sampling_weights[sample_idx]=0
 
     if normalise:
-        #sampling_weights=sampling_weights/max(sampling_weights)
         sampling_weights=sampling_weights/sum(sampling_weights)
 
     return sampling_weights
@@ -266,23 +265,13 @@ def plot_weighting(slide_id,sample_coords,coords,weights,args,correct=False,thum
     x_values=x_values.cpu()
     y_values=y_values.cpu()
     
-    c='limegreen'
-    c2='darkgreen'
-    
-    ## make it more transparent for lower values
-    #cmap = colors.LinearSegmentedColormap.from_list(
-    #    'incr_alpha', [(0, (*colors.to_rgb(c),0)), (1, c2)])
-    cmap='jet'
-
-    plt.scatter(x_values, y_values, c=weights, cmap=cmap, s=3, alpha=0.6, marker="s", edgecolors='none')#, vmin=0, vmax=0.8)
-    #plt.colorbar()
+    plt.scatter(x_values, y_values, c=weights, cmap='jet', s=3, alpha=0.6, marker="s", edgecolors='none')
     x_samples, y_samples = sample_coords.T
     x_samples=(x_samples+128)*(thumbnail_size/max(slide.dimensions))
     y_samples=(y_samples+128)*(thumbnail_size/max(slide.dimensions))
     x_samples=x_samples.cpu()
     y_samples=y_samples.cpu()
     plt.scatter(x_samples,y_samples,c='white',s=3.5,alpha=1, edgecolors='none')
-    
 
     plt.axis('off')
     if correct:
@@ -307,28 +296,18 @@ def plot_weighting_gif(slide_id,sample_coords,coords,weights,args,iteration,corr
     plt.figure()
     plt.imshow(img)
     
-    c='limegreen'
-    c2='darkgreen'
+    if iteration > 0:
+        plt.scatter(x_coords, y_coords, c=weights, cmap='jet', s=3, alpha=0.6, marker="s", edgecolors='none')
 
-        ## make it more transparent for lower values
-        #cmap = colors.LinearSegmentedColormap.from_list(
-        #    'incr_alpha', [(0, (*colors.to_rgb(c),0)), (1, c2)])
-        #cmap='RdYlGn'
-    cmap='jet'
-    cmap = plt.get_cmap(cmap)
-        #plt.scatter(x_coords,y_coords,c=weights,cmap=cmap,s=2, marker="s",edgecolors='none')
-    plt.scatter(x_coords, y_coords, c=weights, cmap=cmap, s=3, alpha=0.6, marker="s", edgecolors='none')#, vmin=0, vmax=0.8)
-    #plt.colorbar()
-
-    x_samples, y_samples = sample_coords.T
-    x_samples=(x_samples+128)*(thumbnail_size/max(slide.dimensions))
-    y_samples=(y_samples+128)*(thumbnail_size/max(slide.dimensions))
-    x_samples=x_samples.cpu()
-    y_samples=y_samples.cpu()
-    plt.scatter(x_samples,y_samples,c='white',s=3.5,alpha=1, edgecolors='none')
-    plt.axis('off')
-    plt.savefig(args.plot_dir+'weight_maps/gifs/stills/{}_{}_iter{}.png'.format(slide_id,args.sampling_type,str(iteration).zfill(3)), dpi=300,bbox_inches='tight',pad_inches = 0)
-    plt.close()
+        x_samples, y_samples = sample_coords.T
+        x_samples=(x_samples+128)*(thumbnail_size/max(slide.dimensions))
+        y_samples=(y_samples+128)*(thumbnail_size/max(slide.dimensions))
+        x_samples=x_samples.cpu()
+        y_samples=y_samples.cpu()
+        plt.scatter(x_samples,y_samples,c='white',s=3.5,alpha=1, edgecolors='none')
+        plt.axis('off')
+        plt.savefig(args.plot_dir+'weight_maps/gifs/stills/{}_{}_iter{}.png'.format(slide_id,args.sampling_type,str(iteration).zfill(3)), dpi=300,bbox_inches='tight',pad_inches = 0)
+        plt.close()
     
     if final_iteration:
         print("Plotting weight gif for slide {} over {} iterations".format(slide_id,iteration+1))
