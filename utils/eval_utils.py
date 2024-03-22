@@ -280,7 +280,6 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
             labels_per_sample.append(label)
 
             ## Find nearest neighbors of each patch to prepare for spatial resampling
-            nbrs = NearestNeighbors(n_neighbors=args.sampling_neighbors, algorithm='ball_tree').fit(X)
             distances, indices = nbrs.kneighbors(X[sample_idxs])
         
             ## INTERMEDIATE SAMPLING ITERATIONS
