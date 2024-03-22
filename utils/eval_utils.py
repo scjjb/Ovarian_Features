@@ -156,8 +156,6 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
 
     num_slides=len(dataset)*same_slide_repeats
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    test_loss = 0.
-    test_error = 0.
 
     ## Collecting predictions per sampling iteration to view performance across resampling iterations
     Y_hats_per_sample = []
@@ -170,12 +168,11 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
     final_preds = np.zeros(num_slides)
     final_logits = []
     labels = np.zeros(num_slides)
-
-    test_loss = 0.
     test_error = 0.
-    
+    loss = 0.
+    acc_logger = Accuracy_Logger(n_classes=args.n_classes)
+
     loader = get_simple_loader(dataset, model_type=args.model_type)
-    slide_ids = loader.dataset.slide_data['slide_id']
     slide_id_list=[]
     texture_dataset = []
         
@@ -190,17 +187,13 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
                     ignore=[])
             slide_id_list = list(pd.read_csv(args.csv_path)['slide_id'])
 
-    acc_logger = Accuracy_Logger(n_classes=args.n_classes)
-
     num_random=int(args.samples_per_iteration*args.sampling_random)
-    
     total_samples_per_slide = (args.samples_per_iteration*args.resampling_iterations)+args.final_sample_size
+    
     if args.fully_random:
         total_samples_per_slide=args.samples_per_iteration
     print("Total patches sampled per slide: ",total_samples_per_slide)
     
-    
-    loss = 0.
     for batch_idx, contents in enumerate(loader):
         if not args.tuning:
             print('progress: {}/{}'.format(batch_idx, num_slides))
@@ -294,7 +287,7 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
                 
                 ## update gifs - may be possible to simplify this 
                 if args.plot_weighting_gif:
-                    plot_weighting_gif(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,iteration_count+1,slide,x_coords,y_coords,final_iteration=False)
+                    plot_weighting_gif(slide_id, coords[all_sample_idxs], coords, sampling_weights, args, iteration_count+1, slide=slide, x_coords=x_coords, y_coords=y_coords, final_iteration=False)
                 if args.plot_sampling_gif:
                     if args.use_all_samples:
                         plot_sampling_gif(slide_id,coords[all_sample_idxs+sample_idxs],args,iteration_count+1,slide,final_iteration=False)
@@ -372,9 +365,9 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
             if args.plot_sampling_gif:
                 plot_sampling_gif(slide_id,coords[sample_idxs],args,iteration_count+1,Y_hat==label,slide,final_iteration=True)
             if args.plot_weighting:
-                plot_weighting(slide_id,coords,sampling_weights,args,Y_hat==label)
+                plot_weighting(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,Y_hat==label)
             if args.plot_weighting_gif:
-                plot_weighting_gif(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,iteration_count+1,Y_hat==label,slide,x_coords,y_coords,final_iteration=True)
+                plot_weighting_gif(slide_id, coords[all_sample_idxs], coords, sampling_weights, args, iteration_count+1, slide=slide, x_coords=x_coords, y_coords=y_coords, final_iteration=True)
 
     
     all_errors=[]
