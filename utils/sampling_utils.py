@@ -7,6 +7,7 @@ from PIL import Image
 #from matplotlib import colors
 from multiprocessing.pool import Pool
 import random
+import os 
 
 def generate_sample_idxs(idxs_length,previous_samples,sampling_weights,samples_per_iteration,num_random,grid=False,coords=None):
     if grid:
@@ -193,6 +194,8 @@ def update_sampling_weights(sampling_weights, attention_scores, all_sample_idxs,
 
 def plot_sampling(slide_id,sample_coords,args,correct=False,thumbnail_size=1000):
     print("Plotting slide {} with {} samples".format(slide_id,len(sample_coords)))
+    os.makedirs(args.plot_dir+'sampling_maps/', exist_ok=True)
+    
     slide = openslide.open_slide(args.data_slide_dir+"/"+slide_id+".svs")
     img = slide.get_thumbnail((thumbnail_size,thumbnail_size))
     plt.figure()
@@ -208,14 +211,15 @@ def plot_sampling(slide_id,sample_coords,args,correct=False,thumbnail_size=1000)
         correct_str="correct"
     else:
         correct_str="incorrect"
-    plt.savefig('../mount_outputs/sampling_maps/{}_{}.png'.format(slide_id,correct_str), dpi=300)
+    plt.savefig(args.plot_dir+'sampling_maps/{}_{}.png'.format(slide_id,correct_str), dpi=300, pad_inches = 0, bbox_inches='tight')
     plt.close()
  
 
 def plot_sampling_gif(slide_id,sample_coords,args,iteration,correct=False,slide=None,final_iteration=False,thumbnail_size=1000):
     if slide==None:
         slide = openslide.open_slide(args.data_slide_dir+"/"+slide_id+".svs")
-    
+        os.makedirs(args.plot_dir+'sampling_maps/gifs/stills/', exist_ok=True)
+
     img = slide.get_thumbnail((thumbnail_size,thumbnail_size))
     plt.figure()
     plt.imshow(img)
@@ -226,17 +230,17 @@ def plot_sampling_gif(slide_id,sample_coords,args,iteration,correct=False,slide=
     y_values=y_values.cpu()
     plt.scatter(x_values,y_values,s=6)
     plt.axis('off')
-    plt.savefig('../mount_outputs/sampling_maps/{}_iter{}.png'.format(slide_id,str(iteration).zfill(3)), dpi=300)
+    plt.savefig(args.plot_dir+'sampling_maps/gifs/stills/{}_iter{}.png'.format(slide_id,str(iteration).zfill(3)), dpi=300,bbox_inches='tight',pad_inches = 0)
     plt.close()
     
     if final_iteration:
         print("Plotting gif for slide {} over {} iterations".format(slide_id,iteration+1))
-        fp_in = "../mount_outputs/sampling_maps/{}_iter*.png".format(slide_id)
+        fp_in = args.plot_dir+"sampling_maps/gifs/stills/{}_iter*.png".format(slide_id)
         if correct:
             correct_str="correct"
         else:
             correct_str="incorrect"
-        fp_out = "../mount_outputs/sampling_maps/{}_{}.gif".format(slide_id,correct_str)
+        fp_out = args.plot_dir+"sampling_maps/gifs/{}_{}.gif".format(slide_id,correct_str)
         imgs = (Image.open(f) for f in sorted(glob.glob(fp_in)))
         img = next(imgs)  # extract first image from iterator
         img.save(fp=fp_out, format='GIF', append_images=imgs,save_all=True, duration=200, loop=1)
@@ -244,8 +248,9 @@ def plot_sampling_gif(slide_id,sample_coords,args,iteration,correct=False,slide=
     return slide
 
 
-def plot_weighting(slide_id,coords,weights,args,correct=False,thumbnail_size=3000):
-    print("Plotting final weights CHECK THESE ARE ACTUALLY FINAL for slide {}.".format(slide_id))
+def plot_weighting(slide_id,sample_coords,coords,weights,args,correct=False,thumbnail_size=3000):
+    print("Plotting final weights for slide {}.".format(slide_id))
+    os.makedirs(args.plot_dir+'weight_maps/', exist_ok=True)
 
     slide = openslide.open_slide(args.data_slide_dir+"/"+slide_id+".svs")
     img = slide.get_thumbnail((thumbnail_size,thumbnail_size))
@@ -263,16 +268,24 @@ def plot_weighting(slide_id,coords,weights,args,correct=False,thumbnail_size=300
     ## make it more transparent for lower values
     #cmap = colors.LinearSegmentedColormap.from_list(
     #    'incr_alpha', [(0, (*colors.to_rgb(c),0)), (1, c2)])
-    cmap='coolwarm'
+    cmap='jet'
 
-    plt.scatter(x_values,y_values,c=weights,cmap=cmap,s=2, alpha=0.4, marker="s",edgecolors='none')
-    plt.colorbar()
+    plt.scatter(x_values, y_values, c=weights, cmap=cmap, s=3, alpha=0.6, marker="s", edgecolors='none', vmin=0, vmax=0.8)
+    #plt.colorbar()
+    x_samples, y_samples = sample_coords.T
+    x_samples=(x_samples+128)*(thumbnail_size/max(slide.dimensions))
+    y_samples=(y_samples+128)*(thumbnail_size/max(slide.dimensions))
+    x_samples=x_samples.cpu()
+    y_samples=y_samples.cpu()
+    plt.scatter(x_samples,y_samples,c='white',s=3.5,alpha=1, edgecolors='none')
+    
+
     plt.axis('off')
     if correct:
         correct_str="correct"
     else:
         correct_str="incorrect"
-    plt.savefig('../mount_outputs/weight_maps/{}_{}_{}.png'.format(slide_id,args.sampling_type,correct_str), dpi=1000)
+    plt.savefig(args.plot_dir+'weight_maps/{}_{}_{}.png'.format(slide_id,args.sampling_type,correct_str), dpi=500,pad_inches = 0, bbox_inches='tight')
     plt.close()
 
 
@@ -284,43 +297,43 @@ def plot_weighting_gif(slide_id,sample_coords,coords,weights,args,iteration,corr
         y_coords=(y_coords+128)*(thumbnail_size/max(slide.dimensions))
         x_coords=x_coords.cpu()
         y_coords=y_coords.cpu()
+        os.makedirs(args.plot_dir+'weight_maps/gifs/stills/', exist_ok=True)
+
+    img = slide.get_thumbnail((thumbnail_size,thumbnail_size))
+    plt.figure()
+    plt.imshow(img)
     
-    if iteration>0:
-        img = slide.get_thumbnail((thumbnail_size,thumbnail_size))
-        plt.figure()
-        plt.imshow(img)
-    
-        c='limegreen'
-        c2='darkgreen'
+    c='limegreen'
+    c2='darkgreen'
 
         ## make it more transparent for lower values
         #cmap = colors.LinearSegmentedColormap.from_list(
         #    'incr_alpha', [(0, (*colors.to_rgb(c),0)), (1, c2)])
         #cmap='RdYlGn'
-        cmap='jet'
-        cmap = plt.get_cmap(cmap)
+    cmap='jet'
+    cmap = plt.get_cmap(cmap)
         #plt.scatter(x_coords,y_coords,c=weights,cmap=cmap,s=2, marker="s",edgecolors='none')
-        plt.scatter(x_coords,y_coords,c=weights,cmap=cmap,s=1.6685,alpha=0.6,marker="s",edgecolors='none',vmin=0,vmax=0.8)
-        plt.colorbar()
+    plt.scatter(x_coords, y_coords, c=weights, cmap=cmap, s=3, alpha=0.6, marker="s", edgecolors='none', vmin=0, vmax=0.8)
+    #plt.colorbar()
 
-        x_samples, y_samples = sample_coords.T
-        x_samples=(x_samples+128)*(thumbnail_size/max(slide.dimensions))
-        y_samples=(y_samples+128)*(thumbnail_size/max(slide.dimensions))
-        x_samples=x_samples.cpu()
-        y_samples=y_samples.cpu()
-        plt.scatter(x_samples,y_samples,c='gray',s=1.6685,alpha=0.8,marker="s", edgecolors='none')
-        plt.axis('off')
-        plt.savefig('../mount_outputs/weight_maps/gifs/{}_{}_iter{}.png'.format(slide_id,args.sampling_type,str(iteration).zfill(3)), dpi=300,bbox_inches='tight')
-        plt.close()
+    x_samples, y_samples = sample_coords.T
+    x_samples=(x_samples+128)*(thumbnail_size/max(slide.dimensions))
+    y_samples=(y_samples+128)*(thumbnail_size/max(slide.dimensions))
+    x_samples=x_samples.cpu()
+    y_samples=y_samples.cpu()
+    plt.scatter(x_samples,y_samples,c='white',s=3.5,alpha=1, edgecolors='none')
+    plt.axis('off')
+    plt.savefig(args.plot_dir+'weight_maps/gifs/stills/{}_{}_iter{}.png'.format(slide_id,args.sampling_type,str(iteration).zfill(3)), dpi=300,bbox_inches='tight',pad_inches = 0)
+    plt.close()
     
     if final_iteration:
         print("Plotting weight gif for slide {} over {} iterations".format(slide_id,iteration+1))
-        fp_in = "../mount_outputs/weight_maps/gifs/{}_{}_iter*.png".format(slide_id,args.sampling_type)
+        fp_in = args.plot_dir+"weight_maps/gifs/stills/{}_{}_iter*.png".format(slide_id,args.sampling_type)
         if correct:
             correct_str="correct"
         else:
             correct_str="incorrect"
-        fp_out = "../mount_outputs/weight_maps/{}_{}_{}.gif".format(slide_id,args.sampling_type,correct_str)
+        fp_out = args.plot_dir+"weight_maps/gifs/{}_{}_{}.gif".format(slide_id,args.sampling_type,correct_str)
         imgs = (Image.open(f) for f in sorted(glob.glob(fp_in)))
         img = next(imgs)  # extract first image from iterator
         img.save(fp=fp_out, format='GIF', append_images=imgs,save_all=True, duration=500, loop=1)

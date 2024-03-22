@@ -294,7 +294,7 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
                 
                 ## update gifs - may be possible to simplify this 
                 if args.plot_weighting_gif:
-                    plot_weighting_gif(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,iteration_count+1,slide,x_coords,y_coords,final_iteration=False)
+                    plot_weighting_gif(slide_id, coords[all_sample_idxs], coords, sampling_weights, args, iteration_count+1, slide=slide, x_coords=x_coords, y_coords=y_coords, final_iteration=False)
                 if args.plot_sampling_gif:
                     if args.use_all_samples:
                         plot_sampling_gif(slide_id,coords[all_sample_idxs+sample_idxs],args,iteration_count+1,slide,final_iteration=False)
@@ -372,9 +372,9 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
             if args.plot_sampling_gif:
                 plot_sampling_gif(slide_id,coords[sample_idxs],args,iteration_count+1,Y_hat==label,slide,final_iteration=True)
             if args.plot_weighting:
-                plot_weighting(slide_id,coords,sampling_weights,args,Y_hat==label)
+                plot_weighting(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,Y_hat==label)
             if args.plot_weighting_gif:
-                plot_weighting_gif(slide_id,coords[all_sample_idxs],coords,sampling_weights,args,iteration_count+1,Y_hat==label,slide,x_coords,y_coords,final_iteration=True)
+                plot_weighting_gif(slide_id, coords[all_sample_idxs], coords, sampling_weights, args, iteration_count+1, slide=slide, x_coords=x_coords, y_coords=y_coords, final_iteration=True)
 
     
     all_errors=[]
