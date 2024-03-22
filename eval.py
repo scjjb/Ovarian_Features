@@ -80,6 +80,7 @@ parser.add_argument('--sampling_random_delta',type=float, default=0.02, help='re
 parser.add_argument('--sampling_neighbors', type=int, default=20, help='number of nearest neighbors to consider when resampling')
 parser.add_argument('--sampling_neighbors_delta', type=int, default=0, help='reduction in number of nearest neighbors per iteration')
 parser.add_argument('--texture_model',type=str, choices=['resnet50','levit_128s'], default='resnet50',help='model to use for feature extraction in textural sampling')
+parser.add_argument('--plot_dir', type=str, default="/",help='sampling plots folder')
 parser.add_argument('--plot_sampling',action='store_true',default=False,help='Save an image showing the samples taken at each at last iteration')
 parser.add_argument('--plot_sampling_gif',action='store_true',default=False,help='Save a gif showing the evolution of the samples taken')
 parser.add_argument('--plot_weighting',action='store_true',default=False,help='Save an image showing each patches sample weighting in the final iteration')
