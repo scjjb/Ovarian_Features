@@ -127,6 +127,20 @@ def eval(config, dataset, args, ckpt_path, class_counts = None):
     return test_error, auc, df, loss
 
 
+def select_best_samples(num_best, sample_idxs, attn_scores, previous_idxs = [], previous_attns = []):
+    ## this function only runs if not retaining all samples from previous sampling steps
+    all_attns = attn_scores + previous_attns
+    if len(all_attns) <= num_best:
+        best_idxs = sample_idxs + previous_idxs
+        best_attns = all_attns 
+    else:
+        all_idxs = sample_idxs + previous_idxs
+        best_attn_idxs = [idx.item() for idx in np.argsort(all_attns)][::-1]
+        best_idxs = [all_idxs[attn_idx] for attn_idx in best_attn_idxs][:num_best]
+        best_attns = [all_attns[attn_idx] for attn_idx in best_attn_idxs][:num_best]
+    return best_idxs, best_attns
+
+
 def evaluate_sampling(model, dataset, args, loss_fn = None):
     assert args.sampling
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -251,13 +265,7 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
             
             ## find best samples to keep if not keeping all previous samples
             if not args.use_all_samples:
-                if args.samples_per_iteration<=args.retain_best_samples:
-                    best_sample_idxs=sample_idxs
-                    best_attn_scores=attn_scores_list
-                else:
-                    attn_idxs=[idx.item() for idx in np.argsort(attn_scores_list)][::-1]
-                    best_sample_idxs=[sample_idxs[attn_idx] for attn_idx in attn_idxs][:args.retain_best_samples]
-                    best_attn_scores=[attn_scores_list[attn_idx] for attn_idx in attn_idxs][:args.retain_best_samples]
+                best_sample_idxs, best_attn_scores = select_best_samples(args.retain_best_samples, sample_idxs, attn_scores_list, previous_idxs = [], previous_attns = [])
 
             ## update gifs
             if args.plot_sampling_gif:
@@ -272,7 +280,6 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
             labels_per_sample.append(label)
 
             ## Find nearest neighbors of each patch to prepare for spatial resampling
-            nbrs = NearestNeighbors(n_neighbors=args.sampling_neighbors, algorithm='ball_tree').fit(X)
             distances, indices = nbrs.kneighbors(X[sample_idxs])
         
             ## INTERMEDIATE SAMPLING ITERATIONS
@@ -313,19 +320,9 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
                 attention_scores=attention_scores[-samples_per_iteration:]
                 attn_scores_list=raw_attention[0].cpu().tolist()
 
-                ## find best samples to keep if not keeping all previous samples
+                ## find best samples to retain if not keeping all previous samples
                 if not args.use_all_samples:
-                    attn_scores_combined=attn_scores_list+best_attn_scores
-                    idxs_combined=sample_idxs+best_sample_idxs
-
-                    if len(idxs_combined)<=args.retain_best_samples:
-                        best_sample_idxs=idxs_combined
-                        best_attn_scores=attn_scores_combined
-                    else:
-                        attn_idxs=[idx.item() for idx in np.argsort(attn_scores_combined)][::-1]
-                        best_sample_idxs=[idxs_combined[attn_idx] for attn_idx in attn_idxs][:args.retain_best_samples]
-                        best_attn_scores=[attn_scores_combined[attn_idx] for attn_idx in attn_idxs][:args.retain_best_samples]
-                
+                    best_sample_idxs, best_attn_scores = select_best_samples(args.retain_best_samples, sample_idxs, attn_scores_list, previous_idxs = best_sample_idxs, previous_attns = best_attn_scores)
                                               
                 ## Store outputs per iteration
                 Y_hats_per_sample.append(Y_hat)
@@ -349,7 +346,6 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
                 sample_idxs=sample_idxs+best_sample_idxs
     
             data_sample=data[sample_idxs].to(device)
-
             ## run classifier on new samples
             with torch.no_grad():
                 logits, Y_prob, Y_hat, raw_attention, results_dict = model(data_sample)
