@@ -73,12 +73,12 @@ def update_sampling_weights(sampling_weights, attention_scores, all_sample_idxs,
     """
     assert sampling_update in ['max','newest','average','none']
     new_attentions = np.zeros(shape=len(sampling_weights))
-    #new_attentions=dict(enumerate(new_attentions)) ## may be better to skip np zeros and use a loop
+    
     if sampling_update=='average':
         for i in range(len(indices)):
             for index in indices[i][:neighbors]:
                 if new_attentions[index]>0:
-                    ## not a perfect method of averaging but want it to run quickly
+                    ## not a perfect method of averaging but don't want to wait to see if there are more than two scores for the same patch
                     new_attentions[index]=(new_attentions[index]+attention_scores[i])/2
                 else:
                     new_attentions[index]=attention_scores[i]
@@ -91,42 +91,8 @@ def update_sampling_weights(sampling_weights, attention_scores, all_sample_idxs,
                     sampling_weights[i] = (sampling_weights[i] + new_attentions[i])/2 
                 else:
                     sampling_weights[i] = new_attentions[i]
-        ##old version
-        #for i in range(len(indices)):
-        #    for index in indices[i][:neighbors]:
-                ## the default value is 0.0001
-        #        if sampling_weights[index]>0.0001:
-        #            sampling_weights[index]=(sampling_weights[index]+pow(attention_scores[i],power))/2
-        #        else:
-        #            sampling_weights[index]=pow(attention_scores[i],power)
+    
     elif sampling_update=='max':
-        ## this chunk is an idea to avoid doing two loops by only looping on the indices, haven't yet managed to improve speed
-        #indices=np.array(indices)
-        #used_indices=np.unique(indices)
-        #for used_index in used_indices:
-        #    rows = np.where(indices==used_index)[0]
-        #    if len(rows)<2:
-        #        new_attentions[used_index]=attention_scores[rows[0]]
-        #    else:
-        #        new_attentions[used_index]=max(attention_scores[rows])
-        
-
-
-        #new_attentions_dict={}
-        #for i in range(len(indices)):
-        #    for index in indices[i][:neighbors]:
-        #        if index in new_attentions_dict:
-        #            if attention_scores[i]>new_attentions_dict[index]:
-         #               new_attentions_dict[index]=attention_scores[i]
-         #       else:
-         #               new_attentions_dict[index]=attention_scores[i]
-
-        ## this block is currently faster
-       
-        
-        ## WORKING CODE but no longer fastest 
-        ########################################################
-        #print("WARNING: USING OLDER VERSION OF CODE IN SAMPLING_UTILS")
         for i in range(len(indices)):
             for index in indices[i][:neighbors]:
                 if new_attentions[index]>0:
@@ -134,56 +100,21 @@ def update_sampling_weights(sampling_weights, attention_scores, all_sample_idxs,
                         new_attentions[index]=attention_scores[i]
                 else:
                     new_attentions[index]=attention_scores[i]
-        #######################################################
         
-        ## this needs indices as a dict
-        #indices=dict(indices)
-        
-        ## New fastest code - it has quartered the runtime of update_sampling_weights but certainly isnt working with eval.py (seems to be working with main.py - check this)
-        #####################################
-        #indices_dict={}
-        #for i,row in enumerate(indices):
-        #    indices_dict[i]=row 
-        #for key,values in indices_dict.items():
-        #    for index in values:
-        #        if new_attentions[index]>0:
-        #            if attention_scores[i]>new_attentions[index]:
-        #                new_attentions[index]=attention_scores[key]
-        #        else:
-        #                new_attentions[index]=attention_scores[key]
-        ########################################
-
-        #with Pool() as pool:
-         #   for result in pool.map(task, range(10)):
-        #        new_attention[result[index]]=
-        #
-                #sampling_weights[index]=max(sampling_weights[index],pow(attention_scores[i],power))
-        #for key in new_attentions_dict:
-        #    new_attentions_dict[key]=pow(new_attentions_dict[key],power)
-        #print(new_attentions)
-        #print(" ")
-        #print(list(new_attentions.values()))
-        #assert 1==2,"break"
-        
-        ## if new_attentions is a dict need the next line
-        #new_attentions=np.array(list(new_attentions.values()),dtype=float)
         new_attentions=pow(new_attentions,power)
-        #new_attentions=1 / (1 + np.exp(-new_attentions))
-        #new_attentions=np.array(new_attentions)
-        #for i in range(len(new_attentions)):
-            #new_attentions[i]=pow(new_attentions[i],power)
         for i in range(len(sampling_weights)):
                 if new_attentions[i]>sampling_weights[i]:
                     sampling_weights[i]=new_attentions[i]
-                #sampling_weights[i]=max(sampling_weights[i],pow(new_attentions[i],power))
+    
     elif sampling_update=='newest':
         for i in range(len(indices)):
             for index in indices[i][:neighbors]:
                 new_attentions[index]=attention_scores[i]
         new_attentions=pow(new_attentions,power)
+        
         for i in range(len(sampling_weights)):
-                if new_attentions[i]>sampling_weights[i]:
-                    sampling_weights[i]=new_attentions[i]
+            if new_attentions[i] > 0:
+                sampling_weights[i] = new_attentions[i]
 
     if not repeats_allowed:
         for sample_idx in all_sample_idxs:
