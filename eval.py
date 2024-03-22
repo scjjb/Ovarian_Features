@@ -88,7 +88,7 @@ parser.add_argument('--use_all_samples',action='store_true',default=False,help='
 parser.add_argument('--final_sample_size',type=int,default=100,help='number of patches for final iteration sample')
 parser.add_argument('--retain_best_samples',type=int,default=100,help='number of highest-attention previous samples to retain for final iteration sample')
 parser.add_argument('--initial_grid_sample',action='store_true',default=False,help='Take the initial sample to be spaced out in a grid')
-parser.add_argument('--sampling_average',action='store_true',default=False,help='Take the sampling weights as averages rather than maxima to leverage more learned information')
+parser.add_argument('--sampling_update',type=str,choices=['average','max','newest'],default='average',help='How sampling weights are assigned when patches have multiple weight scores')
 parser.add_argument('--weight_smoothing',type=float,default=0.15,help='Power applied to attention scores to generate sampling weights')
 parser.add_argument('--fully_random',action='store_true', default=False, help='Take entirely random samples (no active sampling)')
 
