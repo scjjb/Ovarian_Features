@@ -67,7 +67,7 @@ def generate_features_array(args, data, coords, slide_id, slide_id_list, texture
 def update_sampling_weights(sampling_weights, attention_scores, all_sample_idxs, indices, neighbors, power=0.15, normalise = True, sampling_update = 'max', repeats_allowed = False):
     """
     Updates the sampling weights of all patches by looping through the most recent sample and adjusting all neighbors weights
-    By default the weight of a patch is the maximum of its previous weight and the newly assigned weight, though sampling_average changes this to an average
+    By default the weight of a patch is the maximum of its previous weight and the newly assigned weight, though can be changed to average or simply to the newest available
     power is a hyperparameter controlling how attention scores are smoothed as typically very close to 0 or 1
     if repeated_allowed = False then weights for previous samples are set to 0
     """
@@ -85,8 +85,12 @@ def update_sampling_weights(sampling_weights, attention_scores, all_sample_idxs,
         new_attentions=pow(new_attentions,power)
 
         for i in range(len(sampling_weights)):
-            if new_attentions[i]>0:
-                sampling_weights[i]=new_attentions[i]
+            if new_attentions[i] > 0:
+                ## default sampling weights are 0.0001 to prevent instability from sparsity
+                if sampling_weights[i] > 0.0002:
+                    sampling_weights[i] = (sampling_weights[i] + new_attentions[i])/2 
+                else:
+                    sampling_weights[i] = new_attentions[i]
         ##old version
         #for i in range(len(indices)):
         #    for index in indices[i][:neighbors]:
@@ -270,7 +274,7 @@ def plot_weighting(slide_id,sample_coords,coords,weights,args,correct=False,thum
     #    'incr_alpha', [(0, (*colors.to_rgb(c),0)), (1, c2)])
     cmap='jet'
 
-    plt.scatter(x_values, y_values, c=weights, cmap=cmap, s=3, alpha=0.6, marker="s", edgecolors='none', vmin=0, vmax=0.8)
+    plt.scatter(x_values, y_values, c=weights, cmap=cmap, s=3, alpha=0.6, marker="s", edgecolors='none')#, vmin=0, vmax=0.8)
     #plt.colorbar()
     x_samples, y_samples = sample_coords.T
     x_samples=(x_samples+128)*(thumbnail_size/max(slide.dimensions))
@@ -313,7 +317,7 @@ def plot_weighting_gif(slide_id,sample_coords,coords,weights,args,iteration,corr
     cmap='jet'
     cmap = plt.get_cmap(cmap)
         #plt.scatter(x_coords,y_coords,c=weights,cmap=cmap,s=2, marker="s",edgecolors='none')
-    plt.scatter(x_coords, y_coords, c=weights, cmap=cmap, s=3, alpha=0.6, marker="s", edgecolors='none', vmin=0, vmax=0.8)
+    plt.scatter(x_coords, y_coords, c=weights, cmap=cmap, s=3, alpha=0.6, marker="s", edgecolors='none')#, vmin=0, vmax=0.8)
     #plt.colorbar()
 
     x_samples, y_samples = sample_coords.T

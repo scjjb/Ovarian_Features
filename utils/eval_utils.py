@@ -156,8 +156,6 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
 
     num_slides=len(dataset)*same_slide_repeats
     device=torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    test_loss = 0.
-    test_error = 0.
 
     ## Collecting predictions per sampling iteration to view performance across resampling iterations
     Y_hats_per_sample = []
@@ -170,12 +168,11 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
     final_preds = np.zeros(num_slides)
     final_logits = []
     labels = np.zeros(num_slides)
-
-    test_loss = 0.
     test_error = 0.
-    
+    loss = 0.
+    acc_logger = Accuracy_Logger(n_classes=args.n_classes)
+
     loader = get_simple_loader(dataset, model_type=args.model_type)
-    slide_ids = loader.dataset.slide_data['slide_id']
     slide_id_list=[]
     texture_dataset = []
         
@@ -190,17 +187,13 @@ def evaluate_sampling(model, dataset, args, loss_fn = None):
                     ignore=[])
             slide_id_list = list(pd.read_csv(args.csv_path)['slide_id'])
 
-    acc_logger = Accuracy_Logger(n_classes=args.n_classes)
-
     num_random=int(args.samples_per_iteration*args.sampling_random)
-    
     total_samples_per_slide = (args.samples_per_iteration*args.resampling_iterations)+args.final_sample_size
+    
     if args.fully_random:
         total_samples_per_slide=args.samples_per_iteration
     print("Total patches sampled per slide: ",total_samples_per_slide)
     
-    
-    loss = 0.
     for batch_idx, contents in enumerate(loader):
         if not args.tuning:
             print('progress: {}/{}'.format(batch_idx, num_slides))
