@@ -1,0 +1,10 @@
+{"reg": "tune.grid_search([1e-5])",
+"drop_out": "tune.grid_search([0.6])",
+"lr": "tune.grid_search([1e-4])",
+"A_patches": "tune.grid_search([400,700,1000])",
+"model_size": "tune.grid_search(['small_resnet18','large_resnet18','mega_resnet18'])",
+"beta1":  "tune.grid_search([0.8])",
+"beta2": "tune.grid_search([0.99])",
+"eps": "tune.grid_search([1e-4])",
+"lr_factor": "tune.grid_search([0.999999])",
+"lr_patience": "tune.grid_search([30])"}
