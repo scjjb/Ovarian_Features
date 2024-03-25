@@ -212,6 +212,9 @@ def compute_w_loader(file_path, output_path, wsi, model,
         elif args.model_type=='uni':
             kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
             tfms=torch.nn.Sequential(transforms.CenterCrop(224))
+        elif args.model_type=='vit_l':
+            kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
+            tfms=torch.nn.Sequential(transforms.CenterCrop(224))
         elif args.model_type=='HIPT_4K':
             if args.hardware=='DGX':
                 kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
@@ -251,7 +254,7 @@ parser.add_argument('--no_auto_skip', default=False, action='store_true')
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
-parser.add_argument('--model_type',type=str,choices=['resnet18','resnet50','levit_128s','HIPT_4K','uni'],default='resnet50')
+parser.add_argument('--model_type',type=str,choices=['resnet18','resnet50','levit_128s','HIPT_4K','uni','vit_l'],default='resnet50')
 parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_blur','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','colourjitter','colourjitternorm','macenko','reinhard','vahadane','none','uni_default'],default='none')
 parser.add_argument('--hardware',type=str,default="PC")
 parser.add_argument('--graph_patches',type=str,choices=['none','small','big'],default='none')
@@ -284,6 +287,9 @@ if __name__ == '__main__':
             local_dir = "/mnt/results/vit_large_patch16_224.dinov2.uni_mass100k/"
             model.load_state_dict(torch.load(os.path.join(local_dir, "pytorch_model.bin"), map_location="cpu"), strict=True)
             assert args.use_transforms in ["uni_default"]
+        elif args.model_type =='vit_l':
+             model = timm.create_model("vit_large_patch16_224", img_size=224, patch_size=16, init_values=1e-5, num_classes=0, dynamic_img_size=True, pretrained = True)
+             assert args.use_transforms in ["uni_default"]
         elif args.model_type=='HIPT_4K':
             if args.hardware=='DGX':
                  model = HIPT_4K(model256_path="/mnt/results/Checkpoints/vit256_small_dino.pth",model4k_path="/mnt/results/Checkpoints/vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
