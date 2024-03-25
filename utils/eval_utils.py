@@ -115,6 +115,9 @@ def eval(config, dataset, args, ckpt_path, class_counts = None):
         dataset.load_from_h5(True)
         seed_torch(args.seed)
         test_error, auc, df, _, loss = evaluate_sampling(model,dataset, args, loss_fn=loss_fn)
+        ## come back and get these working with evaluate_sampling
+        f1 = None
+        bal_acc = None
     else:
         loader = get_simple_loader(dataset, model_type=args.model_type)
         _, acc, bal_acc, f1, auc, loss, _, df = evaluate(model, loader, args.n_classes, "final", loss_fn=loss_fn)
@@ -124,7 +127,7 @@ def eval(config, dataset, args, ckpt_path, class_counts = None):
         tune.report(accuracy=1-test_error, auc=auc)    
     print('test_error: ', test_error)
     print('auc: ', auc)
-    return test_error, auc, df, loss
+    return test_error, df, loss, f1, auc, bal_acc
 
 
 def select_best_samples(num_best, sample_idxs, attn_scores, previous_idxs = [], previous_attns = []):

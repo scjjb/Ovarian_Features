@@ -201,8 +201,9 @@ datasets_id = {'train': 0, 'val': 1, 'test': 2, 'all': -1}
 
 
 def main():
+    all_f1 = []
     all_auc = []
-    all_acc = []
+    all_bal_acc = []
     all_loss = []
 
     if args.tuning:
@@ -264,17 +265,19 @@ def main():
 
         else:
             class_counts = class_counts_train=dataset.count_by_class(csv_path = '{}/splits_{}.csv'.format(args.split_dir, folds[ckpt_idx]))
-            test_error, auc, df, loss = eval(None,split_dataset, args, ckpt_paths[ckpt_idx], class_counts=class_counts)
+            test_error, df, loss, f1, auc, bal_acc = eval(None,split_dataset, args, ckpt_paths[ckpt_idx], class_counts=class_counts)
+            all_f1.append(f1)
+            print("f1 per fold", all_f1)
             all_auc.append(auc)
             print("auc per fold", all_auc)
-            all_acc.append(1-test_error)
-            print("acc per fold", all_acc)
+            all_bal_acc.append(bal_acc)
+            print("bal_acc per fold", all_bal_acc)
             all_loss.append(loss)
             print("loss per fold", all_loss)
             if not args.eval_features:
                 df.to_csv(os.path.join(args.save_dir, 'fold_{}.csv'.format(folds[ckpt_idx])), index=False)	
     if not args.tuning:
-        final_df = pd.DataFrame({'folds': folds, 'test_auc': all_auc, 'test_acc': all_acc, 'loss': all_loss})	
+        final_df = pd.DataFrame({'folds': folds, 'test_f1': all_f1, 'test_auc': all_auc, 'test_bal_acc': all_bal_acc, 'loss': all_loss})	
         print(final_df)
         if len(folds) != args.k:	
             save_name = 'summary_partial_{}_{}.csv'.format(folds[0], folds[-1])	
