@@ -31,7 +31,7 @@ parser.add_argument('--save_exp_code', type=str, default=None,help='experiment c
 
 ## Model settings
 parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'graph', 'graph_ms','patchgcn'], default='clam_sb', help='type of model (default: clam_sb)')
-parser.add_argument('--model_size', type=str, choices=['tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier','tiny128','tiny','small', 'big','hipt_mega_tiny','hipt_mega_small','hipt_mega_big','hipt_mega_mega','hipt_const','hipt_smallest','hipt_small','hipt_medium','hipt_big','hipt_smaller'], default='small', help='size of model (default: small)')
+parser.add_argument('--model_size', type=str, choices=['tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','large_resnet18','tinier','tiny128','tiny','small', 'big','hipt_mega_tiny','hipt_mega_small','hipt_mega_big','hipt_mega_mega','hipt_const','hipt_smallest','hipt_small','hipt_medium','hipt_big','hipt_smaller'], default='small', help='size of model (default: small)')
 parser.add_argument('--task', type=str, choices=['ovarian_5class','ovarian_1vsall','nsclc','treatment'])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout p=0.25')
 parser.add_argument('--bag_loss', type=str, choices=['ce', 'balanced_ce'], default='ce',
