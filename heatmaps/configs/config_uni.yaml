@@ -42,7 +42,7 @@ model_arguments:
   model_size: small
   drop_out: 0.4
 heatmap_arguments:
-  max_size: 2000
+  max_size: 3000
   # downsample at which to visualize heatmap (-1 refers to downsample closest to 32x downsample)
   vis_level: -1
   # transparency for overlaying heatmap on background (0: background only, 1: foreground only)
