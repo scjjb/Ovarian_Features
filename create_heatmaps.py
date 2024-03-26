@@ -454,7 +454,7 @@ if __name__ == '__main__':
                         if os.path.isfile(os.path.join(p_slide_save_dir, heatmap_save_name)):
                                 pass
                         else:
-                                heatmap = wsi_object.visWSI(vis_level=vis_level, view_slide_only=True, custom_downsample=heatmap_args.custom_downsample)
+                                heatmap = wsi_object.visWSI(vis_level=vis_level, view_slide_only=True, custom_downsample=heatmap_args.custom_downsample, max_size=max_size)
                                 if heatmap_args.save_ext == 'jpg':
                                         heatmap.save(os.path.join(p_slide_save_dir, heatmap_save_name), quality=100)
                                 else:
