@@ -214,6 +214,15 @@ if __name__ == '__main__':
                 print('\nprogress: {}/{}'.format(i, total))
                 print('skipped unavailable slides: {}'.format(unavailable_patch_files))
                 slide_name = str(process_stack.loc[i, 'slide_id'])
+                
+                try:
+                    wsi_object = initialize_wsi(slide_path, seg_mask_path=mask_file, seg_params=seg_params, filter_params=filter_params)
+                    print('Done!')
+                except:
+                    print('svs file unavailable for {}'.format(slide_name))
+                    unavailable_patch_files = unavailable_patch_files+1
+                    continue
+
                 if data_args.slide_ext not in slide_name:
                         slide_name+=data_args.slide_ext
                 print('\nprocessing: ', slide_name)     
@@ -285,15 +294,6 @@ if __name__ == '__main__':
                 #for key, val in vis_params.items():
                 #        print('{}: {}'.format(key, val))
                 
-                print('Initializing WSI object')
-                try:
-                    wsi_object = initialize_wsi(slide_path, seg_mask_path=mask_file, seg_params=seg_params, filter_params=filter_params)
-                    print('Done!')
-                except:
-                    print('svs file unavailable for {}'.format(slide_name))
-                    unavailable_patch_files = unavailable_patch_files+1
-                    continue
-
                 wsi_ref_downsample = wsi_object.level_downsamples[patch_args.patch_level]
 
                 # the actual patch size for heatmap visualization should be the patch size * downsample factor * custom downsample factor
