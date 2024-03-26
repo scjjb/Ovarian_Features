@@ -31,7 +31,7 @@ parser.add_argument('--save_exp_code', type=str, default=None,help='experiment c
 
 ## Model settings
 parser.add_argument('--model_type', type=str, choices=['clam_sb', 'clam_mb', 'mil', 'graph', 'graph_ms','patchgcn'], default='clam_sb', help='type of model (default: clam_sb)')
-parser.add_argument('--model_size', type=str, choices=['tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','tinier','tiny128','tiny','small', 'big','hipt_mega_tiny','hipt_mega_small','hipt_mega_big','hipt_mega_mega','hipt_const','hipt_smallest','hipt_small','hipt_medium','hipt_big','hipt_smaller'], default='small', help='size of model (default: small)')
+parser.add_argument('--model_size', type=str, choices=['tinier_resnet18','tinier2_resnet18','tiny_resnet18','small_resnet18','large_resnet18','tinier','tiny128','tiny','small', 'big','hipt_mega_tiny','hipt_mega_small','hipt_mega_big','hipt_mega_mega','hipt_const','hipt_smallest','hipt_small','hipt_medium','hipt_big','hipt_smaller'], default='small', help='size of model (default: small)')
 parser.add_argument('--task', type=str, choices=['ovarian_5class','ovarian_1vsall','nsclc','treatment'])
 parser.add_argument('--drop_out', type=float, default=0.25, help='dropout p=0.25')
 parser.add_argument('--bag_loss', type=str, choices=['ce', 'balanced_ce'], default='ce',
@@ -201,8 +201,9 @@ datasets_id = {'train': 0, 'val': 1, 'test': 2, 'all': -1}
 
 
 def main():
+    all_f1 = []
     all_auc = []
-    all_acc = []
+    all_bal_acc = []
     all_loss = []
 
     if args.tuning:
@@ -264,17 +265,19 @@ def main():
 
         else:
             class_counts = class_counts_train=dataset.count_by_class(csv_path = '{}/splits_{}.csv'.format(args.split_dir, folds[ckpt_idx]))
-            test_error, auc, df, loss = eval(None,split_dataset, args, ckpt_paths[ckpt_idx], class_counts=class_counts)
+            test_error, df, loss, f1, auc, bal_acc = eval(None,split_dataset, args, ckpt_paths[ckpt_idx], class_counts=class_counts)
+            all_f1.append(f1)
+            print("f1 per fold", all_f1)
             all_auc.append(auc)
             print("auc per fold", all_auc)
-            all_acc.append(1-test_error)
-            print("acc per fold", all_acc)
+            all_bal_acc.append(bal_acc)
+            print("bal_acc per fold", all_bal_acc)
             all_loss.append(loss)
             print("loss per fold", all_loss)
             if not args.eval_features:
                 df.to_csv(os.path.join(args.save_dir, 'fold_{}.csv'.format(folds[ckpt_idx])), index=False)	
     if not args.tuning:
-        final_df = pd.DataFrame({'folds': folds, 'test_auc': all_auc, 'test_acc': all_acc, 'loss': all_loss})	
+        final_df = pd.DataFrame({'folds': folds, 'test_f1': all_f1, 'test_auc': all_auc, 'test_bal_acc': all_bal_acc, 'loss': all_loss})	
         print(final_df)
         if len(folds) != args.k:	
             save_name = 'summary_partial_{}_{}.csv'.format(folds[0], folds[-1])	
