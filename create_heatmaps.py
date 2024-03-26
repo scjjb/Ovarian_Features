@@ -214,17 +214,22 @@ if __name__ == '__main__':
                 print('\nprogress: {}/{}'.format(i, total))
                 print('skipped unavailable slides: {}'.format(unavailable_patch_files))
                 slide_name = str(process_stack.loc[i, 'slide_id'])
+                if data_args.slide_ext not in slide_name:
+		                slide_name+=data_args.slide_ext
                 
-                try:
-                    wsi_object = initialize_wsi(slide_path, seg_mask_path=mask_file, seg_params=seg_params, filter_params=filter_params)
-                    print('Done!')
-                except:
+                if isinstance(data_args.data_dir, str):
+                        slide_path = os.path.join(data_args.data_dir, slide_name)
+                elif isinstance(data_args.data_dir, dict):
+                        data_dir_key = process_stack.loc[i, data_args.data_dir_key]
+                        slide_path = os.path.join(data_args.data_dir[data_dir_key], slide_name)
+                else:
+                        raise NotImplementedError
+
+                if not os.path.isfile(slide_path):
                     print('svs file unavailable for {}'.format(slide_name))
                     unavailable_patch_files = unavailable_patch_files+1
                     continue
-
-                if data_args.slide_ext not in slide_name:
-                        slide_name+=data_args.slide_ext
+                
                 print('\nprocessing: ', slide_name)     
 
                 try:
@@ -254,14 +259,6 @@ if __name__ == '__main__':
                         top_left = None
                         bot_right = None
                 
-                if isinstance(data_args.data_dir, str):
-                        slide_path = os.path.join(data_args.data_dir, slide_name)
-                elif isinstance(data_args.data_dir, dict):
-                        data_dir_key = process_stack.loc[i, data_args.data_dir_key]
-                        slide_path = os.path.join(data_args.data_dir[data_dir_key], slide_name)
-                else:
-                        raise NotImplementedError
-
                 mask_file = os.path.join(r_slide_save_dir, slide_id+'_mask.pkl')
                 
                 # Load segmentation and filter parameters
@@ -294,6 +291,7 @@ if __name__ == '__main__':
                 #for key, val in vis_params.items():
                 #        print('{}: {}'.format(key, val))
                 
+                wsi_object = initialize_wsi(slide_path, seg_mask_path=mask_file, seg_params=seg_params, filter_params=filter_params)
                 wsi_ref_downsample = wsi_object.level_downsamples[patch_args.patch_level]
 
                 # the actual patch size for heatmap visualization should be the patch size * downsample factor * custom downsample factor
