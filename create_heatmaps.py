@@ -208,7 +208,11 @@ if __name__ == '__main__':
         os.makedirs(exp_args.raw_save_dir, exist_ok=True)
         blocky_wsi_kwargs = {'top_left': None, 'bot_right': None, 'patch_size': patch_size, 'step_size': patch_size, 'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift, 't': transforms}
 
-        for i in range(len(process_stack)):
+        unavailable_patch_files=0
+        total = len(process_stack)
+        for i in range(total):
+                print('\nprogress: {}/{}'.format(i, total))
+                print('skipped unavailable slides: {}'.format(unavailable_patch_files))
                 slide_name = str(process_stack.loc[i, 'slide_id'])
                 if data_args.slide_ext not in slide_name:
                         slide_name+=data_args.slide_ext
@@ -285,8 +289,13 @@ if __name__ == '__main__':
                         print('{}: {}'.format(key, val))
                 
                 print('Initializing WSI object')
-                wsi_object = initialize_wsi(slide_path, seg_mask_path=mask_file, seg_params=seg_params, filter_params=filter_params)
-                print('Done!')
+                try:
+                    wsi_object = initialize_wsi(slide_path, seg_mask_path=mask_file, seg_params=seg_params, filter_params=filter_params)
+                    print('Done!')
+                except:
+                    print('patch file unavailable for {}'.format(slide_name))
+                    unavailable_patch_files = unavailable_patch_files+1
+                    continue
 
                 wsi_ref_downsample = wsi_object.level_downsamples[patch_args.patch_level]
 
