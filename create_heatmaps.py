@@ -113,7 +113,7 @@ if __name__ == '__main__':
         heatmap_args = argparse.Namespace(**args['heatmap_arguments'])
         sample_args = argparse.Namespace(**args['sample_arguments'])
 
-        patch_size = tuple([patch_args.patch_size for i in range(2)])
+        patch_size = tuple([int(patch_args.patch_size/patch_args.custom_downsample) for i in range(2)])
         step_size = tuple((np.array(patch_size) * (1-patch_args.overlap)).astype(int))
         print('patch_size: {} x {}, with {:.2f} overlap, step size is {} x {}'.format(patch_size[0], patch_size[1], patch_args.overlap, step_size[0], step_size[1]))
 
