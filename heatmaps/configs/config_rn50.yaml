@@ -9,7 +9,7 @@ exp_arguments:
   raw_save_dir: /mnt/results/heatmaps/RN50
   # where to save final heatmaps
   production_save_dir: /mnt/results/heatmaps/RN50
-  batch_size: 32
+  batch_size: 8
 data_arguments: 
   # where is data stored; can be a single str path or a dictionary of key, data_dir mapping
   data_dir: /mnt/data/Katie_WSI/idrive
@@ -33,7 +33,7 @@ patching_arguments:
   patch_size: 1024
   overlap: 0.5
   patch_level: 0
-  custom_downsample: 8
+  custom_downsample: 4
 model_arguments: 
   # arguments for initializing model from checkpoint
   ckpt_path: /mnt/results/stagingandids_resnet50_10x_bestfrom15tuning_bce_normal_s1/s_0_checkpoint.pt
