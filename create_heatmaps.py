@@ -377,6 +377,8 @@ if __name__ == '__main__':
                                 for idx, (s_coord, s_score) in enumerate(zip(sample_results['sampled_coords'], sample_results['sampled_scores'])):
                                         print('coord: {} score: {:.3f}'.format(s_coord, s_score))
                                         patch = wsi_object.wsi.read_region(tuple(s_coord), patch_args.patch_level, (patch_args.patch_size, patch_args.patch_size)).convert('RGB')
+                                        ## making it smaller to save space 
+                                        patch = patch.resize((int(patch_args.patch_size/2), int(patch_args.patch_size/2)))
                                         patch.save(os.path.join(sample_save_dir, '{}_{}_x_{}_y_{}_a_{:.3f}.png'.format(idx, slide_id, s_coord[0], s_coord[1], s_score)))
 
                 wsi_kwargs = {'top_left': top_left, 'bot_right': bot_right, 'patch_size': patch_size, 'step_size': step_size, 'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift, 't': transforms}
