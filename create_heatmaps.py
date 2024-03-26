@@ -245,9 +245,6 @@ if __name__ == '__main__':
                         top_left = None
                         bot_right = None
                 
-                print('slide id: ', slide_id)
-                print('top left: ', top_left, ' bot right: ', bot_right)
-
                 if isinstance(data_args.data_dir, str):
                         slide_path = os.path.join(data_args.data_dir, slide_name)
                 elif isinstance(data_args.data_dir, dict):
@@ -279,21 +276,21 @@ if __name__ == '__main__':
                 else:
                         seg_params['exclude_ids'] = []
 
-                for key, val in seg_params.items():
-                        print('{}: {}'.format(key, val))
+                #for key, val in seg_params.items():
+                #        print('{}: {}'.format(key, val))
 
-                for key, val in filter_params.items():
-                        print('{}: {}'.format(key, val))
+                #for key, val in filter_params.items():
+                #        print('{}: {}'.format(key, val))
 
-                for key, val in vis_params.items():
-                        print('{}: {}'.format(key, val))
+                #for key, val in vis_params.items():
+                #        print('{}: {}'.format(key, val))
                 
                 print('Initializing WSI object')
                 try:
                     wsi_object = initialize_wsi(slide_path, seg_mask_path=mask_file, seg_params=seg_params, filter_params=filter_params)
                     print('Done!')
                 except:
-                    print('patch file unavailable for {}'.format(slide_name))
+                    print('svs file unavailable for {}'.format(slide_name))
                     unavailable_patch_files = unavailable_patch_files+1
                     continue
 
