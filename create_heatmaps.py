@@ -299,6 +299,13 @@ if __name__ == '__main__':
 
                 block_map_save_path = os.path.join(r_slide_save_dir, '{}_blockmap.h5'.format(slide_id))
                 mask_path = os.path.join(r_slide_save_dir, '{}_mask.jpg'.format(slide_id))
+                
+                try:
+                    max_size = heatmap_args.max_size
+                except:
+                    max_size = 10000
+
+                vis_params['max_size'] = max_size
                 if vis_params['vis_level'] < 0:
                         best_level = wsi_object.wsi.get_best_level_for_downsample(32)
                         vis_params['vis_level'] = best_level
@@ -373,11 +380,6 @@ if __name__ == '__main__':
                                         patch.save(os.path.join(sample_save_dir, '{}_{}_x_{}_y_{}_a_{:.3f}.png'.format(idx, slide_id, s_coord[0], s_coord[1], s_score)))
 
                 wsi_kwargs = {'top_left': top_left, 'bot_right': bot_right, 'patch_size': patch_size, 'step_size': step_size, 'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift, 't': transforms}
-
-                try:
-                    max_size = heatmap_args.max_size
-                except:
-                    max_size = 10000
 
                 heatmap_save_name = '{}_blockmap.tiff'.format(slide_id)
                 if os.path.isfile(os.path.join(r_slide_save_dir, heatmap_save_name)):
