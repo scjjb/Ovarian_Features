@@ -374,12 +374,17 @@ if __name__ == '__main__':
 
                 wsi_kwargs = {'top_left': top_left, 'bot_right': bot_right, 'patch_size': patch_size, 'step_size': step_size, 'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift, 't': transforms}
 
+                try:
+                    max_size = heatmap_args.max_size
+                except:
+                    max_size = 10000
+
                 heatmap_save_name = '{}_blockmap.tiff'.format(slide_id)
                 if os.path.isfile(os.path.join(r_slide_save_dir, heatmap_save_name)):
                         pass
                 else:
                         heatmap = drawHeatmap(scores, coords, slide_path, wsi_object=wsi_object, cmap=heatmap_args.cmap, alpha=heatmap_args.alpha, use_holes=True, binarize=False, vis_level=-1, blank_canvas=False,
-                                                        thresh=-1, patch_size = vis_patch_size, convert_to_percentiles=True)
+                                                        thresh=-1, patch_size = vis_patch_size, convert_to_percentiles=True, max_size = max_size)
                 
                         heatmap.save(os.path.join(r_slide_save_dir, '{}_blockmap.png'.format(slide_id)))
                         del heatmap
@@ -411,10 +416,6 @@ if __name__ == '__main__':
                 coords = coord_dset[:]
                 file.close()
 
-                try:
-                    max_size = heatmap_args.max_size
-                except:
-                    max_size = 10000
 
                 heatmap_vis_args = {'convert_to_percentiles': True, 'vis_level': heatmap_args.vis_level, 'blur': heatmap_args.blur, 'custom_downsample': heatmap_args.custom_downsample, 'max_size': max_size}
                 if heatmap_args.use_ref_scores:
