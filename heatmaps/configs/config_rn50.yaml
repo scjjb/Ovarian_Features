@@ -9,7 +9,7 @@ exp_arguments:
   raw_save_dir: /mnt/results/heatmaps/RN50
   # where to save final heatmaps
   production_save_dir: /mnt/results/heatmaps/RN50
-  batch_size: 4
+  batch_size: 32
 data_arguments: 
   # where is data stored; can be a single str path or a dictionary of key, data_dir mapping
   data_dir: /mnt/data/Katie_WSI/idrive
