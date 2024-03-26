@@ -33,7 +33,7 @@ patching_arguments:
   patch_size: 1024
   overlap: 0.5
   patch_level: 0
-  custom_downsample: 4
+  custom_downsample: 8
 model_arguments: 
   # arguments for initializing model from checkpoint
   ckpt_path: /mnt/results/stagingandids_resnet50_10x_bestfrom15tuning_bce_normal_s1/s_0_checkpoint.pt

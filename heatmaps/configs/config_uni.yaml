@@ -33,14 +33,14 @@ patching_arguments:
   patch_size: 1024
   overlap: 0.5
   patch_level: 0
-  custom_downsample: 4
+  custom_downsample: 8
 model_arguments: 
   # arguments for initializing model from checkpoint
   ckpt_path: /mnt/results/stagingandids_10x_bestfrom15tuning_bce_uni_s1/s_0_checkpoint.pt
   model_type: clam_sb # see utils/eval_utils/
   initiate_fn: initiate_model # see utils/eval_utils/
   model_size: small
-  drop_out: 0.4
+  drop_out: 0.0
 heatmap_arguments:
   max_size: 3000
   # downsample at which to visualize heatmap (-1 refers to downsample closest to 32x downsample)
