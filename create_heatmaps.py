@@ -21,10 +21,12 @@ from vis_utils.heatmap_utils import initialize_wsi, drawHeatmap, compute_from_pa
 from wsi_core.wsi_utils import sample_rois
 from utils.file_utils import save_hdf5
 from HIPT_4K.hipt_4k import HIPT_4K
-
+from torchvision import transforms
+from datasets.dataset_h5 import eval_transforms
+import timm
 
 parser = argparse.ArgumentParser(description='Heatmap inference script')
-parser.add_argument('--model', type=str, default='resnet50',choices=['resnet50','hipt'])
+parser.add_argument('--model', type=str, default='resnet50',choices=['resnet50','uni','hipt'])
 parser.add_argument('--save_exp_code', type=str, default=None,
                                         help='experiment code')
 parser.add_argument('--overlap', type=float, default=None)
@@ -169,11 +171,22 @@ if __name__ == '__main__':
 
 
         if model_type=='resnet50': 
-            print("USING RESNET")
+            print("CREATING HEATMAP USING RESNET50")
             feature_extractor = resnet50_baseline(pretrained=True)
+            transforms = eval_transforms(pretrained=True)
+        elif model_type=='uni':
+            print("CREATING HEATMAP USING UNI")
+            feature_extractor = timm.create_model("vit_large_patch16_224", img_size=224, patch_size=16, init_values=1e-5, num_classes=0, dynamic_img_size=True)
+            local_dir = "/mnt/results/vit_large_patch16_224.dinov2.uni_mass100k/"
+            feature_extractor.load_state_dict(torch.load(os.path.join(local_dir, "pytorch_model.bin"), map_location="cpu"), strict=True)
+            transforms = transforms.Compose(
+                    [transforms.Resize(224),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))])
         elif model_type=='hipt':
             print("USING HIPT")
             feature_extractor = HIPT_4K(model256_path="/CLAM/HIPT_4K/ckpts/vit256_small_dino.pth",model4k_path="/CLAM/HIPT_4K/ckpts/vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
+            assert 1==2, "need to set the transforms for this"
         else:
             raise NotImplementedError
         feature_extractor.eval()
@@ -193,8 +206,7 @@ if __name__ == '__main__':
 
         os.makedirs(exp_args.production_save_dir, exist_ok=True)
         os.makedirs(exp_args.raw_save_dir, exist_ok=True)
-        blocky_wsi_kwargs = {'top_left': None, 'bot_right': None, 'patch_size': patch_size, 'step_size': patch_size, 
-        'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift}
+        blocky_wsi_kwargs = {'top_left': None, 'bot_right': None, 'patch_size': patch_size, 'step_size': patch_size, 'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift, 't': transforms}
 
         for i in range(len(process_stack)):
                 slide_name = str(process_stack.loc[i, 'slide_id'])
@@ -356,8 +368,7 @@ if __name__ == '__main__':
                                         patch = wsi_object.wsi.read_region(tuple(s_coord), patch_args.patch_level, (patch_args.patch_size, patch_args.patch_size)).convert('RGB')
                                         patch.save(os.path.join(sample_save_dir, '{}_{}_x_{}_y_{}_a_{:.3f}.png'.format(idx, slide_id, s_coord[0], s_coord[1], s_score)))
 
-                wsi_kwargs = {'top_left': top_left, 'bot_right': bot_right, 'patch_size': patch_size, 'step_size': step_size, 
-                'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift}
+                wsi_kwargs = {'top_left': top_left, 'bot_right': bot_right, 'patch_size': patch_size, 'step_size': step_size, 'custom_downsample':patch_args.custom_downsample, 'level': patch_args.patch_level, 'use_center_shift': heatmap_args.use_center_shift, 't': transforms}
 
                 heatmap_save_name = '{}_blockmap.tiff'.format(slide_id)
                 if os.path.isfile(os.path.join(r_slide_save_dir, heatmap_save_name)):
