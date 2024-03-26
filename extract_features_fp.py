@@ -288,7 +288,7 @@ if __name__ == '__main__':
             model.load_state_dict(torch.load(os.path.join(local_dir, "pytorch_model.bin"), map_location="cpu"), strict=True)
             assert args.use_transforms in ["uni_default"]
         elif args.model_type =='vit_l':
-             model = timm.create_model("vit_large_patch16_224", img_size=224, patch_size=16, init_values=1e-5, num_classes=0, dynamic_img_size=True, pretrained = True)
+             model = timm.create_model("vit_large_patch16_224",  num_classes=0,  pretrained = True)
              assert args.use_transforms in ["uni_default"]
         elif args.model_type=='HIPT_4K':
             if args.hardware=='DGX':
