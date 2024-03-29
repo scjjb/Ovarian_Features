@@ -7,4 +7,4 @@
 "beta2": "tune.grid_search([0.999])",
 "eps": "tune.grid_search([1e-3])",
 "lr_factor": "tune.grid_search([0.35,0.5,0.65])",
-"lr_patience": "tune.grid_search([15])"}
+"lr_patience": "tune.grid_search([10,15,20])"}
