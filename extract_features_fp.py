@@ -196,6 +196,13 @@ def compute_w_loader(file_path, output_path, wsi, model,
                     transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))])
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
+        elif args.use_transforms=='histo_resnet18_224':
+            t = transforms.Compose(
+                    [transforms.Resize(224),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+
         elif args.use_transforms=='uni_default':
             t = transforms.Compose(
                     [transforms.Resize(224),
@@ -262,7 +269,7 @@ parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
 parser.add_argument('--model_type',type=str,choices=['resnet18','resnet50','levit_128s','HIPT_4K','uni','vit_l'],default='resnet50')
-parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_blur','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','colourjitter','colourjitternorm','macenko','reinhard','vahadane','none','uni_default','histo_resnet18'],default='none')
+parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_blur','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','colourjitter','colourjitternorm','macenko','reinhard','vahadane','none','uni_default','histo_resnet18','histo_resnet18_224'],default='none')
 parser.add_argument('--hardware',type=str,default="PC")
 parser.add_argument('--graph_patches',type=str,choices=['none','small','big'],default='none')
 args = parser.parse_args()
@@ -286,7 +293,7 @@ if __name__ == '__main__':
         if args.model_type=='resnet18':
             model = resnet18_baseline(pretrained=True,dataset=args.pretraining_dataset)
             if args.pretraining_dataset=='Histo':
-                assert args.use_transforms=='histo_resnet18'
+                assert args.use_transforms in ['histo_resnet18','histo_resnet18_224']
         elif args.model_type=='resnet50':
             model = resnet50_baseline(pretrained=True,dataset=args.pretraining_dataset)
         elif args.model_type=='levit_128s':
