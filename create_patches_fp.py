@@ -264,6 +264,7 @@ parser.add_argument('--patch_level', type=int, default=0,
 parser.add_argument('--process_list',  type = str, default=None,
                                         help='name of list of images to process with parameters (.csv)')
 parser.add_argument('--pad_slide', default=False, action='store_true', help='pad slides a minimum of 4096x4096 for use in the ATEC23 test data')
+parser.add_argument('--line_thickness', type=int, default=250,help='Thickness of lines marking edges in mask plots')
 
 
 if __name__ == '__main__':
@@ -298,7 +299,7 @@ if __name__ == '__main__':
         seg_params = {'seg_level': args.seg_level, 'sthresh': args.sthresh, 'mthresh': args.mthresh, 'close': args.closing, 'use_otsu': args.use_otsu,
                                   'keep_ids': 'none', 'exclude_ids': 'none'}
         filter_params = {'a_t':args.atfilter, 'a_h': args.ahfilter, 'max_n_holes':args.max_holes}
-        vis_params = {'vis_level': -1, 'line_thickness': 250}
+        vis_params = {'vis_level': -1, 'line_thickness': args.line_thickness}
         patch_params = {'use_padding': True, 'contour_fn': 'four_pt'}
 
         if args.preset:
