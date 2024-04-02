@@ -15,6 +15,7 @@ from utils.file_utils import save_hdf5
 from HIPT_4K.hipt_4k import HIPT_4K
 from HIPT_4K.hipt_model_utils import eval_transforms
 
+import torchvision
 import torch
 from torchvision import transforms
 import torchstain
@@ -220,6 +221,8 @@ def compute_w_loader(file_path, output_path, wsi, model,
             kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
         elif args.model_type=='resnet50':
             kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
+        elif args.model_type=='densenet121':
+            kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
         elif args.model_type=='levit_128s':
             kwargs = {'num_workers': 16, 'pin_memory': True} if device.type == "cuda" else {}
             tfms=torch.nn.Sequential(transforms.CenterCrop(224))
@@ -268,7 +271,7 @@ parser.add_argument('--no_auto_skip', default=False, action='store_true')
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
-parser.add_argument('--model_type',type=str,choices=['resnet18','resnet50','levit_128s','HIPT_4K','uni','vit_l'],default='resnet50')
+parser.add_argument('--model_type',type=str,choices=['resnet18','resnet50','densenet121','levit_128s','HIPT_4K','uni','vit_l'],default='resnet50')
 parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_blur','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','colourjitter','colourjitternorm','macenko','reinhard','vahadane','none','uni_default','histo_resnet18','histo_resnet18_224'],default='none')
 parser.add_argument('--hardware',type=str,default="PC")
 parser.add_argument('--graph_patches',type=str,choices=['none','small','big'],default='none')
@@ -296,6 +299,8 @@ if __name__ == '__main__':
                 assert args.use_transforms in ['histo_resnet18','histo_resnet18_224']
         elif args.model_type=='resnet50':
             model = resnet50_baseline(pretrained=True,dataset=args.pretraining_dataset)
+        elif args.model_type=='densenet121':
+            model = torchvision.models.densenet121(pretrained=True,num_classes=1024) 
         elif args.model_type=='levit_128s':
             model=timm.create_model('levit_256',pretrained=True, num_classes=0)    
         elif args.model_type=='uni':
