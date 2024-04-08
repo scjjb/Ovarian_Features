@@ -97,9 +97,16 @@ for model_name in model_names:
             else:
                 plt.plot(fpr, tpr)
         
-
+        bootstrap_failure_resamples = 0
         for _ in range(bootstraps):
             idxs=np.random.choice(range(len(all_Ys)),len(all_Ys))
+            classes_sampled = len(np.unique([all_Ys[idx] for idx in idxs]))
+            while classes_sampled < args.num_classes:
+                bootstrap_failure_resamples += 1
+                print("resampling because of failed sample",bootstrap_failure_resamples)
+                idxs=np.random.choice(range(len(all_Ys)),len(all_Ys))
+                classes_sampled = len(np.unique([all_Ys[idx] for idx in idxs]))
+            
             if args.num_classes==2:
                 f1s=f1s+[f1_score([all_Ys[idx] for idx in idxs],[all_Yhats[idx] for idx in idxs])]
                 AUC_scores=AUC_scores+[roc_auc_score([all_Ys[idx] for idx in idxs],[all_p1s[idx] for idx in idxs])]
