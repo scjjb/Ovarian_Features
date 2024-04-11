@@ -16,7 +16,7 @@ data_arguments:
   # column name for key in data_dir (if a dict mapping is used)
   data_dir_key: source
   # csv list containing slide_ids (can additionally have seg/patch paramters, class labels, etc.)
-  process_list: rn50vsuni.csv
+  process_list: vitlvsuni.csv
   # preset file for segmentation/patching
   preset: presets/rn50.csv
   # file extention for slides
@@ -36,10 +36,10 @@ patching_arguments:
   custom_downsample: 4
 model_arguments: 
   # arguments for initializing model from checkpoint
-  ckpt_path: /mnt/results/stagingandids_resnet50_10x_bestfrom15tuning_bce_normal_s1/s_0_checkpoint.pt
+  ckpt_path: /mnt/results/stagingandids_resnet50_10x_bestfrom19tuning_bce_normal_s1/s_0_checkpoint.pt
   model_type: clam_sb # see utils/eval_utils/
   initiate_fn: initiate_model # see utils/eval_utils/
-  model_size: small
+  model_size: smaller
   drop_out: 0.4
 heatmap_arguments:
   max_size: 3000
