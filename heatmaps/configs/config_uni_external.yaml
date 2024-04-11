@@ -30,10 +30,10 @@ data_arguments:
     mucinous: 4
 patching_arguments:
   # arguments for patching
-  patch_size: 1024
+  patch_size: 512
   overlap: 0.5
   patch_level: 0
-  custom_downsample: 4
+  custom_downsample: 2
 model_arguments: 
   # arguments for initializing model from checkpoint
   ckpt_path: /mnt/results/stagingandids_10x_bestfrom19tuning_bce_uni_s1/s_0_checkpoint.pt
