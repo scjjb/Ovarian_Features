@@ -6,9 +6,9 @@ exp_arguments:
   # name tag for saving generated figures and assets
   save_exp_code: heatmaps 
   # where to save raw asset files
-  raw_save_dir: /mnt/results/heatmaps/UNI
+  raw_save_dir: /mnt/results/heatmaps/VITL
   # where to save final heatmaps
-  production_save_dir: /mnt/results/heatmaps/UNI
+  production_save_dir: /mnt/results/heatmaps/VITL
   batch_size: 8
 data_arguments: 
   # where is data stored; can be a single str path or a dictionary of key, data_dir mapping
@@ -36,10 +36,10 @@ patching_arguments:
   custom_downsample: 4
 model_arguments: 
   # arguments for initializing model from checkpoint
-  ckpt_path: /mnt/results/stagingandids_10x_bestfrom19tuning_bce_uni_s1/s_0_checkpoint.pt
+  ckpt_path: /mnt/results/stagingandids_10x_bestfrom19tuning_bce_vitl_s1/s_0_checkpoint.pt
   model_type: clam_sb # see utils/eval_utils/
   initiate_fn: initiate_model # see utils/eval_utils/
-  model_size: small
+  model_size: big
   drop_out: 0.0
 heatmap_arguments:
   max_size: 3000
