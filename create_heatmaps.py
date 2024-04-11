@@ -13,7 +13,7 @@ from utils.utils import *
 from math import floor
 from utils.eval_utils import initiate_model as initiate_model
 from models.model_clam import CLAM_MB, CLAM_SB
-from models.resnet_custom import resnet50_baseline
+from models.resnet_custom import resnet18_baseline,resnet50_baseline
 import h5py
 import yaml
 from wsi_core.batch_process_utils import initialize_df
@@ -26,7 +26,7 @@ from datasets.dataset_h5 import eval_transforms
 import timm
 
 parser = argparse.ArgumentParser(description='Heatmap inference script')
-parser.add_argument('--model', type=str, default='resnet50',choices=['resnet50','uni','vitl','hipt'])
+parser.add_argument('--model', type=str, default='resnet50',choices=['resnet18','resnet18histo','resnet50','uni','vitl','hipt'])
 parser.add_argument('--save_exp_code', type=str, default=None,
                                         help='experiment code')
 parser.add_argument('--overlap', type=float, default=None)
@@ -174,6 +174,17 @@ if __name__ == '__main__':
             print("CREATING HEATMAP USING RESNET50")
             feature_extractor = resnet50_baseline(pretrained=True)
             transforms = eval_transforms(pretrained=True)
+        elif model_type=='resnet18':
+            print("CREATING HEATMAP USING RESNET18")
+            feature_extractor = resnet18_baseline(pretrained=True)
+            transforms = eval_transforms(pretrained=True)
+        elif model_type=='resnet18histo':
+            print("CREATING HEATMAP USING RESNET18HISTO")
+            feature_extractor = resnet18_baseline(pretrained=True)
+            t = transforms.Compose(
+                    [transforms.Resize(224),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))])
         elif model_type=='uni':
             print("CREATING HEATMAP USING UNI")
             feature_extractor = timm.create_model("vit_large_patch16_224", img_size=224, patch_size=16, init_values=1e-5, num_classes=0, dynamic_img_size=True)
