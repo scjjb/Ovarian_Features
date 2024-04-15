@@ -181,7 +181,7 @@ if __name__ == '__main__':
         elif model_type=='resnet18histo':
             print("CREATING HEATMAP USING RESNET18HISTO")
             feature_extractor = resnet18_baseline(pretrained=True, dataset = 'Histo')
-            t = transforms.Compose(
+            transforms = transforms.Compose(
                     [transforms.Resize(224),
                     transforms.ToTensor(),
                     transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))])
