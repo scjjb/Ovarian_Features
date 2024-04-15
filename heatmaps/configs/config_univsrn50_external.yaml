@@ -12,7 +12,7 @@ exp_arguments:
   batch_size: 8
 data_arguments: 
   # where is data stored; can be a single str path or a dictionary of key, data_dir mapping
-  data_dir: /mnt/data/Transcanadian_WSI
+  data_dir: /mnt/data/transcanadian_WSI
   # column name for key in data_dir (if a dict mapping is used)
   data_dir_key: source
   # csv list containing slide_ids (can additionally have seg/patch paramters, class labels, etc.)
