@@ -321,7 +321,9 @@ if __name__ == '__main__':
         if torch.cuda.device_count() > 1:
                 model = nn.DataParallel(model)
                 
+        print("\nModel parameters:",f'{sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
         model.eval()
+        
         total = len(bags_dataset)
 
         unavailable_patch_files=0
