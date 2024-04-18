@@ -1,7 +1,7 @@
 {"reg": "tune.grid_search([1e-3])",
 "drop_out": "tune.grid_search([0.0])",
 "lr": "tune.grid_search([5e-5,1e-5,5e-6])",
-"patches": "tune.grid_search([1000,1500,2000])",
+"patches": "tune.grid_search([2000,3000,4000])",
 "beta1":  "tune.grid_search([0.9])",
 "beta2": "tune.grid_search([0.999])",
 "eps": "tune.grid_search([1e-5])",
