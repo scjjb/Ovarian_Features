@@ -35,6 +35,10 @@ for model_name in model_names:
     all_f1_sds=[]
     all_accuracy_sds=[]
     all_balanced_accuracy_sds=[]
+    all_auc_cis=[]
+    all_f1_cis=[]
+    all_accuracy_cis=[]
+    all_balanced_accuracy_cis=[]
 
     for run_no in range(args.run_repeats):
             
@@ -124,21 +128,33 @@ for model_name in model_names:
 
         all_auc_means=all_auc_means+[np.mean(AUC_scores)]
         all_auc_sds=all_auc_sds+[np.std(AUC_scores)]
+        all_auc_cis=all_auc_cis+[list(np.percentile(AUC_scores, [2.5,97.5]))]
         all_f1_means=all_f1_means+[np.mean(f1s)]
         all_f1_sds=all_f1_sds+[np.std(f1s)]
+        all_f1_cis=all_f1_cis+[list(np.percentile(f1s, [2.5,97.5]))]
         all_accuracy_means=all_accuracy_means+[np.mean(accuracies)]
         all_accuracy_sds=all_accuracy_sds+[np.std(accuracies)]
+        all_accuracy_cis=all_accuracy_cis+[list(np.percentile(accuracies, [2.5,97.5]))]
         all_balanced_accuracy_means=all_balanced_accuracy_means+[np.mean(balanced_accuracies)]
         all_balanced_accuracy_sds=all_balanced_accuracy_sds+[np.std(balanced_accuracies)]
+        all_balanced_accuracy_cis=all_balanced_accuracy_cis+[list(np.percentile(balanced_accuracies, [2.5,97.5]))]
 
-        print("AUC mean: ", all_auc_means," AUC std: ",all_auc_sds)
+        print("AUC mean: ", all_auc_means," AUC std: ",all_auc_sds, "AUC 95%CI: ",all_auc_cis)
         if args.num_classes==2:
-            print("F1 mean: ",all_f1_means," F1 std: ",all_f1_sds)
+            print("F1 mean: ",all_f1_means," F1 std: ",all_f1_sds, "F1 95%CI: ",all_f1_cis)
         else:
-            print("Macro F1 mean: ",all_f1_means," F1 std: ",all_f1_sds)
-        print("accuracy mean: ",all_accuracy_means," accuracy std: ",all_accuracy_sds)
-        print("balanced accuracy mean: ",all_balanced_accuracy_means," balanced accuracy std: ",all_balanced_accuracy_sds)
+            print("Macro F1 mean: ",all_f1_means," F1 std: ",all_f1_sds, "F1 95%CI: ",all_f1_cis)
+        print("accuracy mean: ",all_accuracy_means," accuracy std: ",all_accuracy_sds, "accuracy 95%CI: ",all_accuracy_cis)
+        print("balanced accuracy mean: ",all_balanced_accuracy_means," balanced accuracy std: ",all_balanced_accuracy_sds, "balanced accuracy 95%CI: ",all_balanced_accuracy_cis)
         
+    plot_CIs=False
+    if plot_CIs:
+        plot_to = "/mnt/results/CIs/"
+        plt.hist(AUC_scores, bins=50)
+        plt.axvline(np.percentile(AUC_scores, [2.5]), color="red")
+        plt.axvline(np.percentile(AUC_scores, [97.5]), color="red")
+        plt.savefig(plot_to+"AUC.png")
+
     df=pd.DataFrame([[all_auc_means],[all_accuracy_means],[all_balanced_accuracy_means],[all_f1_means],[all_auc_sds],[all_accuracy_sds],[all_balanced_accuracy_sds],[all_f1_sds]])
     df.to_csv("metric_results/"+model_name+".csv",index=False)
 
