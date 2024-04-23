@@ -27,7 +27,9 @@ parser.add_argument('--model_type', type=str, choices=['graph', 'graph_ms'], def
 parser.add_argument('--graph_edge_distance',type=int,default=750,help="Maximum distance between nodes in graph to add edges.")
 parser.add_argument('--offset',type=int,default=512,help="The offset applied to the larger patches in graph_ms, which will typically be half of the size of the smaller magnification patches. This is needed due to coords being top-left rather than centre")
 parser.add_argument('--ms_features',choices=["naive","seperate_zero","seperate_avg"],default="naive",help="whether to assume all patch features are the same (naive) or keep them separate across magnifications")
+parser.add_argument('--no_auto_skip', default=False, action='store_true')
 args = parser.parse_args()
+
 
 
 def extract_graphs():
@@ -53,7 +55,7 @@ def extract_graphs():
     for i in range(total):
         slide_id = str(slide_ids[i])
         
-        if slide_id+'_features.pt' in dest_files:
+        if slide_id+'_features.pt' in dest_files and not args.no_auto_skip:
             print('skipped {}'.format(slide_id))
             continue
             
