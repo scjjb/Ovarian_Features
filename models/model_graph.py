@@ -6,6 +6,23 @@ from torch_geometric.nn import global_mean_pool as gap
 from torch import nn
 import torch.nn.functional as F
 
+import numpy as np
+import random
+import os
+
+
+def seed_torch(seed=7):
+    device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if device.type == 'cuda':
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed) # if you are using multi-GPU.
+    torch.backends.cudnn.benchmark = False
+    torch.backends.cudnn.deterministic = True
+
 """
 TopK Pooling Graph Classification Network (3 fc layers)
 args:
@@ -19,6 +36,7 @@ class Graph_Model(torch.nn.Module):
     def __init__(self, pooling_factor = 0.8, pooling_layers = 3, message_passings = 1, gat_heads = 1, embedding_size = 128, num_features=196, num_classes=2, max_nodes=250, drop_out=0.5, message_passing = 'standard', pooling = 'topk'):
         super().__init__()
         
+        seed_torch(0)
         self.drop_out = drop_out
         self.message_passings = message_passings
         graph_layers=[]
