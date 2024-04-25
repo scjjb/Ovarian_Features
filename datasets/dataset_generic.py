@@ -540,7 +540,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     #path_features = BatchWSI.from_data_list(path_features, update_cat_dims={'edge_latent': 1})
                                     return (path_features, label, 1, 1)
 
-                                if self.model_type not in ['graph_ms']:
+                                if self.model_type not in ['graph','graph_ms']:
                                     try:
                                         features = torch.load(full_path)
                                     except:
@@ -548,15 +548,16 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                 else:
                                     features = []
                                 
-                                if self.model_type in ['graph']:
-                                    with h5py.File(os.path.join(self.coords_path, str(slide_id)+".h5"),'r') as hdf5_file:
-                                        coordinates = hdf5_file['coords'][:]
+                                #if self.model_type in ['graph']:
+                                #    with h5py.File(os.path.join(self.coords_path, str(slide_id)+".h5"),'r') as hdf5_file:
+                                #        coordinates = hdf5_file['coords'][:]
 
-                                if self.max_patches_per_slide < len(features):
-                                    sampled_idxs=np.random.choice(len(features),self.max_patches_per_slide)
-                                    features = features[sampled_idxs]
-                                    if self.model_type == 'graph':
-                                        coordinates = coordinates[sampled_idxs]
+                                if model_type not in['graph','graph_ms']:
+                                    if self.max_patches_per_slide < len(features):
+                                        sampled_idxs=np.random.choice(len(features),self.max_patches_per_slide)
+                                        features = features[sampled_idxs]
+                                    #if self.model_type == 'graph':
+                                    #    coordinates = coordinates[sampled_idxs]
                                     #elif self.model_type == 'graph_ms':
                                     ## is done in the dataloader further down
                                     #    raise NotImplementedError("can't yet subsample multi-scale graphs")
@@ -566,17 +567,17 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                     noise = torch.randn_like(features)*self.perturb_variance
                                     features = features + noise
                                 
-                                if self.model_type == 'graph':
-                                    distances = pdist(coordinates, 'euclidean')
-                                    dist_matrix = squareform(distances)
-                                    adj = (dist_matrix <= self.graph_edge_distance).astype(np.float32)
-                                    adj = (adj - np.identity(adj.shape[0])).astype(np.float32)
-                                    edge_indices = np.transpose(np.triu(adj,k=1).nonzero())
-                                    adj = torch.from_numpy(edge_indices).t().contiguous()
-                                    x = features.clone().detach()
-                                    return x, adj, label
+                                #if self.model_type == ['graph']:
+                                #    distances = pdist(coordinates, 'euclidean')
+                                #    dist_matrix = squareform(distances)
+                                #    adj = (dist_matrix <= self.graph_edge_distance).astype(np.float32)
+                                #    adj = (adj - np.identity(adj.shape[0])).astype(np.float32)
+                                #    edge_indices = np.transpose(np.triu(adj,k=1).nonzero())
+                                #    adj = torch.from_numpy(edge_indices).t().contiguous()
+                                #    x = features.clone().detach()
+                                #    return x, adj, label
                                 
-                                if self.model_type == 'graph_ms':
+                                if self.model_type in ['graph','graph_ms']:
                                     ## load from files created in create_graphs.py
                                     x = torch.load(os.path.join(self.graph_path, 'features', str(slide_id)+'_features.pt'))
                                     adj = torch.load(os.path.join(self.graph_path, 'adj', str(slide_id)+'_adj.pt'))
