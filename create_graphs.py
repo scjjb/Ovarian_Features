@@ -64,15 +64,22 @@ def extract_graphs():
         full_path = os.path.join(data_dir, 'pt_files', '{}.pt'.format(slide_id))
         features = torch.load(full_path)
         
+        with h5py.File(os.path.join(args.coords_path, slide_id+".h5"),'r') as hdf5_file:
+                coordinates = hdf5_file['coords'][:]
+
         if args.model_type == 'graph':
-            raise NotImplementedError("still need to copy this over from datasets/dataset_generic.py")
+            distances = pdist(coordinates, 'euclidean')
+            dist_matrix = squareform(distances)
+            adj = (dist_matrix <= args.graph_edge_distance).astype(np.float32)
+            adj = (adj - np.identity(adj.shape[0])).astype(np.float32)
+            edge_indices = np.transpose(np.triu(adj,k=1).nonzero())
+            adj = torch.from_numpy(edge_indices).t().contiguous()
+            x = features.clone().detach()           
 
         elif args.model_type == 'graph_ms':
             small_full_path = os.path.join(small_data_dir, 'pt_files', '{}.pt'.format(slide_id))
             small_features = torch.load(small_full_path)
 
-            with h5py.File(os.path.join(args.coords_path, slide_id+".h5"),'r') as hdf5_file:
-                coordinates = hdf5_file['coords'][:]
             with h5py.File(os.path.join(args.small_coords_path, slide_id+".h5"),'r') as hdf5_file:
                 small_coordinates = hdf5_file['coords'][:]
 
@@ -125,15 +132,15 @@ def extract_graphs():
             adj = torch.cat((adj_big, adj_small, adj_between),dim=1)
             x = torch.cat((x_big,x_small),dim=0)
 
-            adj_checker = [str(digit.item()) for digit in adj[0]]
-            adj_checker += [str(digit.item()) for digit in adj[1]]
-            x_checker = [str(digit) for digit in range(len(x))]
-            solo_nodes = [node for node in x_checker if node not in adj_checker]
+            #adj_checker = [str(digit.item()) for digit in adj[0]]
+            #adj_checker += [str(digit.item()) for digit in adj[1]]
+            #x_checker = [str(digit) for digit in range(len(x))]
+            #solo_nodes = [node for node in x_checker if node not in adj_checker]
         
     
-            ## save the features and adj as a single .np file. Need to make sure theres a folder made with mkdir before this part 
-            torch.save(x, os.path.join(args.save_graph_path, 'features', str(slide_id)+'_features.pt'))
-            torch.save(adj, os.path.join(args.save_graph_path, 'adj', str(slide_id)+'_adj.pt'))
+        ## save the features and adj as a single .np file. Need to make sure theres a folder made with mkdir before this part 
+        torch.save(x, os.path.join(args.save_graph_path, 'features', str(slide_id)+'_features.pt'))
+        torch.save(adj, os.path.join(args.save_graph_path, 'adj', str(slide_id)+'_adj.pt'))
         
         time_elapsed = time.time() - time_start
         total_time_elapsed += time_elapsed
