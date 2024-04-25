@@ -552,7 +552,7 @@ class Generic_MIL_Dataset(Generic_WSI_Classification_Dataset):
                                 #    with h5py.File(os.path.join(self.coords_path, str(slide_id)+".h5"),'r') as hdf5_file:
                                 #        coordinates = hdf5_file['coords'][:]
 
-                                if model_type not in['graph','graph_ms']:
+                                if self.model_type not in['graph','graph_ms']:
                                     if self.max_patches_per_slide < len(features):
                                         sampled_idxs=np.random.choice(len(features),self.max_patches_per_slide)
                                         features = features[sampled_idxs]
