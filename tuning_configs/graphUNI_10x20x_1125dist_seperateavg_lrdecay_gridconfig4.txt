@@ -6,7 +6,7 @@
 "beta2": "tune.grid_search([0.999])",
 "eps": "tune.grid_search([1e-5])",
 "edge_distance": "tune.grid_search([1125])",
-"poolings": "tune.grid_search([2])",
+"poolings": "tune.grid_search([1,2,3])",
 "passings": "tune.grid_search([1])",
 "gat_heads": "tune.grid_search([1])",
 "pooling_factor": "tune.grid_search([0.6,0.75,0.9])",
