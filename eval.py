@@ -19,8 +19,8 @@ import cProfile, pstats
 parser = argparse.ArgumentParser(description='CLAM Evaluation Script')
 
 ## Folders
-parser.add_argument('--data_root_dir', type=str, default=None,help='directory containing features folders')
-parser.add_argument('--features_folder', type=str, default=None,help='folder within data_root_dir containing the features - must contain pt_files/h5_files subfolder')
+parser.add_argument('--data_root_dir', type=str, default="/",help='directory containing features folders')
+parser.add_argument('--features_folder', type=str, default="/",help='folder within data_root_dir containing the features - must contain pt_files/h5_files subfolder')
 parser.add_argument('--small_features_folder', type=str, default="/",help='folder within data_root_dir containing the small features if needed (only used in graph_ms) - must contain pt_files/h5_files subfolder')
 parser.add_argument('--coords_path', type=str, default=None,help='path to coords pt files if needed')
 parser.add_argument('--small_coords_path', type=str, default=None,help='path to small coords pt files if needed (only used in graph_ms)')
