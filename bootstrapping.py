@@ -15,6 +15,7 @@ parser.add_argument('--run_repeats', type=int, default=10,
 parser.add_argument('--folds', type=int, default=10,
                             help='Number of cross-validation folds')
 parser.add_argument('--data_csv', type=str, default='set_all_714.csv')
+parser.add_argument('--model_folder', type=str, default='/mnt/results/eval_results')
 parser.add_argument('--num_classes',type=int,default=2)
 parser.add_argument('--plot_roc_curves', action='store_true', default=False, help="Plot an ROC curve for each run repeat")
 parser.add_argument('--roc_plot_dir', type=str, default='../mount_outputs/roc_plots/',help='directory to plot ROC curves')
@@ -23,7 +24,7 @@ args = parser.parse_args()
 model_names=args.model_names.split(",")
 bootstraps=args.bootstraps
 
-model_folder = "/mnt/results/eval_results"
+model_folder = args.model_folder
 for model_name in model_names:
     full_model_name=model_folder+'/EVAL_'+model_name
 
