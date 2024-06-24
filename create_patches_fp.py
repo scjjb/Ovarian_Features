@@ -49,7 +49,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
                                   seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False,
                                   'keep_ids': 'none', 'exclude_ids': 'none'},
                                   filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8}, 
-                                  vis_params = {'vis_level': -1, 'line_thickness': 500},
+                                  vis_params = {'vis_level': -1, 'line_thickness': 800},
                                   patch_params = {'use_padding': True, 'contour_fn': 'four_pt'},
                                   patch_level = 0,
                                   use_default_params = False, 
@@ -299,7 +299,11 @@ if __name__ == '__main__':
         seg_params = {'seg_level': args.seg_level, 'sthresh': args.sthresh, 'mthresh': args.mthresh, 'close': args.closing, 'use_otsu': args.use_otsu,
                                   'keep_ids': 'none', 'exclude_ids': 'none'}
         filter_params = {'a_t':args.atfilter, 'a_h': args.ahfilter, 'max_n_holes':args.max_holes}
+<<<<<<< HEAD
         vis_params = {'vis_level': -1, 'line_thickness': args.line_thickness}
+=======
+        vis_params = {'vis_level': -1, 'line_thickness': 800}
+>>>>>>> e633cf02968d908babdb8eba899cc65247fdbf2c
         patch_params = {'use_padding': True, 'contour_fn': 'four_pt'}
 
         if args.preset:
