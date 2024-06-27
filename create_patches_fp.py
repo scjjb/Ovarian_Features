@@ -299,11 +299,7 @@ if __name__ == '__main__':
         seg_params = {'seg_level': args.seg_level, 'sthresh': args.sthresh, 'mthresh': args.mthresh, 'close': args.closing, 'use_otsu': args.use_otsu,
                                   'keep_ids': 'none', 'exclude_ids': 'none'}
         filter_params = {'a_t':args.atfilter, 'a_h': args.ahfilter, 'max_n_holes':args.max_holes}
-<<<<<<< HEAD
         vis_params = {'vis_level': -1, 'line_thickness': args.line_thickness}
-=======
-        vis_params = {'vis_level': -1, 'line_thickness': 800}
->>>>>>> e633cf02968d908babdb8eba899cc65247fdbf2c
         patch_params = {'use_padding': True, 'contour_fn': 'four_pt'}
 
         if args.preset:
