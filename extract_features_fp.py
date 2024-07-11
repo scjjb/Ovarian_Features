@@ -12,7 +12,8 @@ from torch.utils.data import DataLoader
 from models.resnet_custom import resnet18_baseline,resnet50_baseline
 from utils.utils import collate_features
 from utils.file_utils import save_hdf5
-from models.ctran import ctranspath
+from models.HIPT_4K.hipt_4k import HIPT_4K
+from models.HIPT_4K.hipt_model_utils import eval_transforms
 
 import torchvision
 import torch
@@ -210,13 +211,21 @@ def compute_w_loader(file_path, output_path, wsi, model,
                     transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))])
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
+        elif args.use_transforms=='gigapath_default':
+            t = transforms.Compose(
+                    [transforms.Resize(256, interpolation=transforms.InterpolationMode.BICUBIC),
+                    transforms.CenterCrop(224),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+
         else:
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, pretrained=pretrained, 
                 custom_downsample=custom_downsample, target_patch_size=target_patch_size)
         dataset.update_sample(range(len(dataset)))
         x, y = dataset[0]
         
-        if args.model_type in ['resnet18', 'resnet50', 'densenet121', 'ctranspath']:
+        if args.model_type in ['resnet18', 'resnet50', 'densenet121', 'ctranspath', 'provgigapath']:
             kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
         elif args.model_type=='levit_128s':
             kwargs = {'num_workers': 16, 'pin_memory': True} if device.type == "cuda" else {}
@@ -262,12 +271,12 @@ parser.add_argument('--batch_size', type=int, default=256)
 parser.add_argument('--no_auto_skip', default=False, action='store_true')
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
-parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
-parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath'], default='resnet50')
-parser.add_argument('--model_weights_path', type=str, default="/mnt/results/Checkpoints/", help="location of pre-trained model, only needed for HIPT_4K and ctranspath")
-parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
-parser.add_argument('--hardware',type=str,default="PC")
-parser.add_argument('--graph_patches',type=str,choices=['none','small','big'],default='none')
+parser.add_argument('--pretraining_dataset', type=str, choices=['ImageNet','Histo'], default='ImageNet')
+parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath'], default='resnet50')
+parser.add_argument('--model_weights_path', type=str, default="/mnt/results/Checkpoints/", help="location of pre-trained model, only needed for UNI, HIPT_4K and cTransPath")
+parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'gigapath_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
+parser.add_argument('--hardware', type=str, default="PC")
+parser.add_argument('--graph_patches', type=str, choices=['none','small','big'], default='none')
 args = parser.parse_args()
 
 
@@ -310,15 +319,19 @@ if __name__ == '__main__':
              assert args.use_transforms in ["uni_default"]
         
         elif args.model_type == 'ctranspath':
+            from models.ctran import ctranspath
             model = ctranspath()
             model.head = nn.Identity()
             td = torch.load(args.model_weights_path+'ctranspath.pth')
             model.load_state_dict(td['model'], strict=True)
             assert args.use_transforms in ["uni_default"] ## uni and ctranspath have same preprocessing
 
+        elif args.model_type == 'provgigapath':
+            print("if not working, remember to input the huggingface token using 'huggingface-cli login' command")
+            model = timm.create_model("hf_hub:prov-gigapath/prov-gigapath", pretrained=True)
+            assert args.use_transforms in ["gigapath_default"]
+
         elif args.model_type=='HIPT_4K':
-            from HIPT_4K.hipt_4k import HIPT_4K
-            from HIPT_4K.hipt_model_utils import eval_transforms
             model = HIPT_4K(model256_path=args.model_weights_path+"vit256_small_dino.pth",model4k_path=args.model_weights_path+"vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
         
         model = model.to(device)
