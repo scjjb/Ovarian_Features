@@ -14,6 +14,7 @@ from utils.utils import collate_features
 from utils.file_utils import save_hdf5
 from models.HIPT_4K.hipt_4k import HIPT_4K
 from models.HIPT_4K.hipt_model_utils import eval_transforms
+from transformers import AutoImageProcessor, ViTModel
 
 import torchvision
 import torch
@@ -225,14 +226,12 @@ def compute_w_loader(file_path, output_path, wsi, model,
         dataset.update_sample(range(len(dataset)))
         x, y = dataset[0]
         
-        if args.model_type in ['resnet18', 'resnet50', 'densenet121', 'ctranspath', 'provgigapath']:
-            kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
-        elif args.model_type=='levit_128s':
+        kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
+        if args.model_type=='levit_128s':
             kwargs = {'num_workers': 16, 'pin_memory': True} if device.type == "cuda" else {}
             tfms=torch.nn.Sequential(transforms.CenterCrop(224))
         elif args.model_type in ['uni', 'vit_l']:
             kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
-            tfms=torch.nn.Sequential(transforms.CenterCrop(224))
         elif args.model_type=='HIPT_4K':
             if args.hardware=='DGX':
                 kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
@@ -249,9 +248,13 @@ def compute_w_loader(file_path, output_path, wsi, model,
                         if count % print_every == 0:
                                 print('batch {}/{}, {} files processed'.format(count, len(loader), count * batch_size))
                         batch = batch.to(device, non_blocking=True)
+                        
                         if args.model_type=='levit_128s':
                             batch=tfms(batch)
+                        
                         features = model(batch)
+                        if args.model_type=='phikon':
+                            features = features.last_hidden_state[:, 0, :]
                         features = features.cpu().numpy()
 
                         asset_dict = {'features': features, 'coords': coords}
@@ -269,12 +272,13 @@ parser.add_argument('--csv_path', type=str, default=None)
 parser.add_argument('--feat_dir', type=str, default=None)
 parser.add_argument('--batch_size', type=int, default=256)
 parser.add_argument('--no_auto_skip', default=False, action='store_true')
+parser.add_argument('--print_every', type=int, default=100, help='number of batches to process between print statements')
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset', type=str, choices=['ImageNet','Histo'], default='ImageNet')
-parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath'], default='resnet50')
+parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon'], default='resnet50')
 parser.add_argument('--model_weights_path', type=str, default="/mnt/results/Checkpoints/", help="location of pre-trained model, only needed for UNI, HIPT_4K and cTransPath")
-parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'gigapath_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
+parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'gigapath_default', 'phikon_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
 parser.add_argument('--hardware', type=str, default="PC")
 parser.add_argument('--graph_patches', type=str, choices=['none','small','big'], default='none')
 args = parser.parse_args()
@@ -331,6 +335,10 @@ if __name__ == '__main__':
             model = timm.create_model("hf_hub:prov-gigapath/prov-gigapath", pretrained=True)
             assert args.use_transforms in ["gigapath_default"]
 
+        elif args.model_type == 'phikon':
+            model = ViTModel.from_pretrained("owkin/phikon", add_pooling_layer=False)
+            assert args.use_transforms in ["uni_default"] ## uni and phikon have same preprocessing
+
         elif args.model_type=='HIPT_4K':
             model = HIPT_4K(model256_path=args.model_weights_path+"vit256_small_dino.pth",model4k_path=args.model_weights_path+"vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
         
@@ -372,7 +380,7 @@ if __name__ == '__main__':
                 time_start = time.time()
                 wsi = openslide.open_slide(slide_file_path)
                 output_file_path = compute_w_loader(h5_file_path, output_path, wsi, 
-                model = model, batch_size = args.batch_size, verbose = 1, print_every = 100, 
+                model = model, batch_size = args.batch_size, verbose = 1, print_every = args.print_every, 
                 custom_downsample=args.custom_downsample, target_patch_size=args.target_patch_size)
                 time_elapsed = time.time() - time_start
                 total_time_elapsed += time_elapsed
@@ -387,9 +395,9 @@ if __name__ == '__main__':
                 torch.save(features, os.path.join(args.feat_dir, 'pt_files', bag_base+'.pt'))
             except KeyboardInterrupt:
                 assert 1==2, "keyboard interrupt"
-            except:
-                print("patch file unavailable")
-                unavailable_patch_files = unavailable_patch_files+1 
-                continue
+            #except:
+            #    print("patch file unavailable")
+            #    unavailable_patch_files = unavailable_patch_files+1 
+            #    continue
         print("finished running with {} unavailable slide patch files".format(unavailable_patch_files))
         print("total time: {}".format(total_time_elapsed))
