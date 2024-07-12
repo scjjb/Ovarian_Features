@@ -87,8 +87,10 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
         seg_times = 0.
         patch_times = 0.
         stitch_times = 0.
+        skipped_slides = 0
 
         for i in range(total):
+            try:
                 df.to_csv(os.path.join(save_dir, 'process_list_autogen.csv'), index=False)
                 idx = process_stack.index[i]
                 slide = process_stack.loc[idx, 'slide_id']
@@ -218,8 +220,17 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
                 seg_times += seg_time_elapsed
                 patch_times += patch_time_elapsed
                 stitch_times += stitch_time_elapsed
+            
+            except KeyboardInterrupt:
+                assert 1==2, "keyboard interrupt"
+
+            except:
+                skipped_slides += 1
+                print("skipped {} broken slides".format(skipped_slides))
+                
 
         print("total time: {}".format(seg_times+patch_times+stitch_times))
+        print("total skipped: {}".format(skipped_slides))
         seg_times /= total
         patch_times /= total
         stitch_times /= total
