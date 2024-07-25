@@ -200,6 +200,7 @@ class Whole_Slide_Bag_FP(Dataset):
                 img = self.wsi.read_region(coord, self.patch_level, (self.patch_size, self.patch_size)).convert('RGB')
                 if self.target_patch_size is not None:
                         img = img.resize(self.target_patch_size)
+                #print(img)
                 transform = transforms.Compose([transforms.ToTensor()])
                 #print("before transforms",transform(img))
                 img = self.roi_transforms(img).unsqueeze(0)
