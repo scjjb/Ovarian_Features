@@ -16,7 +16,6 @@ from models.HIPT_4K.hipt_4k import HIPT_4K
 from models.HIPT_4K.hipt_model_utils import eval_transforms
 from transformers import AutoImageProcessor, ViTModel
 
-from timm.layers import SwiGLUPacked
 import torchvision
 import torch
 from torchvision import transforms
