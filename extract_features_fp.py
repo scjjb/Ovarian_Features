@@ -16,7 +16,6 @@ from models.HIPT_4K.hipt_4k import HIPT_4K
 from models.HIPT_4K.hipt_model_utils import eval_transforms
 from transformers import AutoImageProcessor, ViTModel
 
-from timm.layers import SwiGLUPacked
 import torchvision
 import torch
 from torchvision import transforms
@@ -346,7 +345,7 @@ if __name__ == '__main__':
             assert args.use_transforms in ["uni_default"] ## uni and phikon have same preprocessing
 
         elif args.model_type == 'virchow':
-            model = timm.create_model("hf-hub:paige-ai/Virchow", pretrained=True, mlp_layer=SwiGLUPacked, act_layer=torch.nn.SiLU)
+            model = timm.create_model("hf-hub:paige-ai/Virchow", pretrained=True, mlp_layer=timm.layers.SwiGLUPacked, act_layer=torch.nn.SiLU)
             assert args.use_transforms in ["gigapath_default"] ## virchow has same preprocessing as provgigapath
             ## see https://huggingface.co/paige-ai/Virchow/blob/main/config.json
 
