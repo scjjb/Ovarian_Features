@@ -49,7 +49,7 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
                                   seg_params = {'seg_level': -1, 'sthresh': 8, 'mthresh': 7, 'close': 4, 'use_otsu': False,
                                   'keep_ids': 'none', 'exclude_ids': 'none'},
                                   filter_params = {'a_t':100, 'a_h': 16, 'max_n_holes':8}, 
-                                  vis_params = {'vis_level': -1, 'line_thickness': 500},
+                                  vis_params = {'vis_level': -1, 'line_thickness': 800},
                                   patch_params = {'use_padding': True, 'contour_fn': 'four_pt'},
                                   patch_level = 0,
                                   use_default_params = False, 
@@ -61,6 +61,8 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
 
         slides = sorted(os.listdir(source))
         slides = [slide for slide in slides if os.path.isfile(os.path.join(source, slide))]
+        print(slides)
+        slides = [slide for slide in slides if slide.endswith('.svs')]
         if process_list is None:
                 df = initialize_df(slides, seg_params, filter_params, vis_params, patch_params)
         
@@ -85,8 +87,10 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
         seg_times = 0.
         patch_times = 0.
         stitch_times = 0.
+        skipped_slides = 0
 
         for i in range(total):
+            try:
                 df.to_csv(os.path.join(save_dir, 'process_list_autogen.csv'), index=False)
                 idx = process_stack.index[i]
                 slide = process_stack.loc[idx, 'slide_id']
@@ -216,8 +220,17 @@ def seg_and_patch(source, save_dir, patch_save_dir, mask_save_dir, stitch_save_d
                 seg_times += seg_time_elapsed
                 patch_times += patch_time_elapsed
                 stitch_times += stitch_time_elapsed
+            
+            except KeyboardInterrupt:
+                assert 1==2, "keyboard interrupt"
+
+            except:
+                skipped_slides += 1
+                print("skipped {} broken slides".format(skipped_slides))
+                
 
         print("total time: {}".format(seg_times+patch_times+stitch_times))
+        print("total skipped: {}".format(skipped_slides))
         seg_times /= total
         patch_times /= total
         stitch_times /= total

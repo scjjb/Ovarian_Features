@@ -1,3 +1,4 @@
+*.pth
 **/.DS_Store
 *.sh
 *.gif

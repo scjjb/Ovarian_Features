@@ -12,14 +12,16 @@ from torch.utils.data import DataLoader
 from models.resnet_custom import resnet18_baseline,resnet50_baseline
 from utils.utils import collate_features
 from utils.file_utils import save_hdf5
-from HIPT_4K.hipt_4k import HIPT_4K
-from HIPT_4K.hipt_model_utils import eval_transforms
+from models.HIPT_4K.hipt_4k import HIPT_4K
+from models.HIPT_4K.hipt_model_utils import eval_transforms
+from transformers import AutoImageProcessor, ViTModel
 
+from timm.layers import SwiGLUPacked
 import torchvision
 import torch
 from torchvision import transforms
 import torchstain
-from torch_staintools.normalizer import NormalizerBuilder
+#from torch_staintools.normalizer import NormalizerBuilder ## disabling this temporarily which will break Vahadane
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 print("torch device:", device, "\n")
@@ -211,27 +213,26 @@ def compute_w_loader(file_path, output_path, wsi, model,
                     transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))])
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
+        elif args.use_transforms=='gigapath_default':
+            t = transforms.Compose(
+                    [transforms.Resize(256, interpolation=transforms.InterpolationMode.BICUBIC),
+                    transforms.CenterCrop(224),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+
         else:
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, pretrained=pretrained, 
                 custom_downsample=custom_downsample, target_patch_size=target_patch_size)
         dataset.update_sample(range(len(dataset)))
         x, y = dataset[0]
         
-        if args.model_type=='resnet18':
-            kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
-        elif args.model_type=='resnet50':
-            kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
-        elif args.model_type=='densenet121':
-            kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
-        elif args.model_type=='levit_128s':
+        kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
+        if args.model_type=='levit_128s':
             kwargs = {'num_workers': 16, 'pin_memory': True} if device.type == "cuda" else {}
             tfms=torch.nn.Sequential(transforms.CenterCrop(224))
-        elif args.model_type=='uni':
+        elif args.model_type in ['uni', 'vit_l']:
             kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
-            tfms=torch.nn.Sequential(transforms.CenterCrop(224))
-        elif args.model_type=='vit_l':
-            kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
-            tfms=torch.nn.Sequential(transforms.CenterCrop(224))
         elif args.model_type=='HIPT_4K':
             if args.hardware=='DGX':
                 kwargs = {'num_workers': 4, 'pin_memory': True} if device.type == "cuda" else {}
@@ -248,11 +249,20 @@ def compute_w_loader(file_path, output_path, wsi, model,
                         if count % print_every == 0:
                                 print('batch {}/{}, {} files processed'.format(count, len(loader), count * batch_size))
                         batch = batch.to(device, non_blocking=True)
+                        
                         if args.model_type=='levit_128s':
                             batch=tfms(batch)
+                        
                         features = model(batch)
-                        features = features.cpu().numpy()
+                        if args.model_type=='phikon':
+                            features = features.last_hidden_state[:, 0, :]
 
+                        if args.model_type=='virchow':
+                            class_token = features[:, 0]
+                            patch_tokens = features[:, 1:]
+                            features = torch.cat([class_token, patch_tokens.mean(1)], dim=-1)
+
+                        features = features.cpu().numpy()
                         asset_dict = {'features': features, 'coords': coords}
                         save_hdf5(output_path, asset_dict, attr_dict= None, mode=mode)
                         mode = 'a'
@@ -268,13 +278,15 @@ parser.add_argument('--csv_path', type=str, default=None)
 parser.add_argument('--feat_dir', type=str, default=None)
 parser.add_argument('--batch_size', type=int, default=256)
 parser.add_argument('--no_auto_skip', default=False, action='store_true')
+parser.add_argument('--print_every', type=int, default=100, help='number of batches to process between print statements')
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
-parser.add_argument('--pretraining_dataset',type=str,choices=['ImageNet','Histo'],default='ImageNet')
-parser.add_argument('--model_type',type=str,choices=['resnet18','resnet50','densenet121','levit_128s','HIPT_4K','uni','vit_l'],default='resnet50')
-parser.add_argument('--use_transforms',type=str,choices=['all','HIPT','HIPT_blur','HIPT_augment','HIPT_augment_colour','HIPT_wang','HIPT_augment01','spatial','colourjitter','colourjitternorm','macenko','reinhard','vahadane','none','uni_default','histo_resnet18','histo_resnet18_224'],default='none')
-parser.add_argument('--hardware',type=str,default="PC")
-parser.add_argument('--graph_patches',type=str,choices=['none','small','big'],default='none')
+parser.add_argument('--pretraining_dataset', type=str, choices=['ImageNet','Histo'], default='ImageNet')
+parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon', 'virchow'], default='resnet50')
+parser.add_argument('--model_weights_path', type=str, default="/mnt/results/Checkpoints/", help="location of pre-trained model, only needed for UNI, HIPT_4K and cTransPath")
+parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'gigapath_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
+parser.add_argument('--hardware', type=str, default="PC")
+parser.add_argument('--graph_patches', type=str, choices=['none','small','big'], default='none')
 args = parser.parse_args()
 
 
@@ -297,37 +309,60 @@ if __name__ == '__main__':
             model = resnet18_baseline(pretrained=True,dataset=args.pretraining_dataset)
             if args.pretraining_dataset=='Histo':
                 assert args.use_transforms in ['histo_resnet18','histo_resnet18_224']
+        
         elif args.model_type=='resnet50':
             model = resnet50_baseline(pretrained=True,dataset=args.pretraining_dataset)
+        
         elif args.model_type=='densenet121':
             model = torchvision.models.densenet121(pretrained=True,num_classes=1024) 
+        
         elif args.model_type=='levit_128s':
             model=timm.create_model('levit_256',pretrained=True, num_classes=0)    
+        
         elif args.model_type=='uni':
             model = timm.create_model("vit_large_patch16_224", img_size=224, patch_size=16, init_values=1e-5, num_classes=0, dynamic_img_size=True)
-            local_dir = "/mnt/results/vit_large_patch16_224.dinov2.uni_mass100k/"
-            model.load_state_dict(torch.load(os.path.join(local_dir, "pytorch_model.bin"), map_location="cpu"), strict=True)
+            model.load_state_dict(torch.load(os.path.join(args.model_weights_path+"vit_large_patch16_224.dinov2.uni_mass100k/pytorch_model.bin"), map_location="cpu"), strict=True)
             assert args.use_transforms in ["uni_default"]
+        
         elif args.model_type =='vit_l':
              model = timm.create_model("vit_large_patch16_224",  num_classes=0,  pretrained = True)
              assert args.use_transforms in ["uni_default"]
-        elif args.model_type=='HIPT_4K':
-            if args.hardware=='DGX':
-                 model = HIPT_4K(model256_path="/mnt/results/Checkpoints/vit256_small_dino.pth",model4k_path="/mnt/results/Checkpoints/vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
-            else:
-                model = HIPT_4K(model256_path="HIPT_4K/ckpts/vit256_small_dino.pth",model4k_path="HIPT_4K/ckpts/vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
-        model = model.to(device)
         
+        elif args.model_type == 'ctranspath':
+            from models.ctran import ctranspath
+            model = ctranspath()
+            model.head = nn.Identity()
+            td = torch.load(args.model_weights_path+'ctranspath.pth')
+            model.load_state_dict(td['model'], strict=True)
+            assert args.use_transforms in ["uni_default"] ## uni and ctranspath have same preprocessing
+
+        elif args.model_type == 'provgigapath':
+            print("if not working, remember to input the huggingface token using 'huggingface-cli login' command")
+            model = timm.create_model("hf_hub:prov-gigapath/prov-gigapath", pretrained=True)
+            assert args.use_transforms in ["gigapath_default"]
+
+        elif args.model_type == 'phikon':
+            model = ViTModel.from_pretrained("owkin/phikon", add_pooling_layer=False)
+            assert args.use_transforms in ["uni_default"] ## uni and phikon have same preprocessing
+
+        elif args.model_type == 'virchow':
+            model = timm.create_model("hf-hub:paige-ai/Virchow", pretrained=True, mlp_layer=SwiGLUPacked, act_layer=torch.nn.SiLU)
+            assert args.use_transforms in ["gigapath_default"] ## virchow has same preprocessing as provgigapath
+            ## see https://huggingface.co/paige-ai/Virchow/blob/main/config.json
+
+        elif args.model_type=='HIPT_4K':
+            model = HIPT_4K(model256_path=args.model_weights_path+"vit256_small_dino.pth",model4k_path=args.model_weights_path+"vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
+        
+        model = model.to(device)
         if torch.cuda.device_count() > 1:
                 model = nn.DataParallel(model)
                 
         print("\nModel parameters:",f'{sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
         model.eval()
         
-        total = len(bags_dataset)
-
         unavailable_patch_files=0
         total_time_elapsed = 0.0
+        total = len(bags_dataset)
         for bag_candidate_idx in range(total):
             print('\nprogress: {}/{}'.format(bag_candidate_idx, total))
             print('skipped unavailable slides: {}'.format(unavailable_patch_files))
@@ -356,7 +391,7 @@ if __name__ == '__main__':
                 time_start = time.time()
                 wsi = openslide.open_slide(slide_file_path)
                 output_file_path = compute_w_loader(h5_file_path, output_path, wsi, 
-                model = model, batch_size = args.batch_size, verbose = 1, print_every = 100, 
+                model = model, batch_size = args.batch_size, verbose = 1, print_every = args.print_every, 
                 custom_downsample=args.custom_downsample, target_patch_size=args.target_patch_size)
                 time_elapsed = time.time() - time_start
                 total_time_elapsed += time_elapsed
