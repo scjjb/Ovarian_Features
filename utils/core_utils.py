@@ -223,7 +223,7 @@ def train(config, datasets, cur, class_counts_train, class_counts_val, args):
 
 
     print('\nInit Model...', end=' ')
-    model_dict = {"dropout": args.drop_out, 'n_classes': args.n_classes}
+    model_dict = {"dropout": args.drop_out, 'n_classes': args.n_classes, 'encoding_size': args.encoding_size}
     
     if args.model_size is not None and args.model_type != 'mil':
         model_dict.update({"size_arg": args.model_size})
