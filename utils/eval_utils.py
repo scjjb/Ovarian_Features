@@ -26,7 +26,7 @@ from ray import tune
 
 def initiate_model(args, ckpt_path, num_features=0):
     print('Init Model')    
-    model_dict = {"dropout": args.drop_out, 'n_classes': args.n_classes}
+    model_dict = {"dropout": args.drop_out, 'n_classes': args.n_classes, 'encoding_size': args.encoding_size}
     
     if args.model_size is not None and args.model_type in ['clam_sb', 'clam_mb']:
         model_dict.update({"size_arg": args.model_size})
