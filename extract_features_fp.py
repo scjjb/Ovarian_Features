@@ -230,12 +230,12 @@ def compute_w_loader(file_path, output_path, wsi, model,
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
         elif args.use_transforms=='kaiko_default':
-            t = transforms.v2.Compose(
-                    [transforms.v2.ToImage(),
-                    transforms.v2.Resize(size=224),
-                    transforms.v2.CenterCrop(size=224),
-                    transforms.v2.ToDtype(torch.float32, scale=True),
-                    transforms.v2.Normalize(mean=(0.5, 0.5, 0.5),std=(0.5, 0.5, 0.5))])
+            
+            t = transforms.Compose(
+                    [transforms.Resize(size=224),
+                    transforms.CenterCrop(size=224),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=(0.5, 0.5, 0.5),std=(0.5, 0.5, 0.5))])
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
         else:
