@@ -14,6 +14,7 @@ from utils.utils import collate_features
 from utils.file_utils import save_hdf5
 from models.HIPT_4K.hipt_4k import HIPT_4K
 from models.HIPT_4K.hipt_model_utils import eval_transforms
+from models import hibou
 from transformers import AutoImageProcessor, ViTModel
 
 import torchvision
@@ -220,6 +221,23 @@ def compute_w_loader(file_path, output_path, wsi, model,
                     transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))])
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
+        elif args.use_transforms=='hibou_default':
+            t = transforms.Compose(
+                    [transforms.Resize((224, 224), interpolation=torchvision.transforms.InterpolationMode.BICUBIC),
+                    transforms.CenterCrop((224, 224)),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=[0.7068, 0.5755, 0.7220], std=[0.1950, 0.2316, 0.1816])])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+
+        elif args.use_transforms=='kaiko_default':
+            t = transforms.v2.Compose(
+                    [transforms.v2.ToImage(),
+                    transforms.v2.Resize(size=224),
+                    transforms.v2.CenterCrop(size=224),
+                    transforms.v2.ToDtype(torch.float32, scale=True),
+                    transforms.v2.Normalize(mean=(0.5, 0.5, 0.5),std=(0.5, 0.5, 0.5))])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+
         else:
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, pretrained=pretrained, 
                 custom_downsample=custom_downsample, target_patch_size=target_patch_size)
@@ -281,9 +299,9 @@ parser.add_argument('--print_every', type=int, default=100, help='number of batc
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset', type=str, choices=['ImageNet','Histo'], default='ImageNet')
-parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon', 'virchow'], default='resnet50')
+parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon', 'virchow', 'hibou_b', 'kaiko_b8'], default='resnet50')
 parser.add_argument('--model_weights_path', type=str, default="/mnt/results/Checkpoints/", help="location of pre-trained model, only needed for UNI, HIPT_4K and cTransPath")
-parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'gigapath_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
+parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'gigapath_default', 'hibou_default', 'kaiko_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
 parser.add_argument('--hardware', type=str, default="PC")
 parser.add_argument('--graph_patches', type=str, choices=['none','small','big'], default='none')
 args = parser.parse_args()
@@ -343,6 +361,16 @@ if __name__ == '__main__':
         elif args.model_type == 'phikon':
             model = ViTModel.from_pretrained("owkin/phikon", add_pooling_layer=False)
             assert args.use_transforms in ["uni_default"] ## uni and phikon have same preprocessing
+
+        elif args.model_type == 'hibou_b':
+            model = hibou.build_model(args.model_weights_path+"hibou-b.pth")
+            assert args.use_transforms in ["hibou_default"]
+        
+        elif args.model_type == 'kaiko_b8':
+            print("kaiko requires python >=3.10")
+            model = torch.hub.load("kaiko-ai/towards_large_pathology_fms", "vitb8", trust_repo=True)
+            assert args.use_transforms in ["kaiko_default"]
+            
 
         elif args.model_type == 'virchow':
             model = timm.create_model("hf-hub:paige-ai/Virchow", pretrained=True, mlp_layer=timm.layers.SwiGLUPacked, act_layer=torch.nn.SiLU)
