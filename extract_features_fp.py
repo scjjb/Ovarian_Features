@@ -230,7 +230,6 @@ def compute_w_loader(file_path, output_path, wsi, model,
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
         elif args.use_transforms=='kaiko_default':
-            
             t = transforms.Compose(
                     [transforms.Resize(size=224),
                     transforms.CenterCrop(size=224),
@@ -238,6 +237,13 @@ def compute_w_loader(file_path, output_path, wsi, model,
                     transforms.Normalize(mean=(0.5, 0.5, 0.5),std=(0.5, 0.5, 0.5))])
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
+        elif args.use_transforms=='optimus_default':
+            t = transforms.Compose(
+                    [transforms.CenterCrop(size=224),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=(0.707223, 0.578729, 0.703617), std=(0.211883, 0.230117, 0.177517))])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+        
         else:
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, pretrained=pretrained, 
                 custom_downsample=custom_downsample, target_patch_size=target_patch_size)
@@ -299,9 +305,9 @@ parser.add_argument('--print_every', type=int, default=100, help='number of batc
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset', type=str, choices=['ImageNet','Histo'], default='ImageNet')
-parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon', 'virchow', 'hibou_b', 'kaiko_b8'], default='resnet50')
+parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon', 'virchow', 'hibou_b', 'kaiko_b8', 'optimus'], default='resnet50')
 parser.add_argument('--model_weights_path', type=str, default="/mnt/results/Checkpoints/", help="location of pre-trained model, only needed for UNI, HIPT_4K and cTransPath")
-parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'gigapath_default', 'hibou_default', 'kaiko_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
+parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'gigapath_default', 'hibou_default', 'kaiko_default', 'optimus_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
 parser.add_argument('--hardware', type=str, default="PC")
 parser.add_argument('--graph_patches', type=str, choices=['none','small','big'], default='none')
 args = parser.parse_args()
@@ -371,6 +377,9 @@ if __name__ == '__main__':
             model = torch.hub.load("kaiko-ai/towards_large_pathology_fms", "vitb8", trust_repo=True)
             assert args.use_transforms in ["kaiko_default"]
             
+        elif args.model_type == 'optimus':
+            model = timm.create_model("hf_hub:bioptimus/H-optimus-0", pretrained=True)
+            assert args.use_transforms in ["optimus_default"]
 
         elif args.model_type == 'virchow':
             model = timm.create_model("hf-hub:paige-ai/Virchow", pretrained=True, mlp_layer=timm.layers.SwiGLUPacked, act_layer=torch.nn.SiLU)
