@@ -390,7 +390,7 @@ if __name__ == '__main__':
             ## see https://huggingface.co/paige-ai/Virchow/blob/main/config.json
 
         elif args.model_type == 'virchow2cls':
-            model = timm.create_model("hf-hub:paige-ai/Virchow-2", pretrained=True, mlp_layer=SwiGLUPacked, act_layer=torch.nn.SiLU)
+            model = timm.create_model("hf-hub:paige-ai/Virchow-2", pretrained=True, mlp_layer=timm.layers.SwiGLUPacked, act_layer=torch.nn.SiLU)
             assert args.use_transforms in ["gigapath_default"] ## virchow has same preprocessing as provgigapath
 
         elif args.model_type=='HIPT_4K':
