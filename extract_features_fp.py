@@ -285,6 +285,9 @@ def compute_w_loader(file_path, output_path, wsi, model,
                             patch_tokens = features[:, 1:]
                             features = torch.cat([class_token, patch_tokens.mean(1)], dim=-1)
 
+                        if args.model_type=='virchow2cls':
+                            features = features[:, 0] ##only using CLS tokens is best in Zimmermann 2024 preprint
+
                         features = features.cpu().numpy()
                         asset_dict = {'features': features, 'coords': coords}
                         save_hdf5(output_path, asset_dict, attr_dict= None, mode=mode)
@@ -305,7 +308,7 @@ parser.add_argument('--print_every', type=int, default=100, help='number of batc
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset', type=str, choices=['ImageNet','Histo'], default='ImageNet')
-parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon', 'virchow', 'hibou_b', 'kaiko_b8', 'optimus'], default='resnet50')
+parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon', 'virchow', 'virchow2cls', 'hibou_b', 'kaiko_b8', 'optimus'], default='resnet50')
 parser.add_argument('--model_weights_path', type=str, default="/mnt/results/Checkpoints/", help="location of pre-trained model, only needed for UNI, HIPT_4K and cTransPath")
 parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'gigapath_default', 'hibou_default', 'kaiko_default', 'optimus_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
 parser.add_argument('--hardware', type=str, default="PC")
@@ -385,6 +388,10 @@ if __name__ == '__main__':
             model = timm.create_model("hf-hub:paige-ai/Virchow", pretrained=True, mlp_layer=timm.layers.SwiGLUPacked, act_layer=torch.nn.SiLU)
             assert args.use_transforms in ["gigapath_default"] ## virchow has same preprocessing as provgigapath
             ## see https://huggingface.co/paige-ai/Virchow/blob/main/config.json
+
+        elif args.model_type == 'virchow2cls':
+            model = timm.create_model("hf-hub:paige-ai/Virchow-2", pretrained=True, mlp_layer=SwiGLUPacked, act_layer=torch.nn.SiLU)
+            assert args.use_transforms in ["gigapath_default"] ## virchow has same preprocessing as provgigapath
 
         elif args.model_type=='HIPT_4K':
             model = HIPT_4K(model256_path=args.model_weights_path+"vit256_small_dino.pth",model4k_path=args.model_weights_path+"vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
