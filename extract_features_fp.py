@@ -227,7 +227,7 @@ def compute_w_loader(file_path, output_path, wsi, model,
                     [transforms.Resize((224, 224), interpolation=3),
                     transforms.ToTensor(),
                     transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))])
-                dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
 
         elif args.use_transforms=='hibou_default':
