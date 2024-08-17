@@ -15,6 +15,7 @@ from utils.file_utils import save_hdf5
 from models.HIPT_4K.hipt_4k import HIPT_4K
 from models.HIPT_4K.hipt_model_utils import eval_transforms
 from models import hibou
+from models.GPFM import vision_transformer as vits
 from transformers import AutoImageProcessor, ViTModel
 
 import torchvision
@@ -221,6 +222,14 @@ def compute_w_loader(file_path, output_path, wsi, model,
                     transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))])
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
+        elif args.use_transforms=='gpfm_default':
+            t = transforms.Compose(
+                    [transforms.Resize((224, 224), interpolation=3),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+
+
         elif args.use_transforms=='hibou_default':
             t = transforms.Compose(
                     [transforms.Resize((224, 224), interpolation=torchvision.transforms.InterpolationMode.BICUBIC),
@@ -308,9 +317,9 @@ parser.add_argument('--print_every', type=int, default=100, help='number of batc
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset', type=str, choices=['ImageNet','Histo'], default='ImageNet')
-parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon', 'virchow', 'virchow2cls', 'hibou_b', 'kaiko_b8', 'optimus'], default='resnet50')
+parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon','gpfm', 'virchow', 'virchow2cls', 'hibou_b', 'kaiko_b8', 'optimus'], default='resnet50')
 parser.add_argument('--model_weights_path', type=str, default="/mnt/results/Checkpoints/", help="location of pre-trained model, only needed for UNI, HIPT_4K and cTransPath")
-parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'gigapath_default', 'hibou_default', 'kaiko_default', 'optimus_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
+parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'gigapath_default', 'gpfm_default', 'hibou_default', 'kaiko_default', 'optimus_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
 parser.add_argument('--hardware', type=str, default="PC")
 parser.add_argument('--graph_patches', type=str, choices=['none','small','big'], default='none')
 args = parser.parse_args()
@@ -392,6 +401,21 @@ if __name__ == '__main__':
         elif args.model_type == 'virchow2cls':
             model = timm.create_model("hf-hub:paige-ai/Virchow-2", pretrained=True, mlp_layer=timm.layers.SwiGLUPacked, act_layer=torch.nn.SiLU)
             assert args.use_transforms in ["gigapath_default"] ## virchow has same preprocessing as provgigapath
+
+        elif args.model_type == 'gpfm':
+            vit_kwargs = dict(
+            img_size=224,patch_size=14,init_values=1.0e-05,ffn_layer='mlp',block_chunks=4,qkv_bias=True,proj_bias=True,ffn_bias=True,)
+            model = vits.__dict__['vit_large'](**vit_kwargs)
+            ckpt = torch.load(os.path.join(args.model_weights_path+"GPFM.pth"))['teacher']       
+            # rename keys
+            #new_ckpt = {}
+            #for k, v in ckpt.items():
+            #    if 'backbone' in k:
+            #        k = '.'.join(k.split('.')[1:])
+            #        new_ckpt[k] = v
+            #msg = model.load_state_dict(new_ckpt)
+            #print(msg) 
+            assert args.use_transforms in ["gpfm_default"]
 
         elif args.model_type=='HIPT_4K':
             model = HIPT_4K(model256_path=args.model_weights_path+"vit256_small_dino.pth",model4k_path=args.model_weights_path+"vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
