@@ -407,14 +407,15 @@ if __name__ == '__main__':
             img_size=224,patch_size=14,init_values=1.0e-05,ffn_layer='mlp',block_chunks=4,qkv_bias=True,proj_bias=True,ffn_bias=True,)
             model = vits.__dict__['vit_large'](**vit_kwargs)
             ckpt = torch.load(os.path.join(args.model_weights_path+"GPFM.pth"))['teacher']       
+            
             # rename keys
-            #new_ckpt = {}
-            #for k, v in ckpt.items():
-            #    if 'backbone' in k:
-            #        k = '.'.join(k.split('.')[1:])
-            #        new_ckpt[k] = v
-            #msg = model.load_state_dict(new_ckpt)
-            #print(msg) 
+            new_ckpt = {}
+            for k, v in ckpt.items():
+                if 'backbone' in k:
+                    k = '.'.join(k.split('.')[1:])
+                    new_ckpt[k] = v
+            msg = model.load_state_dict(new_ckpt)
+            print(msg) 
             assert args.use_transforms in ["gpfm_default"]
 
         elif args.model_type=='HIPT_4K':
