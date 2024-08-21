@@ -16,7 +16,7 @@ from models.HIPT_4K.hipt_4k import HIPT_4K
 from models.HIPT_4K.hipt_model_utils import eval_transforms
 from models import hibou
 from models.GPFM import vision_transformer as vits
-from transformers import AutoImageProcessor, ViTModel
+from transformers import AutoImageProcessor, ViTModel, AutoModel 
 
 import torchvision
 import torch
@@ -296,6 +296,10 @@ def compute_w_loader(file_path, output_path, wsi, model,
 
                         if args.model_type=='virchow2cls':
                             features = features[:, 0] ##only using CLS tokens is best in Zimmermann 2024 preprint
+                        
+                        if args.model_type=='hibou_l':
+                            features = features.pooler_output
+
 
                         features = features.cpu().numpy()
                         asset_dict = {'features': features, 'coords': coords}
@@ -317,7 +321,7 @@ parser.add_argument('--print_every', type=int, default=100, help='number of batc
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset', type=str, choices=['ImageNet','Histo'], default='ImageNet')
-parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon','gpfm', 'virchow', 'virchow2cls', 'hibou_b', 'kaiko_b8', 'optimus'], default='resnet50')
+parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon','gpfm', 'virchow', 'virchow2cls', 'hibou_b', 'hibou_l', 'kaiko_b8', 'optimus'], default='resnet50')
 parser.add_argument('--model_weights_path', type=str, default="/mnt/results/Checkpoints/", help="location of pre-trained model, only needed for UNI, HIPT_4K and cTransPath")
 parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'gigapath_default', 'gpfm_default', 'hibou_default', 'kaiko_default', 'optimus_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
 parser.add_argument('--hardware', type=str, default="PC")
@@ -384,6 +388,10 @@ if __name__ == '__main__':
             model = hibou.build_model(args.model_weights_path+"hibou-b.pth")
             assert args.use_transforms in ["hibou_default"]
         
+        elif args.model_type == 'hibou_l':
+            model = AutoModel.from_pretrained("histai/hibou-l", trust_remote_code=True)
+            assert args.use_transforms in ["hibou_default"]
+
         elif args.model_type == 'kaiko_b8':
             print("kaiko requires python >=3.10")
             model = torch.hub.load("kaiko-ai/towards_large_pathology_fms", "vitb8", trust_repo=True)
