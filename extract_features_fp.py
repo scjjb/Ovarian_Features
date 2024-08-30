@@ -14,6 +14,7 @@ from utils.utils import collate_features
 from utils.file_utils import save_hdf5
 from models.HIPT_4K.hipt_4k import HIPT_4K
 from models.HIPT_4K.hipt_model_utils import eval_transforms
+from models.lunit import resnet50_lunit, vit_small_lunit
 from models import hibou
 from models.GPFM import vision_transformer as vits
 from transformers import AutoImageProcessor, ViTModel, AutoModel 
@@ -207,6 +208,19 @@ def compute_w_loader(file_path, output_path, wsi, model,
                     transforms.Normalize(mean=(0.5, 0.5, 0.5), std=(0.5, 0.5, 0.5))])
             dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
 
+        elif args.use_transforms=='resnet50lunit_default':
+            t = transforms.Compose(
+                    [transforms.ToTensor(),
+                    transforms.Normalize(mean=(0.70322989, 0.53606487, 0.66096631), std=(0.21716536, 0.26081574, 0.20723464))])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+
+        elif args.use_transforms=='vitSlunit_default':
+            t = transforms.Compose(
+                    [transforms.Resize(224),
+                    transforms.ToTensor(),
+                    transforms.Normalize(mean=(0.70322989, 0.53606487, 0.66096631), std=(0.21716536, 0.26081574, 0.20723464))])
+            dataset = Whole_Slide_Bag_FP(file_path=file_path, wsi=wsi, custom_transforms=t, pretrained=pretrained,custom_downsample=custom_downsample, target_patch_size=target_patch_size)
+
         elif args.use_transforms=='uni_default':
             t = transforms.Compose(
                     [transforms.Resize(224),
@@ -321,9 +335,9 @@ parser.add_argument('--print_every', type=int, default=100, help='number of batc
 parser.add_argument('--custom_downsample', type=int, default=1)
 parser.add_argument('--target_patch_size', type=int, default=-1)
 parser.add_argument('--pretraining_dataset', type=str, choices=['ImageNet','Histo'], default='ImageNet')
-parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon','gpfm', 'virchow', 'virchow2cls', 'hibou_b', 'hibou_l', 'kaiko_b8', 'optimus'], default='resnet50')
+parser.add_argument('--model_type', type=str, choices=['resnet18', 'resnet50', 'resnet50lunit', 'vitSlunit', 'densenet121', 'levit_128s', 'HIPT_4K', 'uni', 'vit_l', 'ctranspath', 'provgigapath', 'phikon','gpfm', 'virchow', 'virchow2cls', 'hibou_b', 'hibou_l', 'kaiko_b8', 'optimus'], default='resnet50')
 parser.add_argument('--model_weights_path', type=str, default="/mnt/results/Checkpoints/", help="location of pre-trained model, only needed for UNI, HIPT_4K and cTransPath")
-parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'uni_default', 'gigapath_default', 'gpfm_default', 'hibou_default', 'kaiko_default', 'optimus_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
+parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'resnet50lunit_default', 'vitSlunit_default', 'uni_default', 'gigapath_default', 'gpfm_default', 'hibou_default', 'kaiko_default', 'optimus_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
 parser.add_argument('--hardware', type=str, default="PC")
 parser.add_argument('--graph_patches', type=str, choices=['none','small','big'], default='none')
 args = parser.parse_args()
@@ -363,6 +377,14 @@ if __name__ == '__main__':
             model.load_state_dict(torch.load(os.path.join(args.model_weights_path+"vit_large_patch16_224.dinov2.uni_mass100k/pytorch_model.bin"), map_location="cpu"), strict=True)
             assert args.use_transforms in ["uni_default"]
         
+        elif args.model_type == 'resnet50lunit':
+             model = resnet50_lunit(pretrained=True, progress=False, key="BT")
+             assert args.use_transforms in ["resnet50lunit_default"]
+
+        elif args.model_type == 'vitSlunit':
+             model = vit_small_lunit(pretrained=True, progress=False, key="DINO_p8", patch_size=8)
+             assert args.use_transforms in ["vitSlunit_default"]
+
         elif args.model_type =='vit_l':
              model = timm.create_model("vit_large_patch16_224",  num_classes=0,  pretrained = True)
              assert args.use_transforms in ["uni_default"]
@@ -482,9 +504,9 @@ if __name__ == '__main__':
                 torch.save(features, os.path.join(args.feat_dir, 'pt_files', bag_base+'.pt'))
             except KeyboardInterrupt:
                 assert 1==2, "keyboard interrupt"
-            except:
-                print("patch file unavailable")
-                unavailable_patch_files = unavailable_patch_files+1 
-                continue
+            #except:
+            #    print("patch file unavailable")
+            #    unavailable_patch_files = unavailable_patch_files+1 
+            #    continue
         print("finished running with {} unavailable slide patch files".format(unavailable_patch_files))
         print("total time: {}".format(total_time_elapsed))
