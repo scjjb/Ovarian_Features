@@ -20,7 +20,6 @@ from wsi_core.batch_process_utils import initialize_df
 from vis_utils.heatmap_utils import initialize_wsi, drawHeatmap, compute_from_patches
 from wsi_core.wsi_utils import sample_rois
 from utils.file_utils import save_hdf5
-from HIPT_4K.hipt_4k import HIPT_4K
 from torchvision import transforms
 from datasets.dataset_h5 import eval_transforms
 import timm
@@ -188,7 +187,7 @@ if __name__ == '__main__':
         elif model_type=='uni':
             print("CREATING HEATMAP USING UNI")
             feature_extractor = timm.create_model("vit_large_patch16_224", img_size=224, patch_size=16, init_values=1e-5, num_classes=0, dynamic_img_size=True)
-            local_dir = "/mnt/results/vit_large_patch16_224.dinov2.uni_mass100k/"
+            local_dir = "/mnt/results/Checkpoints/vit_large_patch16_224.dinov2.uni_mass100k/"
             feature_extractor.load_state_dict(torch.load(os.path.join(local_dir, "pytorch_model.bin"), map_location="cpu"), strict=True)
             transforms = transforms.Compose(
                     [transforms.Resize(224),
@@ -203,6 +202,7 @@ if __name__ == '__main__':
                     transforms.Normalize(mean=(0.485, 0.456, 0.406), std=(0.229, 0.224, 0.225))])
         elif model_type=='hipt':
             print("USING HIPT")
+            from HIPT_4K.hipt_4k import HIPT_4K
             feature_extractor = HIPT_4K(model256_path="/CLAM/HIPT_4K/ckpts/vit256_small_dino.pth",model4k_path="/CLAM/HIPT_4K/ckpts/vit4k_xs_dino.pth",device256=torch.device('cuda:0'),device4k=torch.device('cuda:0'))
             assert 1==2, "need to set the transforms for this"
         else:
