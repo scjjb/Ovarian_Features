@@ -6,6 +6,8 @@ import h5py
 import openslide
 import timm
 import argparse
+from datetime import datetime
+
 
 from datasets.dataset_h5 import Dataset_All_Bags, Whole_Slide_Bag_FP
 from torch.utils.data import DataLoader
@@ -340,6 +342,7 @@ parser.add_argument('--model_weights_path', type=str, default="/mnt/results/Chec
 parser.add_argument('--use_transforms',type=str,choices=['all', 'HIPT', 'HIPT_blur', 'HIPT_augment', 'HIPT_augment_colour', 'HIPT_wang', 'HIPT_augment01', 'spatial', 'colourjitter', 'colourjitternorm', 'macenko', 'reinhard', 'vahadane', 'none', 'resnet50lunit_default', 'vitSlunit_default', 'uni_default', 'gigapath_default', 'gpfm_default', 'hibou_default', 'kaiko_default', 'optimus_default', 'histo_resnet18', 'histo_resnet18_224'], default='none')
 parser.add_argument('--hardware', type=str, default="PC")
 parser.add_argument('--graph_patches', type=str, choices=['none','small','big'], default='none')
+parser.add_argument('--save_times', default=False, action='store_true')
 args = parser.parse_args()
 
 
@@ -461,6 +464,7 @@ if __name__ == '__main__':
         unavailable_patch_files=0
         total_time_elapsed = 0.0
         total = len(bags_dataset)
+        times = []
         for bag_candidate_idx in range(total):
             print('\nprogress: {}/{}'.format(bag_candidate_idx, total))
             print('skipped unavailable slides: {}'.format(unavailable_patch_files))
@@ -494,6 +498,7 @@ if __name__ == '__main__':
                 time_elapsed = time.time() - time_start
                 total_time_elapsed += time_elapsed
                 print('\ncomputing features for {} took {} s'.format(output_file_path, time_elapsed))
+                times = times + time_elapsed
                 file = h5py.File(output_file_path, "r")
 
                 features = file['features'][:]
@@ -510,3 +515,14 @@ if __name__ == '__main__':
                 continue
         print("finished running with {} unavailable slide patch files".format(unavailable_patch_files))
         print("total time: {}".format(total_time_elapsed))
+
+        if args.save_times:
+            os.makedirs("timings", exist_ok=True)
+            now = datetime.now()
+
+            f = open("timings/{}-features-{}.txt".format(args.model_type,csv_path[:-4].split("/")[1]), "a")
+            f.write("\nrun finished at {}".format(now.strftime("%d/%m/%Y, %H:%M:%S")))
+            f.write("\nfinished running with {} unavailable slide patch files".format(unavailable_patch_files))
+            f.write("\ntotal time: {}".format(total_time_elapsed))
+            f.write("\ntimes: {}".format(times))
+            f.close()
