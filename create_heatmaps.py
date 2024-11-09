@@ -107,6 +107,7 @@ if __name__ == '__main__':
         data_args = argparse.Namespace(**args['data_arguments'])
         model_args = args['model_arguments']
         model_args.update({'n_classes': args['exp_arguments']['n_classes']})
+        model_args.update({'encoding_size': 1024})
         model_args = argparse.Namespace(**model_args)
         exp_args = argparse.Namespace(**args['exp_arguments'])
         heatmap_args = argparse.Namespace(**args['heatmap_arguments'])
