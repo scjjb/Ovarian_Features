@@ -459,6 +459,15 @@ if __name__ == '__main__':
                 model = nn.DataParallel(model)
                 
         print("\nModel parameters:",f'{sum(p.numel() for p in model.parameters() if p.requires_grad):,}')
+        param_size = 0
+        for param in model.parameters():
+            param_size += param.nelement() * param.element_size()
+        buffer_size = 0
+        for buffer in model.buffers():
+            buffer_size += buffer.nelement() * buffer.element_size()
+        size_all_mb = (param_size + buffer_size) / 1024**2
+        print('Model size: {:.3f}MB'.format(size_all_mb))
+        
         model.eval()
         
         unavailable_patch_files=0
@@ -498,7 +507,7 @@ if __name__ == '__main__':
                 time_elapsed = time.time() - time_start
                 total_time_elapsed += time_elapsed
                 print('\ncomputing features for {} took {} s'.format(output_file_path, time_elapsed))
-                times = times + time_elapsed
+                times = times + [time_elapsed]
                 file = h5py.File(output_file_path, "r")
 
                 features = file['features'][:]
