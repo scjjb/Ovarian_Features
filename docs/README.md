@@ -1,12 +1,11 @@
 ## A Comprehensive Evaluation of Histopathology Foundation Models for Ovarian Cancer Subtype Classification
 <img src="CISTIB logo.png" align="right" width="240"/>
 
-*An extensive analysis of feature extraction techniques in attention-based multiple instance learning ([ABMIL](https://proceedings.mlr.press/v80/ilse18a.html?ref=https://githubhelp.com))* 
+<img src="Figure1.png" align="centre" width="900"/>
 
-<img src="ABMILpipelineUpdate-min.png" align="centre" width="900"/>
 
-Ovarian cancer histological subtype classification using 17 feature extraction models (three ImageNet-pretrained models, fourteen histopathology foundation models):
-<img width="856" alt="image" src="https://github.com/user-attachments/assets/6f6c01cc-966e-4eeb-994b-b93fc567d9b4" />
+Ovarian cancer histological subtype classification using ([ABMIL](https://proceedings.mlr.press/v80/ilse18a.html?ref=https://githubhelp.com)) with 17 feature extraction models (three ImageNet-pretrained models, fourteen histopathology foundation models):
+<img width="856" alt="image" src="ModelsTable.png" />
 
 
 
