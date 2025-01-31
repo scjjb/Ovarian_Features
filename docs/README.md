@@ -1,5 +1,7 @@
-## A Comprehensive Evaluation of Histopathology Foundation Models for Ovarian Cancer Subtype Classification
+# A Comprehensive Evaluation of Histopathology Foundation Models for Ovarian Cancer Subtype Classification
 <img src="CISTIB logo.png" align="right" width="240"/>
+
+## [Journal Paper](https://doi.org/10.1038/s41698-025-00799-8) | [Preprint](https://arxiv.org/abs/2405.09990)
 
 <img src="Figure1.png" align="centre" width="900"/>
 
